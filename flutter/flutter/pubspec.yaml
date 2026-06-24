@@ -1,0 +1,33 @@
+name: ffmpeg_kit_next_flutter
+description: FFmpeg Kit Next for Flutter. Supports Android, iOS and macOS platforms.
+repository: https://github.com/arthenica/ffmpeg-kit-next
+issue_tracker: https://github.com/arthenica/ffmpeg-kit-next/issues
+homepage: https://github.com/arthenica/ffmpeg-kit-next
+version: 6.1.0
+publish_to: none
+
+environment:
+  sdk: ">=2.12.0 <4.0.0"
+  flutter: ">=2.0.0"
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.arthenica.ffmpegkit.flutter
+        pluginClass: FFmpegKitFlutterPlugin
+      ios:
+        pluginClass: FFmpegKitFlutterPlugin
+      macos:
+        pluginClass: FFmpegKitFlutterPlugin
+
+dependencies:
+  ffmpeg_kit_next_flutter_platform_interface:
+    path: ../flutter_platform_interface
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  plugin_platform_interface: ^2.1.5

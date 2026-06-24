@@ -1,0 +1,2 @@
+include ':ffmpeg-kit-next-android-lib'
+rootProject.name = 'ffmpeg-kit-next-android'

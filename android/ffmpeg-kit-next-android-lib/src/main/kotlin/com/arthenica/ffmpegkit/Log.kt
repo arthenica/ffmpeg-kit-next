@@ -1,0 +1,39 @@
+/*
+ * Copyright (c) 2018-2021, 2026 Taner Sener
+ *
+ * This file is part of FFmpegKitNext.
+ *
+ * FFmpegKitNext is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * FFmpegKitNext is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General License
+ * along with FFmpegKitNext. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package com.arthenica.ffmpegkit
+
+/**
+ * <p>Log entry for an <code>FFmpegKit</code> session.
+ */
+open class Log(open val sessionId: Long, open val level: Level, open val message: String) {
+
+    override fun toString(): String = buildString {
+        append("Log{")
+        append("sessionId=")
+        append(sessionId)
+        append(", level=")
+        append(level)
+        append(", message=")
+        append("\'")
+        append(message)
+        append('\'')
+        append('}')
+    }
+}

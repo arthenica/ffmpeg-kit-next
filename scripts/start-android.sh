@@ -1,0 +1,453 @@
+#!/bin/bash
+
+if [[ -z ${ANDROID_SDK_ROOT} ]]; then
+  echo -e "\n(*) ANDROID_SDK_ROOT not defined\n"
+  exit 1
+fi
+
+if [[ -z ${ANDROID_NDK_ROOT} ]]; then
+  echo -e "\n(*) ANDROID_NDK_ROOT not defined\n"
+  exit 1
+fi
+
+# LOAD INITIAL SETTINGS
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export BASEDIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${BASEDIR}"
+export FFMPEG_KIT_BUILD_TYPE="android"
+source "${SCRIPT_DIR}"/variable.sh
+source "${SCRIPT_DIR}"/function-${FFMPEG_KIT_BUILD_TYPE}.sh
+source "${SCRIPT_DIR}"/help-${FFMPEG_KIT_BUILD_TYPE}.sh
+disabled_libraries=()
+
+# SET DEFAULT SETTINGS
+enable_default_android_architectures
+enable_default_android_libraries
+enable_main_build
+
+# DETECT ANDROID NDK VERSION
+export DETECTED_NDK_VERSION=$(grep -Eo "Revision.*" "${ANDROID_NDK_ROOT}"/source.properties | sed 's/Revision//g;s/=//g;s/ //g')
+echo -e "\nINFO: Using Android NDK v${DETECTED_NDK_VERSION} provided at ${ANDROID_NDK_ROOT}\n" 1>>"${BASEDIR}"/build.log 2>&1
+echo -e "INFO: Build options: $*\n" 1>>"${BASEDIR}"/build.log 2>&1
+
+# SET DEFAULT BUILD OPTIONS
+export GPL_ENABLED="no"
+DISPLAY_HELP=""
+BUILD_FULL=""
+BUILD_TYPE_ID=""
+BUILD_VERSION=$(git describe --tags --always 2>>"${BASEDIR}"/build.log)
+
+# PROCESS BUILD OPTIONS
+while [ ! $# -eq 0 ]; do
+
+  case $1 in
+  -h | --help)
+    DISPLAY_HELP="1"
+    ;;
+  -v | --version)
+    display_version
+    exit 0
+    ;;
+  --skip-*)
+    SKIP_LIBRARY="${1#--skip-}"
+
+    skip_library "${SKIP_LIBRARY}"
+    ;;
+  --no-archive)
+    NO_ARCHIVE="1"
+    ;;
+  --no-output-redirection)
+    no_output_redirection
+    ;;
+  --no-workspace-cleanup-*)
+    NO_WORKSPACE_CLEANUP_LIBRARY="${1#--no-workspace-cleanup-}"
+
+    no_workspace_cleanup_library "${NO_WORKSPACE_CLEANUP_LIBRARY}"
+    ;;
+  --no-link-time-optimization)
+    no_link_time_optimization
+    ;;
+  -d | --debug)
+    enable_debug
+    ;;
+  -s | --speed)
+    optimize_for_speed
+    ;;
+  -f | --force)
+    export BUILD_FORCE="1"
+    ;;
+  --jobs=*)
+    JOB_COUNT="${1#--jobs=}"
+    export BUILD_JOBS="${JOB_COUNT}"
+    ;;
+  --reconf-*)
+    CONF_LIBRARY="${1#--reconf-}"
+
+    reconf_library "${CONF_LIBRARY}"
+    ;;
+  --rebuild-*)
+    BUILD_LIBRARY="${1#--rebuild-}"
+
+    rebuild_library "${BUILD_LIBRARY}"
+    ;;
+  --redownload-*)
+    DOWNLOAD_LIBRARY="${1#--redownload-}"
+
+    redownload_library "${DOWNLOAD_LIBRARY}"
+    ;;
+  --full)
+    BUILD_FULL="1"
+    ;;
+  --enable-gpl)
+    export GPL_ENABLED="yes"
+    ;;
+  --enable-custom-library-*)
+    CUSTOM_LIBRARY_OPTION_KEY="${1#--enable-custom-}"
+    CUSTOM_LIBRARY_OPTION_KEY="${CUSTOM_LIBRARY_OPTION_KEY%%=*}"
+    CUSTOM_LIBRARY_OPTION_VALUE="${1##*=}"
+
+    echo -e "INFO: Custom library options detected: ${CUSTOM_LIBRARY_OPTION_KEY} ${CUSTOM_LIBRARY_OPTION_VALUE}\n" 1>>"${BASEDIR}"/build.log 2>&1
+
+    generate_custom_library_environment_variables "${CUSTOM_LIBRARY_OPTION_KEY}" "${CUSTOM_LIBRARY_OPTION_VALUE}"
+    ;;
+  --enable-*)
+    ENABLED_LIBRARY="${1#--enable-}"
+
+    enable_library "${ENABLED_LIBRARY}"
+    ;;
+  --disable-lib-*)
+    DISABLED_LIB="${1#--disable-lib-}"
+
+    disabled_libraries+=("${DISABLED_LIB}")
+    ;;
+  --disable-*)
+    DISABLED_ARCH="${1#--disable-}"
+
+    disable_arch "${DISABLED_ARCH}"
+    ;;
+  --api-level=*)
+    API_LEVEL="${1#--api-level=}"
+
+    export API=${API_LEVEL}
+    ;;
+  --no-ffmpeg-kit-protocols)
+    export NO_FFMPEG_KIT_PROTOCOLS="1"
+    ;;
+  --toolchain=*)
+    ANDROID_TOOLCHAIN="${1#--toolchain=}"
+    export ANDROID_TOOLCHAIN="${ANDROID_TOOLCHAIN}"
+    ;;
+  --extra-cflags=*)
+    EXTRA_CFLAGS="${1#--extra-cflags=}"
+    export EXTRA_CFLAGS="${EXTRA_CFLAGS}"
+    ;;
+  --extra-cxxflags=*)
+    EXTRA_CXXFLAGS="${1#--extra-cxxflags=}"
+    export EXTRA_CXXFLAGS="${EXTRA_CXXFLAGS}"
+    ;;
+  --extra-ldflags=*)
+    EXTRA_LDFLAGS="${1#--extra-ldflags=}"
+    export EXTRA_LDFLAGS="${EXTRA_LDFLAGS}"
+    ;;
+  --version-*)
+    CUSTOM_VERSION_KEY="${1#--version-}"
+    CUSTOM_VERSION_KEY="${CUSTOM_VERSION_KEY%%=*}"
+    CUSTOM_VERSION_VALUE="${1##*=}"
+
+    echo -e "INFO: Custom version detected: ${CUSTOM_VERSION_KEY} ${CUSTOM_VERSION_VALUE}\n" 1>>"${BASEDIR}"/build.log 2>&1
+
+    generate_custom_version_environment_variables "${CUSTOM_VERSION_KEY}" "${CUSTOM_VERSION_VALUE}"
+    ;;
+  *)
+    print_unknown_option "$1"
+    ;;
+  esac
+  shift
+done
+
+if [[ -z ${BUILD_VERSION} ]]; then
+  echo -e "\n(*) error: Can not run git commands in this folder. See build.log.\n"
+  exit 1
+fi
+
+if [[ -z ${ANDROID_TOOLCHAIN} ]]; then
+  export ANDROID_TOOLCHAIN="${ANDROID_NDK_ROOT}"/toolchains/llvm/prebuilt/"$(get_toolchain)"
+fi
+
+echo -e "INFO: Using Android toolchain at ${ANDROID_TOOLCHAIN}\n" 1>>"${BASEDIR}"/build.log 2>&1
+
+# PROCESS FULL OPTION AS LAST OPTION
+if [[ -n ${BUILD_FULL} ]]; then
+  for library in {0..61}; do
+    if [ ${GPL_ENABLED} == "yes" ]; then
+      enable_library "$(get_library_name $library)" 1
+    else
+      if [[ $(is_gpl_licensed $library) -eq 1 ]]; then
+        enable_library "$(get_library_name $library)" 1
+      fi
+    fi
+  done
+fi
+
+# DISABLE SPECIFIED LIBRARIES
+for disabled_library in "${disabled_libraries[@]}"; do
+  set_library "${disabled_library}" 0
+done
+
+# IF HELP DISPLAYED EXIT
+if [[ -n ${DISPLAY_HELP} ]]; then
+  display_help
+  exit 0
+fi
+
+# SET API LEVEL IN build.gradle
+${SED_INLINE} "s/minSdk .*/minSdk ${API}/g" "${BASEDIR}"/android/ffmpeg-kit-next-android-lib/build.gradle 1>>"${BASEDIR}"/build.log 2>&1
+${SED_INLINE} "s/versionCode ..0/versionCode ${API}0/g" "${BASEDIR}"/android/ffmpeg-kit-next-android-lib/build.gradle 1>>"${BASEDIR}"/build.log 2>&1
+
+echo -e "\nBuilding ffmpeg-kit ${BUILD_TYPE_ID}library for Android\n"
+echo -e -n "INFO: Building ffmpeg-kit ${BUILD_VERSION} ${BUILD_TYPE_ID}library for Android: " 1>>"${BASEDIR}"/build.log 2>&1
+echo -e "$(date)\n" 1>>"${BASEDIR}"/build.log 2>&1
+
+# PRINT BUILD SUMMARY
+print_enabled_architectures
+print_enabled_libraries
+print_reconfigure_requested_libraries
+print_rebuild_requested_libraries
+print_redownload_requested_libraries
+print_custom_libraries
+
+# VALIDATE GPL FLAGS
+for gpl_library in {$LIBRARY_X264,$LIBRARY_XVIDCORE,$LIBRARY_X265,$LIBRARY_LIBVIDSTAB,$LIBRARY_RUBBERBAND}; do
+  if [[ ${ENABLED_LIBRARIES[$gpl_library]} -eq 1 ]]; then
+    library_name=$(get_library_name ${gpl_library})
+
+    if [ ${GPL_ENABLED} != "yes" ]; then
+      echo -e "\n(*) Invalid configuration detected. GPL library ${library_name} enabled without --enable-gpl flag.\n"
+      echo -e "\n(*) Invalid configuration detected. GPL library ${library_name} enabled without --enable-gpl flag.\n" 1>>"${BASEDIR}"/build.log 2>&1
+      exit 1
+    fi
+  fi
+done
+
+trap fail_operation EXIT
+echo -n -e "\nDownloading sources: "
+echo -e "INFO: Downloading the source code of ffmpeg and external libraries.\n" 1>>"${BASEDIR}"/build.log 2>&1
+
+# DOWNLOAD GNU CONFIG
+download_gnu_config
+
+# DOWNLOAD LIBRARY SOURCES
+downloaded_library_sources "${ENABLED_LIBRARIES[@]}"
+
+# SAVE ORIGINAL API LEVEL = NECESSARY TO BUILD 64bit ARCHITECTURES
+export ORIGINAL_API=${API}
+
+# BUILD ENABLED LIBRARIES ON ENABLED ARCHITECTURES
+for run_arch in {0..12}; do
+  if [[ ${ENABLED_ARCHITECTURES[$run_arch]} -eq 1 ]]; then
+    if [[ (${run_arch} -eq ${ARCH_ARM64_V8A} || ${run_arch} -eq ${ARCH_X86_64}) && ${ORIGINAL_API} -lt 21 ]]; then
+
+      # 64 bit ABIs supported after API 21
+      export API=21
+    else
+      export API=${ORIGINAL_API}
+    fi
+
+    export ARCH=$(get_arch_name $run_arch)
+
+    # EXECUTE MAIN BUILD SCRIPT
+    . "${SCRIPT_DIR}"/main-android.sh "${ENABLED_LIBRARIES[@]}" || exit 1
+
+    # CLEAR FLAGS
+    for library in {0..61}; do
+      library_name=$(get_library_name ${library})
+      unset "$(echo "OK_${library_name}" | sed "s/\-/\_/g")"
+      unset "$(echo "DEPENDENCY_REBUILT_${library_name}" | sed "s/\-/\_/g")"
+    done
+  fi
+done
+
+# GET BACK THE ORIGINAL API LEVEL
+export API=${ORIGINAL_API}
+
+# SET ARCHITECTURES TO BUILD
+create_file "${BASEDIR}"/android/jni/build.mk "API := ${API}"
+ANDROID_ARCHITECTURES=""
+if [[ ${ENABLED_ARCHITECTURES[ARCH_ARM_V7A]} -eq 1 ]] || [[ ${ENABLED_ARCHITECTURES[ARCH_ARM_V7A_NEON]} -eq 1 ]]; then
+  ANDROID_ARCHITECTURES+="$(get_android_arch 0) "
+fi
+if [[ ${ENABLED_ARCHITECTURES[ARCH_ARM_V7A]} -eq 1 ]]; then
+  mkdir -p "${BASEDIR}"/android/build 1>>"${BASEDIR}"/build.log 2>&1
+  append_file "${BASEDIR}"/android/jni/build.mk "ARMV7 := true"
+else
+  append_file "${BASEDIR}"/android/jni/build.mk "ARMV7 := false"
+fi
+if [[ ${ENABLED_ARCHITECTURES[ARCH_ARM_V7A_NEON]} -eq 1 ]]; then
+  mkdir -p "${BASEDIR}"/android/build 1>>"${BASEDIR}"/build.log 2>&1
+  append_file "${BASEDIR}"/android/jni/build.mk "ARMV7_NEON := true"
+else
+  append_file "${BASEDIR}"/android/jni/build.mk "ARMV7_NEON := false"
+fi
+if [[ ${ENABLED_ARCHITECTURES[ARCH_ARM64_V8A]} -eq 1 ]]; then
+  ANDROID_ARCHITECTURES+="$(get_android_arch 2) "
+fi
+if [[ ${ENABLED_ARCHITECTURES[ARCH_X86]} -eq 1 ]]; then
+  ANDROID_ARCHITECTURES+="$(get_android_arch 3) "
+fi
+if [[ ${ENABLED_ARCHITECTURES[ARCH_X86_64]} -eq 1 ]]; then
+  ANDROID_ARCHITECTURES+="$(get_android_arch 4) "
+fi
+append_file "${BASEDIR}"/android/jni/build.mk "ARMV7_BUILD_PATH := android-arm-${API}"
+append_file "${BASEDIR}"/android/jni/build.mk "ARMV7_NEON_BUILD_PATH := android-arm-neon-${API}"
+append_file "${BASEDIR}"/android/jni/build.mk "X86_BUILD_PATH := android-x86-${API}"
+if [[ $(compare_versions "$API" "21") -lt 0 ]]; then
+  append_file "${BASEDIR}"/android/jni/build.mk "ARM64_BUILD_PATH := android-arm64-21"
+  append_file "${BASEDIR}"/android/jni/build.mk "X86_64_BUILD_PATH := android-x86_64-21"
+else
+  append_file "${BASEDIR}"/android/jni/build.mk "ARM64_BUILD_PATH := android-arm64-${API}"
+  append_file "${BASEDIR}"/android/jni/build.mk "X86_64_BUILD_PATH := android-x86_64-${API}"
+fi
+
+# BUILD FFMPEG-KIT
+if [[ -n ${ANDROID_ARCHITECTURES} ]]; then
+
+  echo -n -e "\nffmpeg-kit: "
+
+  # CREATE Application.mk FILE BEFORE STARTING THE NATIVE BUILD
+  build_application_mk
+
+  # CLEAR OLD NATIVE LIBRARIES
+  rm -rf "${BASEDIR}"/android/libs 1>>"${BASEDIR}"/build.log 2>&1
+  rm -rf "${BASEDIR}"/android/obj 1>>"${BASEDIR}"/build.log 2>&1
+
+  cd "${BASEDIR}"/android 1>>"${BASEDIR}"/build.log 2>&1 || exit 1
+
+  # COPY EXTERNAL LIBRARY LICENSES
+  LICENSE_BASEDIR="${BASEDIR}"/android/ffmpeg-kit-next-android-lib/src/main/res/raw
+  rm -f "${LICENSE_BASEDIR}"/*.txt 1>>"${BASEDIR}"/build.log 2>&1 || exit 1
+  for library in {0..49}; do
+    if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
+      ENABLED_LIBRARY=$(get_library_name ${library} | sed 's/-/_/g')
+      LICENSE_FILE="${LICENSE_BASEDIR}/license_${ENABLED_LIBRARY}.txt"
+
+      RC=$(copy_external_library_license_file ${library} "${LICENSE_FILE}")
+
+      if [[ ${RC} -ne 0 ]]; then
+        echo -e "ERROR: Failed to copy the license file of ${ENABLED_LIBRARY}\n" 1>>"${BASEDIR}"/build.log 2>&1
+        exit 1
+      fi
+
+      echo -e "DEBUG: Copied the license file of ${ENABLED_LIBRARY} successfully\n" 1>>"${BASEDIR}"/build.log 2>&1
+    fi
+  done
+
+  # COPY CUSTOM LIBRARY LICENSES
+  for custom_library_index in "${CUSTOM_LIBRARIES[@]}"; do
+    library_name="CUSTOM_LIBRARY_${custom_library_index}_NAME"
+    relative_license_path="CUSTOM_LIBRARY_${custom_library_index}_LICENSE_FILE"
+
+    destination_license_path="${LICENSE_BASEDIR}/license_${!library_name}.txt"
+
+    cp "${BASEDIR}/src/${!library_name}/${!relative_license_path}" "${destination_license_path}" 1>>"${BASEDIR}"/build.log 2>&1
+
+    RC=$?
+
+    if [[ ${RC} -ne 0 ]]; then
+      echo -e "ERROR: Failed to copy the license file of custom library ${!library_name}\n" 1>>"${BASEDIR}"/build.log 2>&1
+      exit 1
+    fi
+
+    echo -e "DEBUG: Copied the license file of custom library ${!library_name} successfully\n" 1>>"${BASEDIR}"/build.log 2>&1
+  done
+
+  # COPY LIBRARY LICENSES
+  if [[ ${GPL_ENABLED} == "yes" ]]; then
+    cp "${BASEDIR}"/tools/license/LICENSE.GPLv3 "${LICENSE_BASEDIR}"/license.txt 1>>"${BASEDIR}"/build.log 2>&1 || exit 1
+  else
+    cp "${BASEDIR}"/LICENSE "${LICENSE_BASEDIR}"/license.txt 1>>"${BASEDIR}"/build.log 2>&1 || exit 1
+  fi
+
+  echo -e "DEBUG: Copied the ffmpeg-kit license successfully\n" 1>>"${BASEDIR}"/build.log 2>&1
+
+  overwrite_file "${BASEDIR}"/tools/source/SOURCE "${LICENSE_BASEDIR}"/source.txt 1>>"${BASEDIR}"/build.log 2>&1 || exit 1
+
+  echo -e "DEBUG: Copied source.txt successfully\n" 1>>"${BASEDIR}"/build.log 2>&1
+
+  # BUILD NATIVE LIBRARY
+  if [[ ${SKIP_ffmpeg_kit} -ne 1 ]]; then
+
+    # NDK >= 24.0 DOES NOT REQUIRE arch -x86_64 ON DARWIN ARM64 HOSTS
+    if [[ "$(is_darwin_arm64)" == "1" ]] && [[ $(compare_versions "$DETECTED_NDK_VERSION" "24.0") -lt 1 ]]; then
+       arch -x86_64 "${ANDROID_NDK_ROOT}"/ndk-build -B 1>>"${BASEDIR}"/build.log 2>&1
+    else
+      "${ANDROID_NDK_ROOT}"/ndk-build -B 1>>"${BASEDIR}"/build.log 2>&1
+    fi
+
+    if [ $? -eq 0 ]; then
+      echo "ok"
+    else
+      exit 1
+    fi
+  else
+    echo "skipped"
+  fi
+
+  echo -e -n "\n"
+
+  # DO NOT BUILD ANDROID ARCHIVE
+  if [[ ${NO_ARCHIVE} -ne 1 ]]; then
+
+    echo -e -n "\nCreating Android archive under prebuilt: "
+
+    # BUILD ANDROID ARCHIVE
+    rm -f "${BASEDIR}"/android/ffmpeg-kit-next-android-lib/build/outputs/aar/ffmpeg-kit-next-release.aar 1>>"${BASEDIR}"/build.log 2>&1
+    ./gradlew ffmpeg-kit-next-android-lib:clean ffmpeg-kit-next-android-lib:assembleRelease ffmpeg-kit-next-android-lib:testReleaseUnitTest 1>>"${BASEDIR}"/build.log 2>&1
+    if [ $? -ne 0 ]; then
+      exit 1
+    fi
+
+    # COPY ANDROID ARCHIVE INTO A LOCAL MAVEN REPOSITORY UNDER PREBUILT
+    FFMPEG_KIT_VERSION=$(get_ffmpeg_kit_version)
+    FFMPEG_KIT_MAVEN_REPOSITORY="${BASEDIR}/prebuilt/$(get_aar_directory)"
+    FFMPEG_KIT_MAVEN_ARTIFACT_DIRECTORY="${FFMPEG_KIT_MAVEN_REPOSITORY}/com/arthenica/ffmpeg-kit-next/${FFMPEG_KIT_VERSION}"
+    rm -rf "${FFMPEG_KIT_MAVEN_ARTIFACT_DIRECTORY}" 1>>"${BASEDIR}"/build.log 2>&1
+    mkdir -p "${FFMPEG_KIT_MAVEN_ARTIFACT_DIRECTORY}" 1>>"${BASEDIR}"/build.log 2>&1
+    cp "${BASEDIR}"/android/ffmpeg-kit-next-android-lib/build/outputs/aar/ffmpeg-kit-next-release.aar "${FFMPEG_KIT_MAVEN_ARTIFACT_DIRECTORY}/ffmpeg-kit-next-${FFMPEG_KIT_VERSION}.aar" 1>>"${BASEDIR}"/build.log 2>&1
+    if [ $? -ne 0 ]; then
+      exit 1
+    fi
+
+    # CREATE THE POM FILE FOR THE MAVEN ARTIFACT
+    cat >"${FFMPEG_KIT_MAVEN_ARTIFACT_DIRECTORY}/ffmpeg-kit-next-${FFMPEG_KIT_VERSION}.pom" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.arthenica</groupId>
+  <artifactId>ffmpeg-kit-next</artifactId>
+  <version>${FFMPEG_KIT_VERSION}</version>
+  <packaging>aar</packaging>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.arthenica</groupId>
+      <artifactId>smart-exception-java</artifactId>
+      <version>0.2.1</version>
+      <scope>runtime</scope>
+    </dependency>
+  </dependencies>
+</project>
+EOF
+    if [ $? -ne 0 ]; then
+      exit 1
+    fi
+
+    echo -e "INFO: Created ffmpeg-kit Android archive successfully.\n" 1>>"${BASEDIR}"/build.log 2>&1
+    echo -e "ok\n"
+  else
+    echo -e "INFO: Skipped creating Android archive.\n" 1>>"${BASEDIR}"/build.log 2>&1
+  fi
+fi

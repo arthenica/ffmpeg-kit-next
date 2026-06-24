@@ -1,0 +1,113 @@
+{
+  "name": "ffmpeg-kit-next-react-native",
+  "version": "6.1.0",
+  "description": "FFmpeg Kit Next for React Native",
+  "main": "src/index",
+  "types": "src/index.d.ts",
+  "react-native": "src/index",
+  "source": "src/index",
+  "scripts": {
+    "test": "jest",
+    "lint": "eslint \"**/*.{js,ts,tsx}\"",
+    "release": "release-it"
+  },
+  "keywords": [
+    "react-native",
+    "android",
+    "ffmpeg",
+    "ffmpeg-kit",
+    "ffmpeg-kit-next",
+    "ios"
+  ],
+  "repository": "https://github.com/arthenica/ffmpeg-kit-next",
+  "author": "ARTHENICA <open-source@arthenica.com> (https://www.arthenica.com)",
+  "license": "LGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/arthenica/ffmpeg-kit-next/issues"
+  },
+  "homepage": "https://github.com/arthenica/ffmpeg-kit-next",
+  "codegenConfig": {
+    "name": "FFmpegKitReactNativeSpec",
+    "type": "modules",
+    "jsSrcsDir": "src",
+    "android": {
+      "javaPackageName": "com.arthenica.ffmpegkit.reactnative"
+    }
+  },
+  "devDependencies": {
+    "@commitlint/config-conventional": "^17.7.0",
+    "@react-native-community/eslint-config": "^2.0.0",
+    "@release-it/conventional-changelog": "^7.0.0",
+    "@types/jest": "^29.5.4",
+    "@types/react": "^16.9.19",
+    "@types/react-native": "^0.62.13",
+    "commitlint": "^17.7.1",
+    "eslint": "^8.48.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "jest": "^29.6.4",
+    "pod-install": "^0.1.39",
+    "prettier": "^3.0.2",
+    "react": "^16.13.1",
+    "react-native": "^0.63.4",
+    "release-it": "^16.1.5"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
+  },
+  "jest": {
+    "preset": "react-native"
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  },
+  "release-it": {
+    "git": {
+      "commitMessage": "chore: release ${version}",
+      "tagName": "v${version}"
+    },
+    "npm": {
+      "publish": true
+    },
+    "github": {
+      "release": true
+    },
+    "plugins": {
+      "@release-it/conventional-changelog": {
+        "preset": "angular"
+      }
+    }
+  },
+  "eslintConfig": {
+    "root": true,
+    "extends": [
+      "@react-native-community",
+      "prettier"
+    ],
+    "rules": {
+      "prettier/prettier": [
+        "error",
+        {
+          "quoteProps": "consistent",
+          "singleQuote": true,
+          "tabWidth": 2,
+          "trailingComma": "es5",
+          "useTabs": false
+        }
+      ]
+    }
+  },
+  "eslintIgnore": [
+    "node_modules/"
+  ],
+  "prettier": {
+    "quoteProps": "consistent",
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "es5",
+    "useTabs": false
+  }
+}

@@ -1,0 +1,12 @@
+*.iml
+.gradle
+local.properties
+/.idea/workspace.xml
+/.idea/libraries
+.DS_Store
+/build
+/captures
+gradle
+
+# Locally-copied FFmpegKit native AAR (see copy_local_binaries.sh)
+/libs-maven/

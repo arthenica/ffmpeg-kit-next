@@ -1,0 +1,12 @@
+/.tmp/
+/*.log
+/prebuilt/
+.DS_Store
+.swiftpm
+.idea
+/.gradle
+/android/jni/build.mk
+/.claude
+/.gemini
+/.codex
+/.ai

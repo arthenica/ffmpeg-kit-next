@@ -1,0 +1,14 @@
+# main section
+title: ffmpeg-kit-next
+baseurl: "/ffmpeg-kit-next"
+locale: "en"
+theme: jekyll-theme-minimal
+markdown: kramdown
+
+# github section
+show_downloads: true
+github:
+  zip_url:
+  tar_url: 
+  owner_name: ARTHENICA
+  owner_url: https://github.com/arthenica
