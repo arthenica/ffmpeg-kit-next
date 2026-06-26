@@ -105,6 +105,11 @@ Some parts of `FFmpeg` and some external libraries are licensed under the `GPL`.
 third and last number in the version string, if exists, is specific to `FFmpegKitNext`. It shows different releases from
 the same `FFmpeg` release branch.
 
+|    Platforms     |                                 FFmpegKit Version                                 | FFmpeg Version | Release Date |
+|:----------------:|:---------------------------------------------------------------------------------:|:--------------:|:------------:|
+|  Android<br>Flutter<br>iOS<br>Linux<br>macOS<br>React Native<br>tvOS      |   [6.1.0](https://github.com/arthenica/ffmpeg-kit-next/releases/tag/v6.1.0)    |      6.1.2       | Jun 26, 2026 |
+
+
 ### 11. Documentation
 
 A more detailed documentation is available under [Wiki](https://github.com/arthenica/ffmpeg-kit-next/wiki).

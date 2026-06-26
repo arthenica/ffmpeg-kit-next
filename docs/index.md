@@ -48,8 +48,7 @@ See [React Native](react-native) to learn more about `FFmpegKitNext` for `React 
 
 Use `nix-android.sh`, `nix-ios.sh`, `nix-linux.sh`, `nix-macos.sh` and `nix-tvos.sh` to build `FFmpegKitNext` locally for each native platform.
 
-All scripts support additional options to enable optional libraries and disable platform architectures. See
-[Building](https://github.com/arthenica/ffmpeg-kit-next/wiki/Building) wiki page for the details.
+All scripts support additional options to enable optional libraries and disable platform architectures. See [Building](https://github.com/arthenica/ffmpeg-kit-next/wiki/Building) wiki page for the details.
 
 ### 8. FFmpegKitNext Library
 
@@ -104,10 +103,7 @@ Some parts of `FFmpeg` and some external libraries are licensed under the `GPL`.
 
 `FFmpegKitNext` binaries generated use the same major and minor version numbers as the upstream `FFmpeg` project. The
 third and last number in the version string, if exists, is specific to `FFmpegKitNext`. It shows different releases from
-the same `FFmpeg` release branch. 
-
-`dev` part in the version string indicates that `FFmpeg` source code is cloned from the `FFmpeg` `master` branch and
-the exact version number of `FFmpeg` is obtained using the `git describe --tags` command.
+the same `FFmpeg` release branch.
 
 ### 11. Documentation
 
@@ -119,7 +115,7 @@ You can see how `FFmpegKitNext` is used inside an application by running test ap
 [FFmpegKitNext Test](https://github.com/arthenica/ffmpeg-kit-next-test) project.
 
 All applications are identical and supports command execution, video encoding, accessing https urls, encoding audio,
-burning subtitles, video stabilisation, pipe operations and concurrent command execution.
+burning subtitles, video stabilisation, pipe operations, ffkit protocols and concurrent command execution.
 
 ### 13. License
 
