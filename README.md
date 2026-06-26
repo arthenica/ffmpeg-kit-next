@@ -108,6 +108,7 @@ the same `FFmpeg` release branch.
 |    Platforms     |                                 FFmpegKit Version                                 | FFmpeg Version | Release Date |
 |:----------------:|:---------------------------------------------------------------------------------:|:--------------:|:------------:|
 |  Android<br>Flutter<br>iOS<br>Linux<br>macOS<br>React Native<br>tvOS      |   [6.1.0](https://github.com/arthenica/ffmpeg-kit-next/releases/tag/v6.1.0)    |      6.1.2       | Jun 26, 2026 |
+|  Android<br>Flutter<br>iOS<br>Linux<br>macOS<br>React Native<br>tvOS      |   [6.1.1](https://github.com/arthenica/ffmpeg-kit-next/releases/tag/v6.1.1)    |      6.1.6       | Jun 27, 2026 |
 
 
 ### 11. Documentation

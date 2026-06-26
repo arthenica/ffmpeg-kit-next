@@ -17,3 +17,10 @@ rm -rf ../apple/src/.libs
 
 rm -rf ../linux/src/.deps
 rm -rf ../linux/src/.libs
+
+rm -rf ../react-native/android/libs-maven
+rm -rf ../react-native/ios/Frameworks
+
+rm -rf ../flutter/flutter/android/libs-maven
+rm -rf ../flutter/flutter/ios/ffmpeg_kit_next_flutter/Frameworks
+rm -rf ../flutter/flutter/macos/ffmpeg_kit_next_flutter/Frameworks

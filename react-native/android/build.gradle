@@ -29,8 +29,8 @@ android {
   defaultConfig {
     minSdkVersion 24
     targetSdkVersion 34
-    versionCode 610
-    versionName "6.1.0"
+    versionCode 611
+    versionName "6.1.1"
   }
 
   buildTypes {
@@ -127,5 +127,5 @@ repositories {
 dependencies {
   api 'com.facebook.react:react-native:+'
   // Locally built FFmpegKit AAR resolved from the android/libs-maven Maven repo.
-  implementation 'com.arthenica:ffmpeg-kit-next:6.1.0'
+  implementation 'com.arthenica:ffmpeg-kit-next:6.1.1'
 }
