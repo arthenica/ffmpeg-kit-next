@@ -1,0 +1,30 @@
+--- a/configure.ac
++++ b/configure.ac
+@@ -4338,10 +4338,12 @@
+         SOURCES="$SOURCES $srcdir/src/core/unix/*.c"
+         # The iOS platform requires special setup.
+         AC_DEFINE(SDL_VIDEO_DRIVER_UIKIT, 1, [ ])
+-        AC_DEFINE(SDL_VIDEO_OPENGL_ES2, 1, [ ])
+-        AC_DEFINE(SDL_VIDEO_OPENGL_ES, 1, [ ])
+-        AC_DEFINE(SDL_VIDEO_RENDER_OGL_ES, 1, [ ])
+-        AC_DEFINE(SDL_VIDEO_RENDER_OGL_ES2, 1, [ ])
++        if test x$enable_video_opengles = xyes; then
++            AC_DEFINE(SDL_VIDEO_OPENGL_ES2, 1, [ ])
++            AC_DEFINE(SDL_VIDEO_OPENGL_ES, 1, [ ])
++            AC_DEFINE(SDL_VIDEO_RENDER_OGL_ES, 1, [ ])
++            AC_DEFINE(SDL_VIDEO_RENDER_OGL_ES2, 1, [ ])
++        fi
+         SOURCES="$SOURCES $srcdir/src/video/uikit/*.m"
+         SUMMARY_video="${SUMMARY_video} uikit"
+         have_video=yes
+@@ -4357,7 +4359,9 @@
+         EXTRA_LDFLAGS="$EXTRA_LDFLAGS -Wl,-framework,CoreMotion"
+         EXTRA_LDFLAGS="$EXTRA_LDFLAGS -Wl,-framework,Foundation"
+         EXTRA_LDFLAGS="$EXTRA_LDFLAGS -Wl,-framework,GameController"
+-        EXTRA_LDFLAGS="$EXTRA_LDFLAGS -Wl,-framework,OpenGLES"
++        if test x$enable_video_opengles = xyes; then
++            EXTRA_LDFLAGS="$EXTRA_LDFLAGS -Wl,-framework,OpenGLES"
++        fi
+         EXTRA_LDFLAGS="$EXTRA_LDFLAGS -Wl,-framework,QuartzCore"
+         EXTRA_LDFLAGS="$EXTRA_LDFLAGS -Wl,-framework,UIKit"
+

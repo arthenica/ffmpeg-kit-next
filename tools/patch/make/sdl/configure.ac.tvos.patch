@@ -1,0 +1,39 @@
+--- a/configure.ac
++++ b/configure.ac
+@@ -4271,8 +4271,16 @@
+         SOURCES="$srcdir/src/main/haiku/*.cc $SOURCES"
+         EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lroot -lbe -lmedia -lgame -ldevice -ltextencoding"
+         ;;
+-    *-ios-*)
++    *-ios-*|*-tvos-*)
+         ARCH=ios
++        case $host in
++            *-tvos-*)
++                have_tvos=yes
++                ;;
++            *)
++                have_tvos=no
++                ;;
++        esac
+ 
+         CheckVisibilityHidden
+         CheckWerror
+@@ -4307,7 +4315,7 @@
+         #    EXTRA_LDFLAGS="$EXTRA_LDFLAGS -Wl,-framework,ForceFeedback"
+         #fi
+         # Set up files for the sensor library
+-        if test x$enable_sensor = xyes; then
++        if test x$enable_sensor = xyes -a x$have_tvos != xyes; then
+             AC_DEFINE(SDL_SENSOR_COREMOTION, 1, [ ])
+             SOURCES="$SOURCES $srcdir/src/sensor/coremotion/*.m"
+             have_sensor=yes
+@@ -4351,6 +4359,8 @@
+         EXTRA_LDFLAGS="$EXTRA_LDFLAGS -Wl,-framework,AudioToolbox"
+         EXTRA_LDFLAGS="$EXTRA_LDFLAGS -Wl,-framework,CoreAudio"
+         EXTRA_LDFLAGS="$EXTRA_LDFLAGS -Wl,-framework,CoreGraphics"
+-        EXTRA_LDFLAGS="$EXTRA_LDFLAGS -Wl,-framework,CoreMotion"
++        if test x$have_tvos != xyes; then
++            EXTRA_LDFLAGS="$EXTRA_LDFLAGS -Wl,-framework,CoreMotion"
++        fi
+         EXTRA_LDFLAGS="$EXTRA_LDFLAGS -Wl,-framework,Foundation"
+         EXTRA_LDFLAGS="$EXTRA_LDFLAGS -Wl,-framework,GameController"

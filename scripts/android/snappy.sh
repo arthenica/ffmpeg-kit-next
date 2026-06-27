@@ -31,4 +31,4 @@ make -j$(get_cpu_count) || return 1
 make install || return 1
 
 # CREATE PACKAGE CONFIG MANUALLY
-create_snappy_package_config "1.1.9" || return 1
+create_snappy_package_config "1.2.2" || return 1

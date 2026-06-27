@@ -159,6 +159,7 @@
         nasm
         yasm
         gettext
+        gperf
         libiconv
         python3
         perl
@@ -173,7 +174,6 @@
         findutils
         gnumake
         gnugrep
-        gperf
         groff
         gtk-doc
         jdk17
@@ -198,7 +198,6 @@
         gcc
         gnumake
         gnugrep
-        gperf
         groff
         gtk-doc
         libtasn1

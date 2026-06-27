@@ -1,5 +1,15 @@
 #!/bin/bash
 
+# DETERMINE POINTER SIZE PER ARCH SO LIBJPEG-TURBO CAN DERIVE SIMD CPU_TYPE UNDER CMAKE_SYSTEM_NAME=Generic
+case ${ARCH} in
+arm-v7a | arm-v7a-neon | x86)
+  SIMD_VOID_P_SIZE=4
+  ;;
+arm64-v8a | x86-64)
+  SIMD_VOID_P_SIZE=8
+  ;;
+esac
+
 mkdir -p "${BUILD_DIR}" || return 1
 cd "${BUILD_DIR}" || return 1
 
@@ -23,9 +33,11 @@ cmake -Wno-dev \
   -DENABLE_SHARED=0 \
   -DWITH_JPEG8=1 \
   -DWITH_SIMD=1 \
+  -DREQUIRE_SIMD=1 \
   -DWITH_TURBOJPEG=0 \
   -DWITH_JAVA=0 \
   -DCMAKE_SYSTEM_PROCESSOR=$(get_cmake_system_processor) \
+  -DCMAKE_SIZEOF_VOID_P=${SIMD_VOID_P_SIZE} \
   "${BASEDIR}"/src/"${LIB_NAME}" || return 1
 
 make -j$(get_cpu_count) || return 1

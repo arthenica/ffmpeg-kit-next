@@ -11,11 +11,13 @@ fi
 ./configure \
   --prefix="${LIB_INSTALL_PREFIX}" \
   --with-pic \
-  --without-x \
+  --disable-video-x11 \
   --with-sysroot="${ANDROID_SYSROOT}" \
   --enable-static \
   --disable-shared \
   --disable-fast-install \
+  --disable-hidapi \
+  --disable-sensor \
   --host="${HOST}" || return 1
 
 make -j$(get_cpu_count) || return 1

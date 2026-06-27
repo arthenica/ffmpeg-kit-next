@@ -93,7 +93,7 @@ get_app_specific_cflags() {
   jpeg)
     APP_FLAGS="-Wno-nullability-completeness"
     ;;
-  kvazaar)
+  kvazaar | openssl)
     APP_FLAGS="-std=gnu99 -Wno-unused-function"
     ;;
   leptonica)

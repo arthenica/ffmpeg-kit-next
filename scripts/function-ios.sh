@@ -134,7 +134,7 @@ get_app_specific_cflags() {
   jpeg)
     APP_FLAGS="-Wno-nullability-completeness"
     ;;
-  kvazaar)
+  kvazaar | openssl)
     APP_FLAGS="-std=gnu99 -Wno-unused-function"
     ;;
   leptonica)
@@ -149,7 +149,7 @@ get_app_specific_cflags() {
   libwebp | xvidcore)
     APP_FLAGS="-fno-common -DPIC"
     ;;
-  openh264 | openssl | x265)
+  openh264 | x265)
     APP_FLAGS="-Wno-unused-function"
     ;;
   sdl)
