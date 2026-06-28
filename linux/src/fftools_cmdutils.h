@@ -1,33 +1,42 @@
 /*
- * Various utilities for command line tools
+ * Original FFmpeg source:
+ * Derived from FFmpeg source file fftools/cmdutils.h.
  *
- * copyright (c) 2003 Fabrice Bellard
- * copyright (c) 2018-2022, 2026 Taner Sener
- * copyright (c) 2023-2024 ARTHENICA LTD
+ * FFmpegKitNext modifications:
+ * Copyright (c) 2026 Taner Sener
  *
- * This file is part of FFmpegKitNext.
+ * This modified file is part of FFmpegKitNext.
+ * It is derived from FFmpeg's fftools/cmdutils.h at tag n7.1.5.
  *
- * FFmpegKitNext is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General License as published by
+ * The original FFmpeg source is licensed under the GNU Lesser General
+ * Public License version 2.1 or later. FFmpegKitNext distributes this
+ * modified file under the GNU Lesser General Public License version 3 or
+ * later, as permitted by that original "or later" license.
+ *
+ * This file is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * FFmpegKitNext is distributed in the hope that it will be useful,
+ * This file is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with FFmpegKitNext. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
- * This file is the modified version of cmdutils.h file living in ffmpeg source
- * code under the fftools folder. We manually update it each time we depend on a
- * new ffmpeg version. Below you can see the list of changes applied by us to
- * develop mobile-ffmpeg and later ffmpeg-kit libraries.
+ * Modification history:
  *
  * ffmpeg-kit changes by ARTHENICA LTD
+ *
+ * 06.2026
+ * --------------------------------------------------------
+ * - FFmpeg 7.1.5 changes migrated
+ * - FFmpegKitNext integration updates preserved, including wrapper API,
+ *   callbacks, cancellation and thread/session-local execution where applicable
  *
  * 11.2024
  * --------------------------------------------------------
@@ -83,11 +92,13 @@
 #undef main /* We don't want SDL to override our main() */
 #endif
 
-/**
- * Defines logs printed to stderr by ffmpeg. They are not filtered and always
- * redirected.
+/*
+ * Custom log level used by FFmpegKit to force output that upstream FFmpeg would
+ * otherwise write directly to stdout/stderr (help text, banner, progress stats,
+ * ffprobe sections) through the av_log callback, so it is captured by the active
+ * session logs regardless of the configured log level.
  */
-#define AV_LOG_STDERR -16
+#define AV_LOG_STDERR    -16
 
 /**
  * program name, defined by the program for show_version().
@@ -103,12 +114,6 @@ extern __thread AVDictionary *sws_dict;
 extern __thread AVDictionary *swr_opts;
 extern __thread AVDictionary *format_opts, *codec_opts;
 extern __thread int hide_banner;
-extern __thread int find_stream_info;
-
-/**
- * Wraps exit with a program-specific cleanup routine.
- */
-void exit_program(int ret) av_noreturn;
 
 /**
  * Initialize dynamic library loading
@@ -132,6 +137,17 @@ int opt_default(void *optctx, const char *opt, const char *arg);
  */
 int opt_timelimit(void *optctx, const char *opt, const char *arg);
 
+enum OptionType {
+    OPT_TYPE_FUNC,
+    OPT_TYPE_BOOL,
+    OPT_TYPE_STRING,
+    OPT_TYPE_INT,
+    OPT_TYPE_INT64,
+    OPT_TYPE_FLOAT,
+    OPT_TYPE_DOUBLE,
+    OPT_TYPE_TIME,
+};
+
 /**
  * Parse a string and return its corresponding value as a double.
  *
@@ -143,56 +159,166 @@ int opt_timelimit(void *optctx, const char *opt, const char *arg);
  * @param min the minimum valid accepted value
  * @param max the maximum valid accepted value
  */
-int parse_number(const char *context, const char *numstr, int type, double min,
-                 double max, double *dst);
+int parse_number(const char *context, const char *numstr, enum OptionType type,
+                 double min, double max, double *dst);
+
+enum StreamList {
+    STREAM_LIST_ALL,
+    STREAM_LIST_STREAM_ID,
+    STREAM_LIST_PROGRAM,
+    STREAM_LIST_GROUP_ID,
+    STREAM_LIST_GROUP_IDX,
+};
+
+typedef struct StreamSpecifier {
+    // trailing stream index - pick idx-th stream that matches
+    // all the other constraints; -1 when not present
+    int                  idx;
+
+    // which stream list to consider
+    enum StreamList      stream_list;
+
+    // STREAM_LIST_STREAM_ID: stream ID
+    // STREAM_LIST_GROUP_IDX: group index
+    // STREAM_LIST_GROUP_ID:  group ID
+    // STREAM_LIST_PROGRAM:   program ID
+    int64_t              list_id;
+
+    // when not AVMEDIA_TYPE_UNKNOWN, consider only streams of this type
+    enum AVMediaType     media_type;
+    uint8_t              no_apic;
+
+    uint8_t              usable_only;
+
+    int                  disposition;
+
+    char                *meta_key;
+    char                *meta_val;
+
+    char                *remainder;
+} StreamSpecifier;
+
+/**
+ * Parse a stream specifier string into a form suitable for matching.
+ *
+ * @param ss Parsed specifier will be stored here; must be uninitialized
+ *           with stream_specifier_uninit() when no longer needed.
+ * @param spec String containing the stream specifier to be parsed.
+ * @param allow_remainder When 1, the part of spec that is left after parsing
+ *                        the stream specifier is stored into ss->remainder.
+ *                        When 0, any remainder will cause parsing to fail.
+ */
+int stream_specifier_parse(StreamSpecifier *ss, const char *spec,
+                           int allow_remainder, void *logctx);
+
+/**
+ * @return 1 if st matches the parsed specifier, 0 if it does not
+ */
+unsigned stream_specifier_match(const StreamSpecifier *ss,
+                                const AVFormatContext *s, const AVStream *st,
+                                void *logctx);
+
+void stream_specifier_uninit(StreamSpecifier *ss);
 
 typedef struct SpecifierOpt {
-    char *specifier; /**< stream/chapter/program/... specifier */
+    // original specifier or empty string
+    char            *specifier;
+    // parsed specifier for OPT_FLAG_PERSTREAM options
+    StreamSpecifier  stream_spec;
+
     union {
         uint8_t *str;
-        int i;
-        int64_t i64;
+        int        i;
+        int64_t  i64;
         uint64_t ui64;
-        float f;
-        double dbl;
+        float      f;
+        double   dbl;
     } u;
 } SpecifierOpt;
 
+typedef struct SpecifierOptList {
+    SpecifierOpt    *opt;
+    int           nb_opt;
+
+    /* Canonical option definition that was parsed into this list. */
+    const struct OptionDef *opt_canon;
+    /* Type corresponding to the field that should be used from SpecifierOpt.u.
+     * May not match the option type, e.g. OPT_TYPE_BOOL options are stored as
+     * int, so this field would be OPT_TYPE_INT for them */
+    enum OptionType type;
+} SpecifierOptList;
+
 typedef struct OptionDef {
     const char *name;
+    enum OptionType type;
     int flags;
-#define HAS_ARG 0x0001
-#define OPT_BOOL 0x0002
-#define OPT_EXPERT 0x0004
-#define OPT_STRING 0x0008
-#define OPT_VIDEO 0x0010
-#define OPT_AUDIO 0x0020
-#define OPT_INT 0x0080
-#define OPT_FLOAT 0x0100
-#define OPT_SUBTITLE 0x0200
-#define OPT_INT64 0x0400
-#define OPT_EXIT 0x0800
-#define OPT_DATA 0x1000
-#define OPT_PERFILE                                                            \
-    0x2000 /* the option is per-file (currently ffmpeg-only).                  \
-              implied by OPT_OFFSET or OPT_SPEC */
-#define OPT_OFFSET                                                             \
-    0x4000 /* option is specified as an offset in a passed optctx */
-#define OPT_SPEC                                                               \
-    0x8000 /* option is to be stored in an array of SpecifierOpt.              \
-              Implies OPT_OFFSET. Next element after the offset is             \
-              an int containing element count in the array. */
-#define OPT_TIME 0x10000
-#define OPT_DOUBLE 0x20000
-#define OPT_INPUT 0x40000
-#define OPT_OUTPUT 0x80000
-    union {
+
+/* The OPT_TYPE_FUNC option takes an argument.
+ * Must not be used with other option types, as for those it holds:
+ * - OPT_TYPE_BOOL do not take an argument
+ * - all other types do
+ */
+#define OPT_FUNC_ARG    (1 << 0)
+/* Program will immediately exit after processing this option */
+#define OPT_EXIT        (1 << 1)
+/* Option is intended for advanced users. Only affects
+ * help output.
+ */
+#define OPT_EXPERT      (1 << 2)
+#define OPT_VIDEO       (1 << 3)
+#define OPT_AUDIO       (1 << 4)
+#define OPT_SUBTITLE    (1 << 5)
+#define OPT_DATA        (1 << 6)
+/* The option is per-file (currently ffmpeg-only). At least one of OPT_INPUT,
+ * OPT_OUTPUT, OPT_DECODER must be set when this flag is in use.
+   */
+#define OPT_PERFILE     (1 << 7)
+
+/* Option is specified as an offset in a passed optctx.
+ * Always use as OPT_OFFSET in option definitions. */
+#define OPT_FLAG_OFFSET (1 << 8)
+#define OPT_OFFSET      (OPT_FLAG_OFFSET | OPT_PERFILE)
+
+/* Option is to be stored in a SpecifierOptList.
+   Always use as OPT_SPEC in option definitions. */
+#define OPT_FLAG_SPEC   (1 << 9)
+#define OPT_SPEC        (OPT_FLAG_SPEC | OPT_OFFSET)
+
+/* Option applies per-stream (implies OPT_SPEC). */
+#define OPT_FLAG_PERSTREAM  (1 << 10)
+#define OPT_PERSTREAM   (OPT_FLAG_PERSTREAM | OPT_SPEC)
+
+/* ffmpeg-only - specifies whether an OPT_PERFILE option applies to input,
+ * output, or both. */
+#define OPT_INPUT       (1 << 11)
+#define OPT_OUTPUT      (1 << 12)
+
+/* This option is a "canonical" form, to which one or more alternatives
+ * exist. These alternatives are listed in u1.names_alt. */
+#define OPT_HAS_ALT     (1 << 13)
+/* This option is an alternative form of some other option, whose
+ * name is stored in u1.name_canon */
+#define OPT_HAS_CANON   (1 << 14)
+
+/* ffmpeg-only - OPT_PERFILE may apply to standalone decoders */
+#define OPT_DECODER     (1 << 15)
+
+     union {
         void *dst_ptr;
         int (*func_arg)(void *, const char *, const char *);
         size_t off;
     } u;
     const char *help;
     const char *argname;
+
+    union {
+        /* Name of the canonical form of this option.
+         * Is valid when OPT_HAS_CANON is set. */
+        const char *name_canon;
+        /* A NULL-terminated list of alternate forms of this option.
+         * Is valid when OPT_HAS_ALT is set. */
+        const char * const *names_alt;
+    } u1;
 } OptionDef;
 
 /**
@@ -202,23 +328,15 @@ typedef struct OptionDef {
  * @param msg title of this group. Only printed if at least one option matches.
  * @param req_flags print only options which have all those flags set.
  * @param rej_flags don't print options which have any of those flags set.
- * @param alt_flags print only options that have at least one of those flags set
  */
 void show_help_options(const OptionDef *options, const char *msg, int req_flags,
-                       int rej_flags, int alt_flags);
+                       int rej_flags);
 
 /**
  * Show help for all options with given flags in class and all its
  * children.
  */
-void show_help_children(const AVClass *clazz, int flags);
-
-/**
- * Per-fftool specific help handler. Implemented in each
- * fftool, called by show_help().
- */
-void show_help_default_ffmpeg(const char *opt, const char *arg);
-void show_help_default_ffprobe(const char *opt, const char *arg);
+void show_help_children(const AVClass *class, int flags);
 
 /**
  * Parse the command line arguments.
@@ -233,13 +351,12 @@ void show_help_default_ffprobe(const char *opt, const char *arg);
  * not have to be processed.
  */
 int parse_options(void *optctx, int argc, char **argv, const OptionDef *options,
-                  int (*parse_arg_function)(void *optctx, const char *));
+                  int (* parse_arg_function)(void *optctx, const char*));
 
 /**
  * Parse one given option.
  *
- * @return on success 1 if arg was consumed, 0 otherwise; negative number on
- * error
+ * @return on success 1 if arg was consumed, 0 otherwise; negative number on error
  */
 int parse_option(void *optctx, const char *opt, const char *arg,
                  const OptionDef *options);
@@ -250,9 +367,9 @@ int parse_option(void *optctx, const char *opt, const char *arg,
  * used multiple times.
  */
 typedef struct Option {
-    const OptionDef *opt;
-    const char *key;
-    const char *val;
+    const OptionDef  *opt;
+    const char       *key;
+    const char       *val;
 } Option;
 
 typedef struct OptionGroupDef {
@@ -275,7 +392,7 @@ typedef struct OptionGroup {
     const char *arg;
 
     Option *opts;
-    int nb_opts;
+    int  nb_opts;
 
     AVDictionary *codec_opts;
     AVDictionary *format_opts;
@@ -291,14 +408,14 @@ typedef struct OptionGroupList {
     const OptionGroupDef *group_def;
 
     OptionGroup *groups;
-    int nb_groups;
+    int       nb_groups;
 } OptionGroupList;
 
 typedef struct OptionParseContext {
     OptionGroup global_opts;
 
     OptionGroupList *groups;
-    int nb_groups;
+    int           nb_groups;
 
     /* parsing state */
     OptionGroup cur_group;
@@ -308,9 +425,8 @@ typedef struct OptionParseContext {
  * Parse an options group and write results into optctx.
  *
  * @param optctx an app-specific options context. NULL for global options group
- * @param g option group
  */
-int parse_optgroup(void *optctx, OptionGroup *g);
+int parse_optgroup(void *optctx, OptionGroup *g, const OptionDef *defs);
 
 /**
  * Split the commandline into an intermediate form convenient for further
@@ -331,8 +447,8 @@ int parse_optgroup(void *optctx, OptionGroup *g);
  * same as the order of group definitions.
  */
 int split_commandline(OptionParseContext *octx, int argc, char *argv[],
-                      const OptionDef *options, const OptionGroupDef *groups,
-                      int nb_groups);
+                      const OptionDef *options,
+                      const OptionGroupDef *groups, int nb_groups);
 
 /**
  * Free all allocated memory in an OptionParseContext.
@@ -374,11 +490,13 @@ int check_stream_specifier(AVFormatContext *s, AVStream *st, const char *spec);
  * @param codec The particular codec for which the options should be filtered.
  *              If null, the default one is looked up according to the codec id.
  * @param dst a pointer to the created dictionary
+ * @param opts_used if non-NULL, every option stored in dst is also stored here,
+ *                  with specifiers preserved
  * @return a non-negative number on success, a negative error code on failure
  */
 int filter_codec_opts(const AVDictionary *opts, enum AVCodecID codec_id,
                       AVFormatContext *s, AVStream *st, const AVCodec *codec,
-                      AVDictionary **dst);
+                      AVDictionary **dst, AVDictionary **opts_used);
 
 /**
  * Setup AVCodecContext options for avformat_find_stream_info().
@@ -388,7 +506,8 @@ int filter_codec_opts(const AVDictionary *opts, enum AVCodecID codec_id,
  * Each dictionary will contain the options from codec_opts which can
  * be applied to the corresponding stream codec context.
  */
-int setup_find_stream_info_opts(AVFormatContext *s, AVDictionary *codec_opts,
+int setup_find_stream_info_opts(AVFormatContext *s,
+                                AVDictionary *codec_opts,
                                 AVDictionary ***dst);
 
 /**
@@ -400,7 +519,10 @@ int setup_find_stream_info_opts(AVFormatContext *s, AVDictionary *codec_opts,
  *
  * @see av_strerror()
  */
-void print_error(const char *filename, int err);
+static inline void print_error(const char *filename, int err)
+{
+    av_log(NULL, AV_LOG_ERROR, "%s: %s\n", filename, av_err2str(err));
+}
 
 /**
  * Print the program banner to stderr. The banner contents depend on the
@@ -434,8 +556,7 @@ int read_yesno(void);
  * preset, may be NULL
  */
 FILE *get_preset_file(char *filename, size_t filename_size,
-                      const char *preset_name, int is_path,
-                      const char *codec_name);
+                      const char *preset_name, int is_path, const char *codec_name);
 
 /**
  * Realloc array to hold new_size elements of elem_size.
@@ -462,21 +583,20 @@ int grow_array(void **array, int elem_size, int *size, int new_size);
  */
 void *allocate_array_elem(void *array, size_t elem_size, int *nb_elems);
 
-#define GROW_ARRAY(array, nb_elems)                                            \
-    grow_array((void **)&array, sizeof(*array), &nb_elems, nb_elems + 1)
-
-#define GET_PIX_FMT_NAME(pix_fmt)                                              \
-    const char *name = av_get_pix_fmt_name(pix_fmt);
-
-#define GET_CODEC_NAME(id) const char *name = avcodec_descriptor_get(id)->name;
-
-#define GET_SAMPLE_FMT_NAME(sample_fmt)                                        \
-    const char *name = av_get_sample_fmt_name(sample_fmt)
-
-#define GET_SAMPLE_RATE_NAME(rate)                                             \
-    char name[16];                                                             \
-    snprintf(name, sizeof(name), "%d", rate);
+#define GROW_ARRAY(array, nb_elems)\
+    grow_array((void**)&array, sizeof(*array), &nb_elems, nb_elems + 1)
 
 double get_rotation(const int32_t *displaymatrix);
+
+/* read file contents into a string */
+char *file_read(const char *filename);
+
+/* Remove keys in dictionary b from dictionary a */
+void remove_avoptions(AVDictionary **a, AVDictionary *b);
+
+/* Check if any keys exist in dictionary m */
+int check_avoptions(AVDictionary *m);
+
+int cmdutils_isalnum(char c);
 
 #endif /* FFTOOLS_CMDUTILS_H */

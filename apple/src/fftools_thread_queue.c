@@ -1,29 +1,42 @@
 /*
+ * Original FFmpeg source:
+ * Derived from FFmpeg source file fftools/thread_queue.c.
+ *
+ * FFmpegKitNext modifications:
  * Copyright (c) 2026 Taner Sener
  *
- * This file is part of FFmpegKitNext.
+ * This modified file is part of FFmpegKitNext.
+ * It is derived from FFmpeg's fftools/thread_queue.c at tag n7.1.5.
  *
- * FFmpegKitNext is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General License as published by
+ * The original FFmpeg source is licensed under the GNU Lesser General
+ * Public License version 2.1 or later. FFmpegKitNext distributes this
+ * modified file under the GNU Lesser General Public License version 3 or
+ * later, as permitted by that original "or later" license.
+ *
+ * This file is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * FFmpegKitNext is distributed in the hope that it will be useful,
+ * This file is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with FFmpegKitNext. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
- * This file is the modified version of thread_queue.c file living in ffmpeg
- * source code under the fftools folder. We manually update it each time we
- * depend on a new ffmpeg version. Below you can see the list of changes applied
- * by us to develop ffmpeg-kit library.
+ * Modification history:
  *
  * ffmpeg-kit changes by ARTHENICA LTD
+ *
+ * 06.2026
+ * --------------------------------------------------------
+ * - FFmpeg 7.1.5 changes migrated
+ * - FFmpegKitNext integration updates preserved, including wrapper API,
+ *   callbacks, cancellation and thread/session-local execution where applicable
  *
  * 07.2023
  * --------------------------------------------------------
@@ -50,24 +63,25 @@ enum {
 };
 
 typedef struct FifoElem {
-    void *obj;
+    void        *obj;
     unsigned int stream_idx;
 } FifoElem;
 
 struct ThreadQueue {
-    int *finished;
-    unsigned int nb_streams;
+    int              *finished;
+    unsigned int    nb_streams;
 
-    AVFifo *fifo;
+    AVFifo  *fifo;
 
     ObjPool *obj_pool;
-    void (*obj_move)(void *dst, void *src);
+    void   (*obj_move)(void *dst, void *src);
 
     pthread_mutex_t lock;
-    pthread_cond_t cond;
+    pthread_cond_t  cond;
 };
 
-void tq_free(ThreadQueue **ptq) {
+void tq_free(ThreadQueue **ptq)
+{
     ThreadQueue *tq = *ptq;
 
     if (!tq)
@@ -91,8 +105,8 @@ void tq_free(ThreadQueue **ptq) {
 }
 
 ThreadQueue *tq_alloc(unsigned int nb_streams, size_t queue_size,
-                      ObjPool *obj_pool,
-                      void (*obj_move)(void *dst, void *src)) {
+                      ObjPool *obj_pool, void (*obj_move)(void *dst, void *src))
+{
     ThreadQueue *tq;
     int ret;
 
@@ -131,7 +145,8 @@ fail:
     return NULL;
 }
 
-int tq_send(ThreadQueue *tq, unsigned int stream_idx, void *data) {
+int tq_send(ThreadQueue *tq, unsigned int stream_idx, void *data)
+{
     int *finished;
     int ret;
 
@@ -152,7 +167,7 @@ int tq_send(ThreadQueue *tq, unsigned int stream_idx, void *data) {
         ret = AVERROR_EOF;
         *finished |= FINISHED_SEND;
     } else {
-        FifoElem elem = {.stream_idx = stream_idx};
+        FifoElem elem = { .stream_idx = stream_idx };
 
         ret = objpool_get(tq->obj_pool, &elem.obj);
         if (ret < 0)
@@ -171,11 +186,18 @@ finish:
     return ret;
 }
 
-static int receive_locked(ThreadQueue *tq, int *stream_idx, void *data) {
+static int receive_locked(ThreadQueue *tq, int *stream_idx,
+                          void *data)
+{
     FifoElem elem;
     unsigned int nb_finished = 0;
 
-    if (av_fifo_read(tq->fifo, &elem, 1) >= 0) {
+    while (av_fifo_read(tq->fifo, &elem, 1) >= 0) {
+        if (tq->finished[elem.stream_idx] & FINISHED_RECV) {
+            objpool_release(tq->obj_pool, &elem.obj);
+            continue;
+        }
+
         tq->obj_move(data, elem.obj);
         objpool_release(tq->obj_pool, &elem.obj);
         *stream_idx = elem.stream_idx;
@@ -183,13 +205,13 @@ static int receive_locked(ThreadQueue *tq, int *stream_idx, void *data) {
     }
 
     for (unsigned int i = 0; i < tq->nb_streams; i++) {
-        if (!(tq->finished[i] & FINISHED_SEND))
+        if (!tq->finished[i])
             continue;
 
         /* return EOF to the consumer at most once for each stream */
         if (!(tq->finished[i] & FINISHED_RECV)) {
             tq->finished[i] |= FINISHED_RECV;
-            *stream_idx = i;
+            *stream_idx   = i;
             return AVERROR_EOF;
         }
 
@@ -199,7 +221,8 @@ static int receive_locked(ThreadQueue *tq, int *stream_idx, void *data) {
     return nb_finished == tq->nb_streams ? AVERROR_EOF : AVERROR(EAGAIN);
 }
 
-int tq_receive(ThreadQueue *tq, int *stream_idx, void *data) {
+int tq_receive(ThreadQueue *tq, int *stream_idx, void *data)
+{
     int ret;
 
     *stream_idx = -1;
@@ -207,7 +230,14 @@ int tq_receive(ThreadQueue *tq, int *stream_idx, void *data) {
     pthread_mutex_lock(&tq->lock);
 
     while (1) {
+        size_t can_read = av_fifo_can_read(tq->fifo);
+
         ret = receive_locked(tq, stream_idx, data);
+
+        // signal other threads if the fifo state changed
+        if (can_read != av_fifo_can_read(tq->fifo))
+            pthread_cond_broadcast(&tq->cond);
+
         if (ret == AVERROR(EAGAIN)) {
             pthread_cond_wait(&tq->cond, &tq->lock);
             continue;
@@ -216,15 +246,13 @@ int tq_receive(ThreadQueue *tq, int *stream_idx, void *data) {
         break;
     }
 
-    if (ret == 0)
-        pthread_cond_broadcast(&tq->cond);
-
     pthread_mutex_unlock(&tq->lock);
 
     return ret;
 }
 
-void tq_send_finish(ThreadQueue *tq, unsigned int stream_idx) {
+void tq_send_finish(ThreadQueue *tq, unsigned int stream_idx)
+{
     av_assert0(stream_idx < tq->nb_streams);
 
     pthread_mutex_lock(&tq->lock);
@@ -238,7 +266,8 @@ void tq_send_finish(ThreadQueue *tq, unsigned int stream_idx) {
     pthread_mutex_unlock(&tq->lock);
 }
 
-void tq_receive_finish(ThreadQueue *tq, unsigned int stream_idx) {
+void tq_receive_finish(ThreadQueue *tq, unsigned int stream_idx)
+{
     av_assert0(stream_idx < tq->nb_streams);
 
     pthread_mutex_lock(&tq->lock);

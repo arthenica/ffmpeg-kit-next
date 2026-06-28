@@ -335,7 +335,7 @@ set_toolchain_paths() {
 
     # patch gas-preprocessor.pl against the following warning
     # Unescaped left brace in regex is deprecated here (and will be fatal in Perl 5.32), passed through in regex; marked by <-- HERE in m/(?:ld|st)\d\s+({ <-- HERE \s*v(\d+)\.(\d[bhsdBHSD])\s*-\s*v(\d+)\.(\d[bhsdBHSD])\s*})/ at /Users/taner/Projects/ffmpeg-kit/.tmp/gas-preprocessor.pl line 1065.
-    sed -i .tmp "s/s\+({/s\+(\\\\{/g;s/s\*})/s\*\\\\})/g" "${FFMPEG_KIT_TMPDIR}"/gas-preprocessor.pl
+    ${SED_INLINE} 's/s+({/s+(\\{/g;s/s\*})/s*\\})/g' "${FFMPEG_KIT_TMPDIR}"/gas-preprocessor.pl
   fi
 
   LOCAL_GAS_PREPROCESSOR="${FFMPEG_KIT_TMPDIR}/gas-preprocessor.pl"

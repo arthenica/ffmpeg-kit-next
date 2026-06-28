@@ -1,30 +1,43 @@
 /*
+ * Original FFmpeg source:
+ * Derived from FFmpeg source file fftools/ffmpeg_hw.c.
+ *
+ * FFmpegKitNext modifications:
  * Copyright (c) 2018-2019, 2026 Taner Sener
  * Copyright (c) 2023-2024 ARTHENICA LTD
  *
- * This file is part of FFmpegKitNext.
+ * This modified file is part of FFmpegKitNext.
+ * It is derived from FFmpeg's fftools/ffmpeg_hw.c at tag n7.1.5.
  *
- * FFmpegKitNext is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General License as published by
+ * The original FFmpeg source is licensed under the GNU Lesser General
+ * Public License version 2.1 or later. FFmpegKitNext distributes this
+ * modified file under the GNU Lesser General Public License version 3 or
+ * later, as permitted by that original "or later" license.
+ *
+ * This file is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * FFmpegKitNext is distributed in the hope that it will be useful,
+ * This file is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with FFmpegKitNext. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
- * This file is the modified version of ffmpeg_hw.c file living in ffmpeg source
- * code under the fftools folder. We manually update it each time we depend on a
- * new ffmpeg version. Below you can see the list of changes applied by us to
- * develop mobile-ffmpeg and later ffmpeg-kit libraries.
+ * Modification history:
  *
  * ffmpeg-kit changes by ARTHENICA LTD
+ *
+ * 06.2026
+ * --------------------------------------------------------
+ * - FFmpeg 7.1.5 changes migrated
+ * - FFmpegKitNext integration updates preserved, including wrapper API,
+ *   callbacks, cancellation and thread/session-local execution where applicable
  *
  * 11.2024
  * --------------------------------------------------------
@@ -48,16 +61,15 @@
 
 #include <string.h>
 
-#include "libavfilter/buffersink.h"
-#include "libavutil/avstring.h"
-#include "libavutil/pixdesc.h"
+#include "libavutil/mem.h"
 
 #include "fftools_ffmpeg.h"
 
 __thread int nb_hw_devices;
 __thread HWDevice **hw_devices;
 
-HWDevice *hw_device_get_by_type(enum AVHWDeviceType type) {
+HWDevice *hw_device_get_by_type(enum AVHWDeviceType type)
+{
     HWDevice *found = NULL;
     int i;
     for (i = 0; i < nb_hw_devices; i++) {
@@ -70,7 +82,8 @@ HWDevice *hw_device_get_by_type(enum AVHWDeviceType type) {
     return found;
 }
 
-HWDevice *hw_device_get_by_name(const char *name) {
+HWDevice *hw_device_get_by_name(const char *name)
+{
     int i;
     for (i = 0; i < nb_hw_devices; i++) {
         if (!strcmp(hw_devices[i]->name, name))
@@ -79,10 +92,11 @@ HWDevice *hw_device_get_by_name(const char *name) {
     return NULL;
 }
 
-static HWDevice *hw_device_add(void) {
+static HWDevice *hw_device_add(void)
+{
     int err;
-    err =
-        av_reallocp_array(&hw_devices, nb_hw_devices + 1, sizeof(*hw_devices));
+    err = av_reallocp_array(&hw_devices, nb_hw_devices + 1,
+                            sizeof(*hw_devices));
     if (err) {
         nb_hw_devices = 0;
         return NULL;
@@ -93,7 +107,8 @@ static HWDevice *hw_device_add(void) {
     return hw_devices[nb_hw_devices++];
 }
 
-static char *hw_device_default_name(enum AVHWDeviceType type) {
+static char *hw_device_default_name(enum AVHWDeviceType type)
+{
     // Make an automatic name of the form "type%d".  We arbitrarily
     // limit at 1000 anonymous devices of the same type - there is
     // probably something else very wrong if you get to this limit.
@@ -117,7 +132,8 @@ static char *hw_device_default_name(enum AVHWDeviceType type) {
     return name;
 }
 
-int hw_device_init_from_string(const char *arg, HWDevice **dev_out) {
+int hw_device_init_from_string(const char *arg, HWDevice **dev_out)
+{
     // "type=name"
     // "type=name,key=value,key2=value2"
     // "type=name:device,key=value,key2=value2"
@@ -174,7 +190,8 @@ int hw_device_init_from_string(const char *arg, HWDevice **dev_out) {
 
     if (!*p) {
         // New device with no parameters.
-        err = av_hwdevice_ctx_create(&device_ref, type, NULL, NULL, 0);
+        err = av_hwdevice_ctx_create(&device_ref, type,
+                                     NULL, NULL, 0);
         if (err < 0)
             goto fail;
 
@@ -198,9 +215,7 @@ int hw_device_init_from_string(const char *arg, HWDevice **dev_out) {
         }
 
         err = av_hwdevice_ctx_create(&device_ref, type,
-                                     q      ? device
-                                     : p[0] ? p
-                                            : NULL,
+                                     q ? device : p[0] ? p : NULL,
                                      options, 0);
         if (err < 0)
             goto fail;
@@ -214,8 +229,8 @@ int hw_device_init_from_string(const char *arg, HWDevice **dev_out) {
             goto invalid;
         }
 
-        err = av_hwdevice_ctx_create_derived(&device_ref, type, src->device_ref,
-                                             0);
+        err = av_hwdevice_ctx_create_derived(&device_ref, type,
+                                             src->device_ref, 0);
         if (err < 0)
             goto fail;
     } else if (*p == ',') {
@@ -226,7 +241,8 @@ int hw_device_init_from_string(const char *arg, HWDevice **dev_out) {
             goto invalid;
         }
 
-        err = av_hwdevice_ctx_create(&device_ref, type, NULL, options, 0);
+        err = av_hwdevice_ctx_create(&device_ref, type,
+                                     NULL, options, 0);
         if (err < 0)
             goto fail;
     } else {
@@ -256,18 +272,21 @@ done:
     av_dict_free(&options);
     return err;
 invalid:
-    av_log(NULL, AV_LOG_ERROR, "Invalid device specification \"%s\": %s\n", arg,
-           errmsg);
+    av_log(NULL, AV_LOG_ERROR,
+           "Invalid device specification \"%s\": %s\n", arg, errmsg);
     err = AVERROR(EINVAL);
     goto done;
 fail:
-    av_log(NULL, AV_LOG_ERROR, "Device creation failed: %d.\n", err);
+    av_log(NULL, AV_LOG_ERROR,
+           "Device creation failed: %d.\n", err);
     av_buffer_unref(&device_ref);
     goto done;
 }
 
-int hw_device_init_from_type(enum AVHWDeviceType type, const char *device,
-                             HWDevice **dev_out) {
+int hw_device_init_from_type(enum AVHWDeviceType type,
+                             const char *device,
+                             HWDevice **dev_out)
+{
     AVBufferRef *device_ref = NULL;
     HWDevice *dev;
     char *name;
@@ -281,7 +300,8 @@ int hw_device_init_from_type(enum AVHWDeviceType type, const char *device,
 
     err = av_hwdevice_ctx_create(&device_ref, type, device, NULL, 0);
     if (err < 0) {
-        av_log(NULL, AV_LOG_ERROR, "Device creation failed: %d.\n", err);
+        av_log(NULL, AV_LOG_ERROR,
+               "Device creation failed: %d.\n", err);
         goto fail;
     }
 
@@ -306,7 +326,8 @@ fail:
     return err;
 }
 
-void hw_device_free_all(void) {
+void hw_device_free_all(void)
+{
     int i;
     for (i = 0; i < nb_hw_devices; i++) {
         av_freep(&hw_devices[i]->name);
@@ -317,50 +338,8 @@ void hw_device_free_all(void) {
     nb_hw_devices = 0;
 }
 
-int hwaccel_retrieve_data(AVCodecContext *avctx, AVFrame *input) {
-    InputStream *ist = avctx->opaque;
-    AVFrame *output = NULL;
-    enum AVPixelFormat output_format = ist->hwaccel_output_format;
-    int err;
-
-    if (input->format == output_format) {
-        // Nothing to do.
-        return 0;
-    }
-
-    output = av_frame_alloc();
-    if (!output)
-        return AVERROR(ENOMEM);
-
-    output->format = output_format;
-
-    err = av_hwframe_transfer_data(output, input, 0);
-    if (err < 0) {
-        av_log(avctx, AV_LOG_ERROR,
-               "Failed to transfer data to "
-               "output frame: %d.\n",
-               err);
-        goto fail;
-    }
-
-    err = av_frame_copy_props(output, input);
-    if (err < 0) {
-        av_frame_unref(output);
-        goto fail;
-    }
-
-    av_frame_unref(input);
-    av_frame_move_ref(input, output);
-    av_frame_free(&output);
-
-    return 0;
-
-fail:
-    av_frame_free(&output);
-    return err;
-}
-
-AVBufferRef *hw_device_for_filter(void) {
+AVBufferRef *hw_device_for_filter(void)
+{
     // Pick the last hardware device if the user doesn't pick the device for
     // filters explicitly with the filter_hw_device option.
     if (filter_hw_device)
@@ -369,14 +348,12 @@ AVBufferRef *hw_device_for_filter(void) {
         HWDevice *dev = hw_devices[nb_hw_devices - 1];
 
         if (nb_hw_devices > 1)
-            av_log(
-                NULL, AV_LOG_WARNING,
-                "There are %d hardware devices. device "
-                "%s of type %s is picked for filters by default. Set hardware "
-                "device explicitly with the filter_hw_device option if device "
-                "%s is not usable for filters.\n",
-                nb_hw_devices, dev->name, av_hwdevice_get_type_name(dev->type),
-                dev->name);
+            av_log(NULL, AV_LOG_WARNING, "There are %d hardware devices. device "
+                   "%s of type %s is picked for filters by default. Set hardware "
+                   "device explicitly with the filter_hw_device option if device "
+                   "%s is not usable for filters.\n",
+                   nb_hw_devices, dev->name,
+                   av_hwdevice_get_type_name(dev->type), dev->name);
 
         return dev->device_ref;
     }

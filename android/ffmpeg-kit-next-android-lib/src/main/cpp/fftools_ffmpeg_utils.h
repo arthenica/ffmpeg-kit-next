@@ -1,12 +1,12 @@
 /*
  * Original FFmpeg source:
- * Derived from FFmpeg source file fftools/objpool.h.
+ * Derived from FFmpeg source file fftools/ffmpeg_utils.h.
  *
  * FFmpegKitNext modifications:
- * Copyright (c) 2022, 2026 Taner Sener
+ * Copyright (c) 2026 Taner Sener
  *
  * This modified file is part of FFmpegKitNext.
- * It is derived from FFmpeg's fftools/objpool.h at tag n7.1.5.
+ * It is derived from FFmpeg's fftools/ffmpeg_utils.h at tag n7.1.5.
  *
  * The original FFmpeg source is licensed under the GNU Lesser General
  * Public License version 2.1 or later. FFmpegKitNext distributes this
@@ -30,35 +30,49 @@
 /*
  * Modification history:
  *
- * ffmpeg-kit changes by ARTHENICA LTD
- *
  * 06.2026
  * --------------------------------------------------------
- * - FFmpeg 7.1.5 changes migrated
- * - FFmpegKitNext integration updates preserved, including wrapper API,
- *   callbacks, cancellation and thread/session-local execution where applicable
- *
- * 07.2023
- * --------------------------------------------------------
- * - FFmpeg 6.0 changes migrated
+ * - Added to FFmpegKitNext from FFmpeg n7.1.5.
+ * - fftools_ wrapper integration and Apple build compatibility updates
+ *   applied for the FFmpegKit API.
  */
 
-#ifndef FFTOOLS_OBJPOOL_H
-#define FFTOOLS_OBJPOOL_H
+#ifndef FFTOOLS_FFMPEG_UTILS_H
+#define FFTOOLS_FFMPEG_UTILS_H
 
-typedef struct ObjPool ObjPool;
+#include <stdint.h>
 
-typedef void* (*ObjPoolCBAlloc)(void);
-typedef void  (*ObjPoolCBReset)(void *);
-typedef void  (*ObjPoolCBFree)(void **);
+#include "libavutil/common.h"
+#include "libavutil/frame.h"
+#include "libavutil/rational.h"
 
-void     objpool_free(ObjPool **op);
-ObjPool *objpool_alloc(ObjPoolCBAlloc cb_alloc, ObjPoolCBReset cb_reset,
-                       ObjPoolCBFree cb_free);
-ObjPool *objpool_alloc_packets(void);
-ObjPool *objpool_alloc_frames(void);
+#include "libavcodec/packet.h"
 
-int  objpool_get(ObjPool *op, void **obj);
-void objpool_release(ObjPool *op, void **obj);
+typedef struct Timestamp {
+    int64_t    ts;
+    AVRational tb;
+} Timestamp;
 
-#endif // FFTOOLS_OBJPOOL_H
+/**
+ * Merge two return codes - return one of the error codes if at least one of
+ * them was negative, 0 otherwise.
+ */
+static inline int err_merge(int err0, int err1)
+{
+    // prefer "real" errors over EOF
+    if ((err0 >= 0 || err0 == AVERROR_EOF) && err1 < 0)
+        return err1;
+    return (err0 < 0) ? err0 : FFMIN(err1, 0);
+}
+
+static inline void pkt_move(void *dst, void *src)
+{
+    av_packet_move_ref(dst, src);
+}
+
+static inline void frame_move(void *dst, void *src)
+{
+    av_frame_move_ref(dst, src);
+}
+
+#endif // FFTOOLS_FFMPEG_UTILS_H
