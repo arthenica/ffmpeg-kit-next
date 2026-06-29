@@ -13,13 +13,24 @@ armv7 | armv7s)
   TARGET="$(get_target_cpu)-darwin-gcc"
   ASM_OPTIONS="--disable-runtime-cpu-detect --enable-neon --enable-neon-asm"
   ;;
+arm64)
+  TARGET="arm64-darwin-gcc"
+
+  # --enable-neon-asm option disabled because it is ARMv7-style 32-bit only
+  ASM_OPTIONS="--enable-runtime-cpu-detect --enable-neon"
+  ;;
+arm64e)
+  TARGET="arm64-darwin-gcc"
+
+  # --enable-neon-asm option disabled because it is ARMv7-style 32-bit only
+  # --enable-neon-dotprod causes arm64e LR authentication requires ptrauth
+  ASM_OPTIONS="--enable-runtime-cpu-detect --enable-neon --disable-neon-dotprod"
+  ;;
 arm64*)
   TARGET="arm64-darwin-gcc"
 
-  # --enable-neon-asm option not added because it causes the following error
-  # vpx_dsp/arm/intrapred_neon_asm.asm.S:653:26: error: vector register expected
-  #    vst1.64
-  ASM_OPTIONS="--disable-runtime-cpu-detect --enable-neon"
+  # --enable-neon-asm option disabled because it is ARMv7-style 32-bit only
+  ASM_OPTIONS="--enable-runtime-cpu-detect --enable-neon"
   ;;
 i386)
   TARGET="x86-iphonesimulator-gcc"

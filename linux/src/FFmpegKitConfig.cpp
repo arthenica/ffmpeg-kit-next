@@ -510,6 +510,19 @@ void cancelSession(long sessionId) {
 }
 
 /**
+ * Adds a cancel session request for every running session to the session map.
+ * Only sessions currently marked running (1) are switched to cancel (2); slots
+ * that are idle (0) or already cancelling (2) are left untouched, and a session
+ * that starts after this call claims its own slot and is therefore unaffected.
+ */
+void cancelAllSessions(void) {
+    for (int i = 0; i < SESSION_MAP_SIZE; i++) {
+        short running = 1;
+        std::atomic_compare_exchange_strong(&sessionMap[i], &running, (short)2);
+    }
+}
+
+/**
  * Checks whether a cancel request for the given session id exists in the
  * session map.
  *
@@ -1315,7 +1328,7 @@ executeFFmpeg(const long sessionId,
     av_log_set_level(configuredLogLevel);
 
     char **commandCharPArray =
-        (char **)av_malloc(sizeof(char *) * (arguments->size() + 1));
+        (char **)av_malloc(sizeof(char *) * (arguments->size() + 2));
 
     /* PRESERVE USAGE FORMAT
      *
@@ -1330,6 +1343,7 @@ executeFFmpeg(const long sessionId,
     for (auto it = arguments->begin(); it != arguments->end(); it++, i++) {
         commandCharPArray[i + 1] = (char *)it->c_str();
     }
+    commandCharPArray[arguments->size() + 1] = NULL;
 
     // REGISTER THE ID BEFORE STARTING THE SESSION
     globalSessionId = sessionId;
@@ -1358,7 +1372,7 @@ int executeFFprobe(const long sessionId,
     av_log_set_level(configuredLogLevel);
 
     char **commandCharPArray =
-        (char **)av_malloc(sizeof(char *) * (arguments->size() + 1));
+        (char **)av_malloc(sizeof(char *) * (arguments->size() + 2));
 
     /* PRESERVE USAGE FORMAT
      *
@@ -1373,6 +1387,7 @@ int executeFFprobe(const long sessionId,
     for (auto it = arguments->begin(); it != arguments->end(); it++, i++) {
         commandCharPArray[i + 1] = (char *)it->c_str();
     }
+    commandCharPArray[arguments->size() + 1] = NULL;
 
     // REGISTER THE ID BEFORE STARTING THE SESSION
     globalSessionId = sessionId;

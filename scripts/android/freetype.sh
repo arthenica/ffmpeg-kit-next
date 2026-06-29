@@ -3,6 +3,8 @@
 # UPDATE BUILD FLAGS
 export LIBPNG_CFLAGS="-I${LIB_INSTALL_BASE}/libpng/include"
 export LIBPNG_LIBS="-L${LIB_INSTALL_BASE}/libpng/lib"
+export BROTLI_CFLAGS="$(pkg-config --cflags libbrotlidec 2>>"${BASEDIR}"/build.log)" || return 1
+export BROTLI_LIBS="$(pkg-config --libs --static libbrotlidec 2>>"${BASEDIR}"/build.log)" || return 1
 
 # ALWAYS CLEAN THE PREVIOUS BUILD
 make distclean 2>/dev/null 1>/dev/null
@@ -19,6 +21,7 @@ fi
   --with-pic \
   --with-zlib \
   --with-png \
+  --with-brotli=yes \
   --with-sysroot="${ANDROID_SYSROOT}" \
   --without-harfbuzz \
   --without-bzip2 \

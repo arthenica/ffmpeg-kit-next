@@ -8,6 +8,19 @@ fi
 
 LIB_NAME="ffmpeg"
 
+get_linux_system_include_flags() {
+  local INCLUDE_FLAGS=""
+  local INCLUDE_DIR
+
+  for INCLUDE_DIR in "/usr/include/$(get_host)" "/usr/include"; do
+    if [ -d "${INCLUDE_DIR}" ]; then
+      INCLUDE_FLAGS+=" -idirafter ${INCLUDE_DIR}"
+    fi
+  done
+
+  echo "${INCLUDE_FLAGS}"
+}
+
 echo -e "----------------------------------------------------------------" 1>>"${BASEDIR}"/build.log 2>&1
 echo -e "\nINFO: Building ${LIB_NAME} for ${HOST} with the following environment variables\n" 1>>"${BASEDIR}"/build.log 2>&1
 env 1>>"${BASEDIR}"/build.log 2>&1
@@ -23,12 +36,14 @@ set_toolchain_paths "${LIB_NAME}"
 
 # SET BUILD FLAGS
 HOST=$(get_host)
-export CFLAGS=$(get_cflags "${LIB_NAME}")
-export CXXFLAGS=$(get_cxxflags "${LIB_NAME}")
+LINUX_SYSTEM_INCLUDE_FLAGS="$(get_linux_system_include_flags)"
+export CFLAGS="$(get_cflags "${LIB_NAME}") ${LINUX_SYSTEM_INCLUDE_FLAGS}"
+export CXXFLAGS="$(get_cxxflags "${LIB_NAME}") ${LINUX_SYSTEM_INCLUDE_FLAGS}"
 export LDFLAGS=$(get_ldflags "${LIB_NAME}")
-export PKG_CONFIG_LIBDIR="${INSTALL_PKG_CONFIG_DIR}${FFMPEG_KIT_NIX_PKG_CONFIG_LIBDIR:+:${FFMPEG_KIT_NIX_PKG_CONFIG_LIBDIR}}"
+export PKG_CONFIG_LIBDIR="$(get_linux_pkg_config_libdir)"
 unset PKG_CONFIG_PATH
 
+echo -e "\nINFO: Using Linux system include flags: ${LINUX_SYSTEM_INCLUDE_FLAGS}\n" 1>>"${BASEDIR}"/build.log 2>&1
 echo -e "\nINFO: Using PKG_CONFIG_LIBDIR: ${PKG_CONFIG_LIBDIR}\n" 1>>"${BASEDIR}"/build.log 2>&1
 
 cd "${BASEDIR}"/src/"${LIB_NAME}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
@@ -49,7 +64,7 @@ CONFIGURE_POSTFIX=""
 HIGH_PRIORITY_INCLUDES=""
 
 # SET CONFIGURE OPTIONS
-for library in {0..92}; do
+for library in {0..96}; do
   if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
     ENABLED_LIBRARY=$(get_library_name ${library})
 
@@ -170,6 +185,11 @@ for library in {0..92}; do
       LDFLAGS+=" $(pkg-config --libs --static kvazaar 2>>"${BASEDIR}"/build.log)"
       CONFIGURE_POSTFIX+=" --enable-libkvazaar"
       ;;
+    vvenc)
+      CFLAGS+=" $(pkg-config --cflags libvvenc 2>>"${BASEDIR}"/build.log)"
+      LDFLAGS+=" $(pkg-config --libs --static libvvenc 2>>"${BASEDIR}"/build.log)"
+      CONFIGURE_POSTFIX+=" --enable-libvvenc"
+      ;;
     libilbc)
       CFLAGS+=" $(pkg-config --cflags libilbc 2>>"${BASEDIR}"/build.log)"
       LDFLAGS+=" $(pkg-config --libs --static libilbc 2>>"${BASEDIR}"/build.log)"
@@ -179,6 +199,21 @@ for library in {0..92}; do
       CFLAGS+=" $(pkg-config --cflags aom 2>>"${BASEDIR}"/build.log)"
       LDFLAGS+=" $(pkg-config --libs --static aom 2>>"${BASEDIR}"/build.log)"
       CONFIGURE_POSTFIX+=" --enable-libaom"
+      ;;
+    libjxl)
+      CFLAGS+=" $(pkg-config --cflags --static libjxl libjxl_threads 2>>"${BASEDIR}"/build.log)"
+      LDFLAGS+=" $(pkg-config --libs --static libjxl libjxl_threads 2>>"${BASEDIR}"/build.log)"
+      CONFIGURE_POSTFIX+=" --enable-libjxl"
+      ;;
+    liblc3)
+      CFLAGS+=" $(pkg-config --cflags lc3 2>>"${BASEDIR}"/build.log)"
+      LDFLAGS+=" $(pkg-config --libs --static lc3 2>>"${BASEDIR}"/build.log)"
+      CONFIGURE_POSTFIX+=" --enable-liblc3"
+      ;;
+    libsvtav1)
+      CFLAGS+=" $(pkg-config --cflags SvtAv1Enc 2>>"${BASEDIR}"/build.log)"
+      LDFLAGS+=" $(pkg-config --libs --static SvtAv1Enc 2>>"${BASEDIR}"/build.log)"
+      CONFIGURE_POSTFIX+=" --enable-libsvtav1"
       ;;
     openh264)
       CFLAGS+=" $(pkg-config --cflags openh264 2>>"${BASEDIR}"/build.log)"
@@ -276,10 +311,18 @@ for library in {0..92}; do
       CONFIGURE_POSTFIX+=" --disable-libdav1d"
     elif [[ ${library} -eq ${LIBRARY_KVAZAAR} ]]; then
       CONFIGURE_POSTFIX+=" --disable-libkvazaar"
+    elif [[ ${library} -eq ${LIBRARY_VVENC} ]]; then
+      CONFIGURE_POSTFIX+=" --disable-libvvenc"
     elif [[ ${library} -eq ${LIBRARY_LIBILBC} ]]; then
       CONFIGURE_POSTFIX+=" --disable-libilbc"
     elif [[ ${library} -eq ${LIBRARY_LIBAOM} ]]; then
       CONFIGURE_POSTFIX+=" --disable-libaom"
+    elif [[ ${library} -eq ${LIBRARY_LIBSVTAV1} ]]; then
+      CONFIGURE_POSTFIX+=" --disable-libsvtav1"
+    elif [[ ${library} -eq ${LIBRARY_LIBJXL} ]]; then
+      CONFIGURE_POSTFIX+=" --disable-libjxl"
+    elif [[ ${library} -eq ${LIBRARY_LIBLC3} ]]; then
+      CONFIGURE_POSTFIX+=" --disable-liblc3"
     elif [[ ${library} -eq ${LIBRARY_OPENH264} ]]; then
       CONFIGURE_POSTFIX+=" --disable-libopenh264"
     elif [[ ${library} -eq ${LIBRARY_OPENSSL} ]]; then

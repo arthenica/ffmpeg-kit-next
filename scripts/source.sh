@@ -96,6 +96,11 @@ get_library_source() {
     SOURCE_ID="v3.12.1"
     SOURCE_TYPE="TAG"
     ;;
+  libsvtav1)
+    SOURCE_REPO_URL="https://github.com/arthenica/svt-av1"
+    SOURCE_ID="v4.1.0"
+    SOURCE_TYPE="TAG"
+    ;;
   libass)
     SOURCE_REPO_URL="https://github.com/arthenica/libass"
     SOURCE_ID="0.17.4"
@@ -109,6 +114,16 @@ get_library_source() {
   libilbc)
     SOURCE_REPO_URL="https://github.com/arthenica/libilbc"
     SOURCE_ID="v3.0.4"
+    SOURCE_TYPE="TAG"
+    ;;
+  libjxl)
+    SOURCE_REPO_URL="https://github.com/arthenica/libjxl"
+    SOURCE_ID="v0.11.2"
+    SOURCE_TYPE="TAG"
+    ;;
+  liblc3)
+    SOURCE_REPO_URL="https://github.com/arthenica/liblc3"
+    SOURCE_ID="v1.1.3"
     SOURCE_TYPE="TAG"
     ;;
   libogg)
@@ -244,6 +259,11 @@ get_library_source() {
   vo-amrwbenc)
     SOURCE_REPO_URL="https://github.com/arthenica/vo-amrwbenc"
     SOURCE_ID="v0.1.3"
+    SOURCE_TYPE="TAG"
+    ;;
+  vvenc)
+    SOURCE_REPO_URL="https://github.com/arthenica/vvenc"
+    SOURCE_ID="v1.14.0"
     SOURCE_TYPE="TAG"
     ;;
   x264)

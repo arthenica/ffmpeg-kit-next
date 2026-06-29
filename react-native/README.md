@@ -28,6 +28,9 @@
 `ffmpeg-kit-next-react-native` is not published to `npm`. Build `FFmpegKitNext` locally for the native platforms you
 target, then integrate the React Native package from this repository using a local file dependency.
 
+> **Building the native binaries:** see [BUILD.md](BUILD.md) for the one-time setup that builds `FFmpegKitNext`
+> from source and copies the native binaries into this plugin before you use it.
+
 ```sh
 yarn add file:../ffmpeg-kit-next/react-native
 ```

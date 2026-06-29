@@ -25,9 +25,9 @@ fi
 # FILTER WHICH EXTERNAL LIBRARIES WILL BE BUILT
 # NOTE THAT BUILT-IN LIBRARIES ARE FORWARDED TO FFMPEG SCRIPT WITHOUT ANY PROCESSING
 enabled_library_list=()
-for library in {1..50}; do
-  if [[ ${!library} -eq 1 ]]; then
-    ENABLED_LIBRARY=$(get_library_name $((library - 1)))
+for library in $(get_common_library_indexes); do
+  if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
+    ENABLED_LIBRARY=$(get_library_name "${library}")
     enabled_library_list+=(${ENABLED_LIBRARY})
 
     echo -e "INFO: Enabled library ${ENABLED_LIBRARY} will be built\n" 1>>"${BASEDIR}"/build.log 2>&1
@@ -132,7 +132,7 @@ if [[ ${SKIP_ffmpeg} -ne 1 ]]; then
   export CFLAGS=$(get_cflags "${LIB_NAME}")
   export CXXFLAGS=$(get_cxxflags "${LIB_NAME}")
   export LDFLAGS=$(get_ldflags "${LIB_NAME}")
-  export PKG_CONFIG_LIBDIR="${INSTALL_PKG_CONFIG_DIR}${FFMPEG_KIT_NIX_PKG_CONFIG_LIBDIR:+:${FFMPEG_KIT_NIX_PKG_CONFIG_LIBDIR}}"
+  export PKG_CONFIG_LIBDIR="$(get_linux_pkg_config_libdir)"
   unset PKG_CONFIG_PATH
 
   cd "${BASEDIR}"/src/"${LIB_NAME}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1

@@ -5,6 +5,24 @@ source "${BASEDIR}"/scripts/function-"${FFMPEG_KIT_BUILD_TYPE}".sh 1>>"${BASEDIR
 
 LIB_NAME="ffmpeg-kit"
 
+prepare_rapidjson_headers() {
+  RAPIDJSON_SYSTEM_INCLUDE_DIR="${RAPIDJSON_SYSTEM_INCLUDE_DIR:-/usr/include/rapidjson}"
+  RAPIDJSON_STAGED_INCLUDE_BASE="${FFMPEG_KIT_TMPDIR}/rapidjson/include"
+  RAPIDJSON_STAGED_INCLUDE_DIR="${RAPIDJSON_STAGED_INCLUDE_BASE}/rapidjson"
+
+  if [ ! -d "${RAPIDJSON_SYSTEM_INCLUDE_DIR}" ]; then
+    echo -e "\nERROR: rapidjson headers not found at ${RAPIDJSON_SYSTEM_INCLUDE_DIR}\n" 1>>"${BASEDIR}"/build.log 2>&1
+    return 1
+  fi
+
+  rm -rf "${RAPIDJSON_STAGED_INCLUDE_DIR}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+  mkdir -p "${RAPIDJSON_STAGED_INCLUDE_BASE}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+  cp -R "${RAPIDJSON_SYSTEM_INCLUDE_DIR}" "${RAPIDJSON_STAGED_INCLUDE_BASE}/" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+  ${SED_INLINE} 's|GenericStringRef& operator=(const GenericStringRef& rhs) { s = rhs.s; length = rhs.length; }|GenericStringRef\& operator=(const GenericStringRef\& rhs);|g' "${RAPIDJSON_STAGED_INCLUDE_DIR}/document.h" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+
+  echo -e "INFO: Using rapidjson headers at ${RAPIDJSON_STAGED_INCLUDE_DIR}\n" 1>>"${BASEDIR}"/build.log 2>&1
+}
+
 echo -e "----------------------------------------------------------------" 1>>"${BASEDIR}"/build.log 2>&1
 echo -e "\nINFO: Building ${LIB_NAME} for ${HOST} with the following environment variables\n" 1>>"${BASEDIR}"/build.log 2>&1
 env 1>>"${BASEDIR}"/build.log 2>&1
@@ -20,10 +38,12 @@ set_toolchain_paths "${LIB_NAME}"
 
 # SET BUILD FLAGS
 HOST=$(get_host)
-export PKG_CONFIG_LIBDIR="${INSTALL_PKG_CONFIG_DIR}${FFMPEG_KIT_NIX_PKG_CONFIG_LIBDIR:+:${FFMPEG_KIT_NIX_PKG_CONFIG_LIBDIR}}"
+export PKG_CONFIG_LIBDIR="$(get_linux_pkg_config_libdir)"
 unset PKG_CONFIG_PATH
+
+prepare_rapidjson_headers || return 1
 export CFLAGS="$(get_cflags ${LIB_NAME}) -I${LIB_INSTALL_BASE}/ffmpeg/include"
-export CXXFLAGS="$(get_cxxflags ${LIB_NAME}) -I${LIB_INSTALL_BASE}/ffmpeg/include"
+export CXXFLAGS="$(get_cxxflags ${LIB_NAME}) -I${LIB_INSTALL_BASE}/ffmpeg/include -I${RAPIDJSON_STAGED_INCLUDE_BASE}"
 export LDFLAGS="$(get_ldflags ${LIB_NAME}) -L${LIB_INSTALL_BASE}/ffmpeg/lib -lavdevice"
 
 cd "${BASEDIR}"/linux 1>>"${BASEDIR}"/build.log 2>&1 || return 1

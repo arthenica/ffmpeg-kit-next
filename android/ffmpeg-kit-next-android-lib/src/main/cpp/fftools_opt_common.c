@@ -1188,7 +1188,7 @@ static void log_callback_report(void *ptr, int level, const char *fmt, va_list v
     ffmpegkit_log_callback_function(ptr, level, fmt, vl);
     av_log_format_line(ptr, level, fmt, vl2, line, sizeof(line), &print_prefix);
     va_end(vl2);
-    if (report_file_level >= level) {
+    if (report_file && report_file_level >= level) {
         fputs(line, report_file);
         fflush(report_file);
     }

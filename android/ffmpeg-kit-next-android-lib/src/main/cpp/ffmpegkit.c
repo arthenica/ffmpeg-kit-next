@@ -552,6 +552,19 @@ void cancelSession(long id) {
 }
 
 /**
+ * Adds a cancel session request for every running session to the session map.
+ * Only sessions currently marked running (1) are switched to cancel (2); slots
+ * that are idle (0) or already cancelling (2) are left untouched, and a session
+ * that starts after this call claims its own slot and is therefore unaffected.
+ */
+void cancelAllSessions(void) {
+    for (int i = 0; i < SESSION_MAP_SIZE; i++) {
+        short running = 1;
+        atomic_compare_exchange_strong(&sessionMap[i], &running, 2);
+    }
+}
+
+/**
  * Checks whether a cancel request for the given session id exists in the
  * session map.
  *
@@ -1595,14 +1608,14 @@ Java_com_arthenica_ffmpegkit_FFmpegKitConfig_nativeFFmpegExecute(
         argumentCount = programArgumentCount + 1;
 
         tempArray =
-            (jstring *)av_malloc(sizeof(jstring) * programArgumentCount);
+            (jstring *)av_mallocz(sizeof(jstring) * programArgumentCount);
     }
 
     /* PRESERVE USAGE FORMAT
      *
      * ffmpeg <arguments>
      */
-    argv = (char **)av_malloc(sizeof(char *) * (argumentCount));
+    argv = (char **)av_mallocz(sizeof(char *) * (argumentCount + 1));
     argv[0] = (char *)av_malloc(sizeof(char) * (strlen(LIB_NAME) + 1));
     strcpy(argv[0], LIB_NAME);
 
@@ -1617,6 +1630,7 @@ Java_com_arthenica_ffmpegkit_FFmpegKitConfig_nativeFFmpegExecute(
             }
         }
     }
+    argv[argumentCount] = NULL;
 
     // REGISTER THE ID BEFORE STARTING THE SESSION
     globalSessionId = (long)id;
@@ -1633,7 +1647,9 @@ Java_com_arthenica_ffmpegkit_FFmpegKitConfig_nativeFFmpegExecute(
     // CLEANUP
     if (tempArray) {
         for (int i = 0; i < (argumentCount - 1); i++) {
-            (*env)->ReleaseStringUTFChars(env, tempArray[i], argv[i + 1]);
+            if (tempArray[i] != NULL && argv[i + 1] != NULL) {
+                (*env)->ReleaseStringUTFChars(env, tempArray[i], argv[i + 1]);
+            }
         }
 
         av_free(tempArray);

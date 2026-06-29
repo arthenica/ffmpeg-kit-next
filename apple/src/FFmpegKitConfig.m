@@ -44,7 +44,7 @@
 #import <sys/types.h>
 
 /** Global library version */
-NSString *const FFmpegKitVersion = @"6.1.1";
+NSString *const FFmpegKitVersion = @"7.1.0";
 
 /**
  * Prefix of named pipes created by ffmpeg-kit.
@@ -506,6 +506,19 @@ void removeSession(long sessionId) {
  */
 void cancelSession(long sessionId) {
     atomic_store(&sessionMap[sessionId % SESSION_MAP_SIZE], 2);
+}
+
+/**
+ * Adds a cancel session request for every running session to the session map.
+ * Only sessions currently marked running (1) are switched to cancel (2); slots
+ * that are idle (0) or already cancelling (2) are left untouched, and a session
+ * that starts after this call claims its own slot and is therefore unaffected.
+ */
+void cancelAllSessions(void) {
+    for (int i = 0; i < SESSION_MAP_SIZE; i++) {
+        short running = 1;
+        atomic_compare_exchange_strong(&sessionMap[i], &running, 2);
+    }
 }
 
 /**
@@ -1310,7 +1323,7 @@ int executeFFmpeg(long sessionId, NSArray *arguments) {
     av_log_set_level(configuredLogLevel);
 
     char **commandCharPArray =
-        (char **)av_malloc(sizeof(char *) * ([arguments count] + 1));
+        (char **)av_malloc(sizeof(char *) * ([arguments count] + 2));
 
     /* PRESERVE USAGE FORMAT
      *
@@ -1325,6 +1338,7 @@ int executeFFmpeg(long sessionId, NSArray *arguments) {
         NSString *argument = [arguments objectAtIndex:i];
         commandCharPArray[i + 1] = (char *)[argument UTF8String];
     }
+    commandCharPArray[[arguments count] + 1] = NULL;
 
     // REGISTER THE ID BEFORE STARTING THE SESSION
     globalSessionId = sessionId;
@@ -1352,7 +1366,7 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
     av_log_set_level(configuredLogLevel);
 
     char **commandCharPArray =
-        (char **)av_malloc(sizeof(char *) * ([arguments count] + 1));
+        (char **)av_malloc(sizeof(char *) * ([arguments count] + 2));
 
     /* PRESERVE USAGE FORMAT
      *
@@ -1367,6 +1381,7 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
         NSString *argument = [arguments objectAtIndex:i];
         commandCharPArray[i + 1] = (char *)[argument UTF8String];
     }
+    commandCharPArray[[arguments count] + 1] = NULL;
 
     // REGISTER THE ID BEFORE STARTING THE SESSION
     globalSessionId = sessionId;

@@ -60,14 +60,14 @@ Java_com_arthenica_ffmpegkit_FFmpegKitConfig_nativeFFprobeExecute(
         argumentCount = programArgumentCount + 1;
 
         tempArray =
-            (jstring *)av_malloc(sizeof(jstring) * programArgumentCount);
+            (jstring *)av_mallocz(sizeof(jstring) * programArgumentCount);
     }
 
     /* PRESERVE USAGE FORMAT
      *
      * ffprobe <arguments>
      */
-    argv = (char **)av_malloc(sizeof(char *) * (argumentCount));
+    argv = (char **)av_mallocz(sizeof(char *) * (argumentCount + 1));
     argv[0] = (char *)av_malloc(sizeof(char) * (strlen(LIB_NAME) + 1));
     strcpy(argv[0], LIB_NAME);
 
@@ -82,6 +82,7 @@ Java_com_arthenica_ffmpegkit_FFmpegKitConfig_nativeFFprobeExecute(
             }
         }
     }
+    argv[argumentCount] = NULL;
 
     // REGISTER THE ID BEFORE STARTING THE SESSION
     globalSessionId = (long)id;
@@ -98,7 +99,9 @@ Java_com_arthenica_ffmpegkit_FFmpegKitConfig_nativeFFprobeExecute(
     // CLEANUP
     if (tempArray) {
         for (int i = 0; i < (argumentCount - 1); i++) {
-            (*env)->ReleaseStringUTFChars(env, tempArray[i], argv[i + 1]);
+            if (tempArray[i] != NULL && argv[i + 1] != NULL) {
+                (*env)->ReleaseStringUTFChars(env, tempArray[i], argv[i + 1]);
+            }
         }
 
         av_free(tempArray);

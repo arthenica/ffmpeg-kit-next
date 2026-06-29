@@ -714,12 +714,14 @@ static inline void writer_printf_avio(WriterContext *wctx, const char *fmt, ...)
 
 static inline void writer_w8_printf(WriterContext *wctx, int b)
 {
-    av_log(NULL, AV_LOG_INFO, "%c", b);
+    /* ffprobe program output (not a log line); emit on the always-delivered
+     * AV_LOG_STDERR channel so FFmpegKit captures it even under -v error. */
+    av_log(NULL, AV_LOG_STDERR, "%c", b);
 }
 
 static inline void writer_put_str_printf(WriterContext *wctx, const char *str)
 {
-    av_log(NULL, AV_LOG_INFO, "%s", str);
+    av_log(NULL, AV_LOG_STDERR, "%s", str);
 }
 
 static inline void writer_printf_printf(WriterContext *wctx, const char *fmt, ...)
@@ -727,7 +729,7 @@ static inline void writer_printf_printf(WriterContext *wctx, const char *fmt, ..
     va_list ap;
 
     va_start(ap, fmt);
-    av_vlog(NULL, AV_LOG_INFO, fmt, ap);
+    av_vlog(NULL, AV_LOG_STDERR, fmt, ap);
     va_end(ap);
 }
 

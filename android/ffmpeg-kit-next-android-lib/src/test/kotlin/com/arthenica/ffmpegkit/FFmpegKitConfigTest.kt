@@ -32,9 +32,9 @@ class FFmpegKitConfigTest {
     fun getExternalLibraries() {
         val supportedExternalLibraries = listOf(
             "chromaprint", "dav1d", "fontconfig", "freetype", "fribidi", "gmp", "gnutls", "kvazaar",
-            "lame", "libaom", "libass", "libiconv", "libilbc", "libtheora", "libvidstab", "libvorbis",
+            "lame", "libaom", "libass", "libjxl", "liblc3", "libsvtav1", "libiconv", "libilbc", "libtheora", "libvidstab", "libvorbis",
             "libvpx", "libwebp", "libxml2", "opencore-amr", "opus", "shine", "sdl", "snappy", "soxr",
-            "speex", "tesseract", "twolame", "x264", "x265", "xvidcore", "android-zlib",
+            "speex", "tesseract", "twolame", "vvenc", "x264", "x265", "xvidcore", "android-zlib",
             "android-media-codec"
         )
 

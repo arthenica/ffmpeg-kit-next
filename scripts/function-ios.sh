@@ -134,7 +134,7 @@ get_app_specific_cflags() {
   jpeg)
     APP_FLAGS="-Wno-nullability-completeness"
     ;;
-  kvazaar | openssl)
+  kvazaar | libsvtav1 | openssl)
     APP_FLAGS="-std=gnu99 -Wno-unused-function"
     ;;
   leptonica)
@@ -235,8 +235,17 @@ get_cxxflags() {
   rubberband)
     echo "-fno-rtti -Wno-c++11-narrowing ${BITCODE_FLAGS} ${COMMON_CFLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
     ;;
+  libjxl)
+    echo "-std=c++17 ${BITCODE_FLAGS} ${COMMON_CFLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
+    ;;
+  libsvtav1)
+    echo "-std=c++11 ${BITCODE_FLAGS} ${COMMON_CFLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
+    ;;
   srt | tesseract | zimg)
     echo "-std=c++11 ${BITCODE_FLAGS} ${COMMON_CFLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
+    ;;
+  vvenc)
+    echo "-std=c++14 ${BITCODE_FLAGS} ${COMMON_CFLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
     ;;
   x265)
     echo "-std=c++11 -fno-exceptions -Wno-deprecated-declarations ${BITCODE_FLAGS} ${COMMON_CFLAGS} ${EXTRA_CXXFLAGS}"

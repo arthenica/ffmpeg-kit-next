@@ -2,11 +2,9 @@
 
 <img src="https://github.com/arthenica/ffmpeg-kit-next/blob/main/docs/assets/ffmpeg-kit-next-icon-v1.png" width="240">
 
-`FFmpegKitNext` is the continuation of `FFmpegKit`.
+`FFmpegKitNext` is the official continuation of `FFmpegKit`.
 
-It keeps the same main goal: make `FFmpeg`<sup>1</sup> easier to integrate into applications.
-
-`FFmpegKitNext` tries to deliver the same idea in a more sustainable way. It focuses on reproducible local builds and maintained wrapper libraries.
+It builds on the foundations of `FFmpegKit` while improving the build infrastructure to reduce build failures, simplify maintenance, and support future platform updates.
 
 ### 0. Features How is FFmpegKitNext different from FFmpegKit?
 
@@ -76,7 +74,7 @@ Some parts of `FFmpeg` and some external libraries are licensed under the `GPL`.
 <tbody>
 <tr>
 <td align="center"><sup>external libraries</sup></td>
-<td align="center"><sup>dav1d</sup><br><sup>fontconfig</sup><br><sup>freetype</sup><br><sup>fribidi</sup><br><sup>gmp</sup><br><sup>gnutls</sup><br><sup>kvazaar</sup><br><sup>lame</sup><br><sup>libass</sup><br><sup>libiconv</sup><br><sup>libilbc</sup><br><sup>libtheora</sup><br><sup>libvorbis</sup><br><sup>libvpx</sup><br><sup>libwebp</sup><br><sup>libxml2</sup><br><sup>opencore-amr</sup><br><sup>opus</sup><br><sup>shine</sup><br><sup>snappy</sup><br><sup>soxr</sup><br><sup>speex</sup><br><sup>twolame</sup><br><sup>vid.stab</sup><br><sup>vo-amrwbenc</sup><br><sup>x264</sup><br><sup>x265</sup><br><sup>xvidcore</sup><br><sup>zimg</sup></td>
+<td align="center"><sup>chromaprint</sup><br><sup>dav1d</sup><br><sup>fontconfig</sup><br><sup>freetype</sup><br><sup>fribidi</sup><br><sup>gmp</sup><br><sup>gnutls</sup><br><sup>harfbuzz</sup><br><sup>kvazaar</sup><br><sup>lame</sup><br><sup>libaom</sup><br><sup>libass</sup><br><sup>libiconv</sup><br><sup>libilbc</sup><br><sup>libjxl</sup><br><sup>liblc3</sup><br><sup>libsvtav1</sup><br><sup>libtheora</sup><br><sup>libvorbis</sup><br><sup>libvpx</sup><br><sup>libwebp</sup><br><sup>libxml2</sup><br><sup>opencore-amr</sup><br><sup>openh264</sup><br><sup>openssl</sup><br><sup>opus</sup><br><sup>rubberband</sup><br><sup>sdl</sup><br><sup>shine</sup><br><sup>snappy</sup><br><sup>soxr</sup><br><sup>speex</sup><br><sup>srt</sup><br><sup>tesseract</sup><br><sup>twolame</sup><br><sup>vid.stab</sup><br><sup>vo-amrwbenc</sup><br><sup>vvenc</sup><br><sup>x264</sup><br><sup>x265</sup><br><sup>xvidcore</sup><br><sup>zimg</sup></td>
 </tr>
 <tr>
 <td align="center"><sup>android system libraries</sup></td>
@@ -101,7 +99,7 @@ Some parts of `FFmpeg` and some external libraries are licensed under the `GPL`.
 
 ### 10. Versions
 
-`FFmpegKitNext` binaries generated use the same major and minor version numbers as the upstream `FFmpeg` project. The
+`FFmpegKitNext` binaries generated use the same major and minor version numbers as the upstream `FFmpeg`<sup>1</sup> project. The
 third and last number in the version string, if exists, is specific to `FFmpegKitNext`. It shows different releases from
 the same `FFmpeg` release branch.
 
@@ -109,6 +107,7 @@ the same `FFmpeg` release branch.
 |:----------------:|:---------------------------------------------------------------------------------:|:--------------:|:------------:|
 |  Android<br>Flutter<br>iOS<br>Linux<br>macOS<br>React Native<br>tvOS      |   [6.1.0](https://github.com/arthenica/ffmpeg-kit-next/releases/tag/v6.1.0)    |      6.1.2       | Jun 26, 2026 |
 |  Android<br>Flutter<br>iOS<br>Linux<br>macOS<br>React Native<br>tvOS      |   [6.1.1](https://github.com/arthenica/ffmpeg-kit-next/releases/tag/v6.1.1)    |      6.1.6       | Jun 27, 2026 |
+|  Android<br>Flutter<br>iOS<br>Linux<br>macOS<br>React Native<br>tvOS      |   [7.1.0](https://github.com/arthenica/ffmpeg-kit-next/releases/tag/v7.1.0)    |      7.1.5       | Jul 01, 2026 |
 
 
 ### 11. Documentation

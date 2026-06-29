@@ -35,4 +35,4 @@ make -j$(get_cpu_count) build_sw || return 1
 make install_sw install_ssldirs || return 1
 
 # MANUALLY COPY PKG-CONFIG FILES
-cp ./*.pc "${INSTALL_PKG_CONFIG_DIR}" || return 1
+cp ./exporters/*.pc "${INSTALL_PKG_CONFIG_DIR}" || return 1

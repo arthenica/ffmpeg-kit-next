@@ -175,7 +175,14 @@
 
 extern __thread long globalSessionId;
 extern void cancelSession(long sessionId);
+extern void cancelAllSessions(void);
 extern int cancelRequested(long sessionId);
+
+extern volatile int handleSIGQUIT;
+extern volatile int handleSIGINT;
+extern volatile int handleSIGTERM;
+extern volatile int handleSIGXCPU;
+extern volatile int handleSIGPIPE;
 
 __thread FILE *vstats_file;
 
@@ -315,17 +322,27 @@ void term_init(void)
 
             tcsetattr (0, TCSANOW, &tty);
         }
-        SIGNAL(SIGQUIT, sigterm_handler); /* Quit (POSIX).  */
+        if (handleSIGQUIT == 1) {
+            SIGNAL(SIGQUIT, sigterm_handler); /* Quit (POSIX).  */
+        }
     }
 #endif
 
-    SIGNAL(SIGINT , sigterm_handler); /* Interrupt (ANSI).    */
-    SIGNAL(SIGTERM, sigterm_handler); /* Termination (ANSI).  */
+    if (handleSIGINT == 1) {
+        SIGNAL(SIGINT , sigterm_handler); /* Interrupt (ANSI).    */
+    }
+    if (handleSIGTERM == 1) {
+        SIGNAL(SIGTERM, sigterm_handler); /* Termination (ANSI).  */
+    }
 #ifdef SIGXCPU
-    SIGNAL(SIGXCPU, sigterm_handler);
+    if (handleSIGXCPU == 1) {
+        SIGNAL(SIGXCPU, sigterm_handler);
+    }
 #endif
 #ifdef SIGPIPE
-    signal(SIGPIPE, SIG_IGN); /* Broken pipe (POSIX). */
+    if (handleSIGPIPE == 1) {
+        signal(SIGPIPE, SIG_IGN); /* Broken pipe (POSIX). */
+    }
 #endif
 #if HAVE_SETCONSOLECTRLHANDLER
     SetConsoleCtrlHandler((PHANDLER_ROUTINE) CtrlHandler, TRUE);
@@ -1140,7 +1157,7 @@ void set_report_callback(void (*callback)(int, float, float, int64_t, double,
 void cancel_operation(long id)
 {
     if (id == 0)
-        sigterm_handler(SIGINT);
+        cancelAllSessions();
     else
         cancelSession(id);
 }
@@ -1225,6 +1242,12 @@ finish:
     ffmpeg_cleanup(ret);
 
     sch_free(&sch);
+
+    /* FFmpegKit return-code contract: 0 = success, 255 = cancel/signal,
+     * 69 = error-rate exceeded; collapse any other failure (a negative AVERROR
+     * such as AVERROR_ENCODER_NOT_FOUND) to 1 so it is not leaked verbatim. */
+    if (ret < 0)
+        ret = 1;
 
     return ret;
 }

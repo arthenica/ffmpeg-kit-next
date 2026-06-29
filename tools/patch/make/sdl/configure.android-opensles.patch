@@ -1,0 +1,22 @@
+--- a/configure.ac
++++ b/configure.ac
+@@ -3765,7 +3765,7 @@
+                 CFLAGS="$CFLAGS $ANDROID_CFLAGS"
+                 SDL_CFLAGS="$SDL_CFLAGS $ANDROID_CFLAGS"
+                 EXTRA_CFLAGS="$EXTRA_CFLAGS $ANDROID_CFLAGS"
+-                EXTRA_LDFLAGS="$EXTRA_LDFLAGS -ldl -lGLESv1_CM -lGLESv2 -llog -landroid"
++                EXTRA_LDFLAGS="$EXTRA_LDFLAGS -ldl -lGLESv1_CM -lGLESv2 -lOpenSLES -llog -landroid"
+                 SDLMAIN_SOURCES="$srcdir/src/main/android/*.c"
+                 if test x$enable_video = xyes; then
+                     SOURCES="$SOURCES $srcdir/src/core/android/*.c $srcdir/src/video/android/*.c"
+--- a/configure
++++ b/configure
+@@ -29393,7 +29393,7 @@
+                 CFLAGS="$CFLAGS $ANDROID_CFLAGS"
+                 SDL_CFLAGS="$SDL_CFLAGS $ANDROID_CFLAGS"
+                 EXTRA_CFLAGS="$EXTRA_CFLAGS $ANDROID_CFLAGS"
+-                EXTRA_LDFLAGS="$EXTRA_LDFLAGS -ldl -lGLESv1_CM -lGLESv2 -llog -landroid"
++                EXTRA_LDFLAGS="$EXTRA_LDFLAGS -ldl -lGLESv1_CM -lGLESv2 -lOpenSLES -llog -landroid"
+                 SDLMAIN_SOURCES="$srcdir/src/main/android/*.c"
+                 if test x$enable_video = xyes; then
+                     SOURCES="$SOURCES $srcdir/src/core/android/*.c $srcdir/src/video/android/*.c"

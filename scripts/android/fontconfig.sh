@@ -1,5 +1,9 @@
 #!/bin/bash
 
+export ac_cv_va_copy=C99
+export FREETYPE_CFLAGS="$(pkg-config --cflags freetype2)"
+export FREETYPE_LIBS="$(pkg-config --libs --static freetype2)"
+
 # ALWAYS CLEAN THE PREVIOUS BUILD
 make distclean 2>/dev/null 1>/dev/null
 
@@ -22,6 +26,7 @@ ${SED_INLINE} "s/NO_HAVE_POSIX_FADVISE/HAVE_POSIX_FADVISE/g" "${BASEDIR}"/src/"$
   --enable-static \
   --disable-shared \
   --disable-fast-install \
+  --disable-cache-build \
   --disable-rpath \
   --disable-libxml2 \
   --disable-docs \

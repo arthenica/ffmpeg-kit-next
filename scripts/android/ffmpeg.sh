@@ -69,7 +69,7 @@ CONFIGURE_POSTFIX=""
 HIGH_PRIORITY_INCLUDES=""
 
 # SET CONFIGURE OPTIONS
-for library in {0..61}; do
+for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3}; do
   if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
     ENABLED_LIBRARY=$(get_library_name ${library})
 
@@ -129,6 +129,11 @@ for library in {0..61}; do
       LDFLAGS+=" $(pkg-config --libs --static kvazaar 2>>"${BASEDIR}"/build.log)"
       CONFIGURE_POSTFIX+=" --enable-libkvazaar"
       ;;
+    vvenc)
+      CFLAGS+=" $(pkg-config --cflags libvvenc 2>>"${BASEDIR}"/build.log)"
+      LDFLAGS+=" $(pkg-config --libs --static libvvenc 2>>"${BASEDIR}"/build.log)"
+      CONFIGURE_POSTFIX+=" --enable-libvvenc"
+      ;;
     lame)
       CFLAGS+=" $(pkg-config --cflags libmp3lame 2>>"${BASEDIR}"/build.log)"
       LDFLAGS+=" $(pkg-config --libs --static libmp3lame 2>>"${BASEDIR}"/build.log)"
@@ -138,6 +143,21 @@ for library in {0..61}; do
       CFLAGS+=" $(pkg-config --cflags aom 2>>"${BASEDIR}"/build.log)"
       LDFLAGS+=" $(pkg-config --libs --static aom 2>>"${BASEDIR}"/build.log)"
       CONFIGURE_POSTFIX+=" --enable-libaom"
+      ;;
+    libjxl)
+      CFLAGS+=" $(pkg-config --cflags --static libjxl libjxl_threads 2>>"${BASEDIR}"/build.log)"
+      LDFLAGS+=" $(pkg-config --libs --static libjxl libjxl_threads 2>>"${BASEDIR}"/build.log)"
+      CONFIGURE_POSTFIX+=" --enable-libjxl"
+      ;;
+    liblc3)
+      CFLAGS+=" $(pkg-config --cflags lc3 2>>"${BASEDIR}"/build.log)"
+      LDFLAGS+=" $(pkg-config --libs --static lc3 2>>"${BASEDIR}"/build.log)"
+      CONFIGURE_POSTFIX+=" --enable-liblc3"
+      ;;
+    libsvtav1)
+      CFLAGS+=" $(pkg-config --cflags SvtAv1Enc 2>>"${BASEDIR}"/build.log)"
+      LDFLAGS+=" $(pkg-config --libs --static SvtAv1Enc 2>>"${BASEDIR}"/build.log)"
+      CONFIGURE_POSTFIX+=" --enable-libsvtav1"
       ;;
     libass)
       CFLAGS+=" $(pkg-config --cflags libass 2>>"${BASEDIR}"/build.log)"
@@ -214,7 +234,7 @@ for library in {0..61}; do
     sdl)
       CFLAGS+=" $(pkg-config --cflags sdl2 2>>"${BASEDIR}"/build.log)"
       LDFLAGS+=" $(pkg-config --libs --static sdl2 2>>"${BASEDIR}"/build.log)"
-      CONFIGURE_POSTFIX+=" --enable-sdl2"
+      CONFIGURE_POSTFIX+=" --enable-sdl2 --extra-libs=-lOpenSLES"
       ;;
     shine)
       CFLAGS+=" $(pkg-config --cflags shine 2>>"${BASEDIR}"/build.log)"

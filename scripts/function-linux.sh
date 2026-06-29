@@ -14,6 +14,20 @@ get_ffmpeg_kit_version() {
   echo "${FFMPEG_KIT_VERSION}"
 }
 
+get_linux_pkg_config_libdir() {
+  local PKG_CONFIG_LIBDIR_VALUE="${INSTALL_PKG_CONFIG_DIR}"
+
+  if [[ -n ${FFMPEG_KIT_SYSTEM_PKG_CONFIG_LIBDIR} ]]; then
+    PKG_CONFIG_LIBDIR_VALUE+=":${FFMPEG_KIT_SYSTEM_PKG_CONFIG_LIBDIR}"
+  fi
+
+  if [[ -n ${FFMPEG_KIT_NIX_PKG_CONFIG_LIBDIR} ]]; then
+    PKG_CONFIG_LIBDIR_VALUE+=":${FFMPEG_KIT_NIX_PKG_CONFIG_LIBDIR}"
+  fi
+
+  echo "${PKG_CONFIG_LIBDIR_VALUE}"
+}
+
 enable_main_build() {
   local _TMP
 }
@@ -78,7 +92,7 @@ create_linux_bundle() {
   # COPY EXTERNAL LIBRARY LICENSES
   LICENSE_BASEDIR="${BASEDIR}/prebuilt/$(get_bundle_directory)/ffmpeg-kit-next/lib"
   rm -f "${LICENSE_BASEDIR}"/*.txt 1>>"${BASEDIR}"/build.log 2>&1 || exit 1
-  for library in {0..49}; do
+  for library in $(get_common_library_indexes); do
     if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
       ENABLED_LIBRARY=$(get_library_name ${library} | sed 's/-/_/g')
       LICENSE_FILE="${LICENSE_BASEDIR}/license_${ENABLED_LIBRARY}.txt"
@@ -192,7 +206,7 @@ get_app_specific_cflags() {
   ffmpeg-kit)
     APP_FLAGS="-Wno-unused-function -Wno-pointer-sign -Wno-switch -Wno-deprecated-declarations"
     ;;
-  kvazaar)
+  kvazaar | libsvtav1)
     APP_FLAGS="-std=gnu99 -Wno-unused-function"
     ;;
   openh264)
@@ -255,7 +269,10 @@ get_cxxflags() {
   ffmpeg-kit)
     echo "${COMMON_FLAGS} ${USES_FFMPEG_KIT_PROTOCOLS}"
     ;;
-  srt | tesseract | zimg)
+  libjxl)
+    echo "-stdlib=libstdc++ -std=c++17 ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS} ${BUILD_DATE} $(get_arch_specific_cflags) -fcxx-exceptions -fPIC"
+    ;;
+  libsvtav1 | srt | tesseract | vvenc | zimg)
     echo "${COMMON_FLAGS} -fcxx-exceptions -fPIC"
     ;;
   *)
@@ -268,7 +285,7 @@ get_common_linked_libraries() {
   local COMMON_LIBRARIES=""
 
   case $1 in
-  chromaprint | ffmpeg-kit | kvazaar | srt | zimg)
+  chromaprint | ffmpeg-kit | kvazaar | libjxl | srt | vvenc | zimg)
     echo "-stdlib=libstdc++ -lstdc++ -lc -lm ${COMMON_LIBRARIES}"
     ;;
   *)

@@ -234,7 +234,7 @@ create_ffmpeg_universal_library() {
   else
     cp "${BASEDIR}"/LICENSE "${FFMPEG_UNIVERSAL_LIBRARY_DIRECTORY}"/LICENSE 1>>"${BASEDIR}"/build.log 2>&1 || exit 1
   fi
-  for library in {0..49}; do
+  for library in $(get_common_library_indexes); do
     if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
         local ENABLED_LIBRARY_NAME="$(get_library_name ${library})"
         local ENABLED_LIBRARY_NAME_UPPERCASE=$(echo "${ENABLED_LIBRARY_NAME}" | tr '[a-z]' '[A-Z]')
@@ -398,7 +398,7 @@ create_ffmpeg_framework() {
 
     # COPY EXTERNAL LIBRARY LICENSES
     if [[ "${FFMPEG_LIB}" == "libavcodec" ]]; then
-      for library in {0..49}; do
+      for library in $(get_common_library_indexes); do
         if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
             local ENABLED_LIBRARY_NAME="$(get_library_name ${library})"
             local ENABLED_LIBRARY_NAME_UPPERCASE=$(echo "${ENABLED_LIBRARY_NAME}" | tr '[a-z]' '[A-Z]')
@@ -1290,7 +1290,7 @@ URL: https://freetype.org
 Description: A free, high-quality, and portable font engine.
 Version: ${FREETYPE_VERSION}
 Requires: libpng
-Requires.private:
+Requires.private: zlib, libbrotlidec
 Libs: -L\${libdir} -lfreetype
 Libs.private:
 Cflags: -I\${includedir}/freetype2
