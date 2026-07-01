@@ -49,60 +49,7 @@
 
       pkgConfigPackages = pkgs: with pkgs; [
         zlib
-      ] ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
-        libiconv
       ];
-
-      linuxFullPkgConfigPackages = pkgs:
-        pkgConfigPackages pkgs ++ (with pkgs; [
-          alsa-lib
-          expat
-          fftw
-          fontconfig
-          freetype
-          fribidi
-          giflib
-          gmp
-          gnutls
-          harfbuzz
-          lame
-          leptonica
-          libass
-          libdrm
-          libjpeg
-          libogg
-          libopus
-          libpng
-          libsamplerate
-          libtasn1
-          libtheora
-          libtiff
-          libunistring
-          libva
-          libvorbis
-          libvpx
-          libwebp
-          libxml2
-          nettle
-          ocl-icd
-          opencore-amr
-          opencl-headers
-          p11-kit
-          rubberband
-          SDL2
-          shine
-          snappy
-          soxr
-          speex
-          tesseract
-          twolame
-          v4l-utils
-          vamp-plugin-sdk
-          vid-stab
-          vo-amrwbenc
-          x265
-          xvidcore
-        ]);
 
       pkgConfigLibdirFor = pkgs: packages:
         pkgs.lib.concatStringsSep ":" [
@@ -112,16 +59,22 @@
 
       pkgConfigLibdir = pkgs: pkgConfigLibdirFor pkgs (pkgConfigPackages pkgs);
 
-      linuxFullPkgConfigLibdir = pkgs: pkgConfigLibdirFor pkgs (linuxFullPkgConfigPackages pkgs);
+      linuxSystemPkgConfigLibdir = pkgs:
+        pkgs.lib.concatStringsSep ":" [
+          "/usr/local/lib/pkgconfig"
+          "/usr/local/lib/x86_64-linux-gnu/pkgconfig"
+          "/usr/local/share/pkgconfig"
+          "/usr/lib/pkgconfig"
+          "/usr/lib64/pkgconfig"
+          "/usr/lib/x86_64-linux-gnu/pkgconfig"
+          "/usr/lib/${pkgs.stdenv.hostPlatform.config}/pkgconfig"
+          "/usr/share/pkgconfig"
+        ];
 
-      pkgConfigShellHookWith = pkgs: pkgConfigLibdir: ''
+      toolchainShellHook = pkgs: ''
         export BISON="${pkgs.bison}/bin/bison"
         export MESON="${pkgs.meson}/bin/meson"
         export SED="${pkgs.gnused}/bin/sed"
-
-        export FFMPEG_KIT_NIX_PKG_CONFIG_LIBDIR="${pkgConfigLibdir}"
-        export PKG_CONFIG_LIBDIR="$FFMPEG_KIT_NIX_PKG_CONFIG_LIBDIR"
-        unset PKG_CONFIG_PATH
 
         export FFMPEG_KIT_NIX_HOST_SDKROOT="''${SDKROOT-}"
         unset SDKROOT
@@ -130,14 +83,32 @@
         echo -e "INFO: Using BISON at $BISON\n" >> "$PWD/build.log"
         echo -e "INFO: Using MESON at $MESON\n" >> "$PWD/build.log"
         echo -e "INFO: Using SED at $SED\n" >> "$PWD/build.log"
+      '';
+
+      pkgConfigShellHookWith = pkgs: pkgConfigLibdir: ''
+        ${toolchainShellHook pkgs}
+
+        export FFMPEG_KIT_NIX_PKG_CONFIG_LIBDIR="${pkgConfigLibdir}"
+        export PKG_CONFIG_LIBDIR="$FFMPEG_KIT_NIX_PKG_CONFIG_LIBDIR"
+        unset PKG_CONFIG_PATH
+
         echo -e "INFO: Using PKG_CONFIG_LIBDIR at $PKG_CONFIG_LIBDIR\n" >> "$PWD/build.log"
       '';
 
       pkgConfigShellHook = pkgs: pkgConfigShellHookWith pkgs (pkgConfigLibdir pkgs);
 
-      linuxFullPkgConfigShellHook = pkgs: pkgConfigShellHookWith pkgs (linuxFullPkgConfigLibdir pkgs);
+      linuxPkgConfigShellHook = pkgs: ''
+        ${toolchainShellHook pkgs}
 
-      commonPackages = pkgs: with pkgs; [
+        export FFMPEG_KIT_SYSTEM_PKG_CONFIG_LIBDIR="${linuxSystemPkgConfigLibdir pkgs}"
+        unset FFMPEG_KIT_NIX_PKG_CONFIG_LIBDIR
+        unset PKG_CONFIG_LIBDIR
+        unset PKG_CONFIG_PATH
+
+        echo -e "INFO: Using system PKG_CONFIG_LIBDIR at $FFMPEG_KIT_SYSTEM_PKG_CONFIG_LIBDIR\n" >> "$PWD/build.log"
+      '';
+
+      commonToolPackages = pkgs: with pkgs; [
         bash
         git
         curl
@@ -159,11 +130,13 @@
         nasm
         yasm
         gettext
-        libiconv
+        gperf
         python3
         perl
         ruby
-      ] ++ pkgConfigPackages pkgs;
+      ];
+
+      commonPackages = pkgs: commonToolPackages pkgs ++ pkgConfigPackages pkgs;
 
       androidPackages = pkgs: with pkgs; commonPackages pkgs ++ [
         autogen
@@ -173,7 +146,6 @@
         findutils
         gnumake
         gnugrep
-        gperf
         groff
         gtk-doc
         jdk17
@@ -188,7 +160,7 @@
         gcc
       ];
 
-      linuxFullPackages = pkgs: with pkgs; commonPackages pkgs ++ [
+      linuxToolchainPackages = pkgs: with pkgs; commonToolPackages pkgs ++ [
         autogen
         coreutils
         doxygen
@@ -198,13 +170,10 @@
         gcc
         gnumake
         gnugrep
-        gperf
         groff
         gtk-doc
-        libtasn1
         patch
         ragel
-        rapidjson
         rsync
         tcl
         texinfo
@@ -213,7 +182,7 @@
         llvmPackages.llvm
         llvmPackages.lld
         llvmPackages.libclang
-      ] ++ linuxFullPkgConfigPackages pkgs;
+      ];
 
       xcodeMinCheck = minMajor: ''
         export DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"
@@ -322,17 +291,18 @@
           '';
         };
 
-      linuxFullShell = system: pkgs:
+      linuxToolchainShell = system: pkgs:
         pkgs.mkShellNoCC {
-          packages = linuxFullPackages pkgs;
+          packages = linuxToolchainPackages pkgs;
 
           shellHook = ''
             export TCLSH="${pkgs.tcl}/bin/tclsh"
-            export PATH="${pkgs.lib.makeBinPath (linuxFullPackages pkgs)}:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+            export PATH="${pkgs.lib.makeBinPath (linuxToolchainPackages pkgs)}:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
             export ACLOCAL_PATH="${pkgs.gettext}/share/aclocal:$ACLOCAL_PATH"
-            ${linuxFullPkgConfigShellHook pkgs}
+            export FFMPEG_KIT_NIX_GLIBC_VERSION="${pkgs.glibc.version}"
+            ${linuxPkgConfigShellHook pkgs}
 
-            echo "FFmpegKit Linux full environment loaded for ${system}"
+            echo "FFmpegKit Linux x86_64 glibc ${pkgs.glibc.version} toolchain environment loaded for ${system}"
           '';
         };
     in
@@ -340,7 +310,11 @@
       devShells = forAllSystems (system: pkgs:
         let
           androidR27dShell = androidShell system pkgs "Android NDK r27d" android.ndkVersion;
-          linuxFullDevShell = linuxFullShell system pkgs;
+          linuxToolchainDevShell = linuxToolchainShell system pkgs;
+          linuxGlibcProfileName =
+            if pkgs.stdenv.hostPlatform.isLinux
+            then "linux-x86_64-glibc-${pkgs.lib.replaceStrings [ "." ] [ "_" ] (builtins.head (pkgs.lib.splitString "-" pkgs.glibc.version))}"
+            else null;
           xcode26Shell = pkgs.mkShellNoCC {
             packages = commonPackages pkgs;
 
@@ -357,14 +331,14 @@
         {
           default =
             if pkgs.stdenv.hostPlatform.isLinux
-            then linuxFullDevShell
+            then linuxToolchainDevShell
             else xcode26Shell;
 
           xcode26 = xcode26Shell;
 
           "android-r27d" = androidR27dShell;
         } // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
-          "linux-full" = linuxFullDevShell;
+          "${linuxGlibcProfileName}" = linuxToolchainDevShell;
         });
     };
 }

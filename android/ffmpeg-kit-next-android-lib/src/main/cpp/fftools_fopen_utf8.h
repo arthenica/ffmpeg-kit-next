@@ -1,29 +1,43 @@
 /*
- * Copyright (c) 2026 Taner Sener
+ * Original FFmpeg source:
+ * Derived from FFmpeg source file fftools/fopen_utf8.h.
  *
- * This file is part of FFmpegKitNext.
+ * FFmpegKitNext modifications:
+ * Copyright (c) 2022, 2026 Taner Sener
+ * Copyright (c) 2023-2024 ARTHENICA LTD
  *
- * FFmpegKitNext is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General License as published by
+ * This modified file is part of FFmpegKitNext.
+ * It is derived from FFmpeg's fftools/fopen_utf8.h at tag n7.1.5.
+ *
+ * The original FFmpeg source is licensed under the GNU Lesser General
+ * Public License version 2.1 or later. FFmpegKitNext distributes this
+ * modified file under the GNU Lesser General Public License version 3 or
+ * later, as permitted by that original "or later" license.
+ *
+ * This file is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * FFmpegKitNext is distributed in the hope that it will be useful,
+ * This file is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with FFmpegKitNext. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
- * This file is the modified version of fopen_utf8.h file living in ffmpeg
- * source code under the fftools folder. We manually update it each time we
- * depend on a new ffmpeg version. Below you can see the list of changes applied
- * by us to develop the ffmpeg-kit library.
+ * Modification history:
  *
  * ffmpeg-kit changes by Taner Sener
+ *
+ * 06.2026
+ * --------------------------------------------------------
+ * - FFmpeg 7.1.5 changes migrated
+ * - FFmpegKitNext integration updates preserved, including wrapper API,
+ *   callbacks, cancellation and thread/session-local execution where applicable
  */
 
 #ifndef FFTOOLS_FOPEN_UTF8_H
@@ -37,15 +51,16 @@
  * CRT, and FILE* handles can't be shared across them.) */
 
 #ifdef _WIN32
+#include "libavutil/mem.h"
 #include "libavutil/wchar_filename.h"
 
-static inline FILE *fopen_utf8(const char *path_utf8, const char *mode) {
+static inline FILE *fopen_utf8(const char *path_utf8, const char *mode)
+{
     wchar_t *path_w, *mode_w;
     FILE *f;
 
     /* convert UTF-8 to wide chars */
-    if (get_extended_win32_path(path_utf8,
-                                &path_w)) /* This sets errno on error. */
+    if (get_extended_win32_path(path_utf8, &path_w)) /* This sets errno on error. */
         return NULL;
     if (!path_w)
         goto fallback;
@@ -72,7 +87,8 @@ fallback:
 
 #else
 
-static inline FILE *fopen_utf8(const char *path, const char *mode) {
+static inline FILE *fopen_utf8(const char *path, const char *mode)
+{
     return fopen(path, mode);
 }
 #endif

@@ -31,7 +31,7 @@ enable_main_build() {
 }
 
 build_application_mk() {
-  if [[ ${ENABLED_LIBRARIES[$LIBRARY_X265]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_TESSERACT]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_OPENH264]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_SNAPPY]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_RUBBERBAND]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_ZIMG]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_SRT]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_CHROMAPRINT]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_LIBILBC]} -eq 1 ]] || [[ -n ${CUSTOM_LIBRARY_USES_CPP} ]]; then
+  if [[ ${ENABLED_LIBRARIES[$LIBRARY_X265]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_VVENC]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_LIBSVTAV1]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_LIBJXL]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_TESSERACT]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_OPENH264]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_SNAPPY]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_RUBBERBAND]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_ZIMG]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_SRT]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_CHROMAPRINT]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_LIBILBC]} -eq 1 ]] || [[ -n ${CUSTOM_LIBRARY_USES_CPP} ]]; then
     local APP_STL="c++_shared"
   else
     local APP_STL="none"
@@ -281,7 +281,7 @@ get_app_specific_cflags() {
   gnutls)
     APP_FLAGS="-std=c99 -Wno-unused-function -D_GL_USE_STDLIB_ALLOC=1"
     ;;
-  kvazaar)
+  kvazaar | libsvtav1)
     APP_FLAGS="-std=gnu99 -Wno-unused-function"
     ;;
   libaom)
@@ -360,6 +360,15 @@ get_cxxflags() {
   opencore-amr)
     echo "${COMMON_FLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
     ;;
+  libjxl)
+    echo "${COMMON_FLAGS} -std=c++17 ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
+    ;;
+  libsvtav1)
+    echo "${COMMON_FLAGS} -std=c++11 ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
+    ;;
+  vvenc)
+    echo "${COMMON_FLAGS} -std=c++14 ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
+    ;;
   x265)
     echo "${COMMON_FLAGS} -std=c++11 -fno-exceptions ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
     ;;
@@ -393,7 +402,7 @@ get_common_linked_libraries() {
   libvpx)
     echo "-lc -lm ${COMMON_LIBRARY_PATHS}"
     ;;
-  srt | tesseract | x265)
+  libjxl | libsvtav1 | srt | tesseract | vvenc | x265)
     echo "-lc -lm -ldl -llog -lc++_shared ${COMMON_LIBRARY_PATHS}"
     ;;
   *)
@@ -547,7 +556,7 @@ URL: https://freetype.org
 Description: A free, high-quality, and portable font engine.
 Version: ${FREETYPE_VERSION}
 Requires: libpng
-Requires.private: zlib
+Requires.private: zlib, libbrotlidec
 Libs: -L\${libdir} -lfreetype
 Libs.private:
 Cflags: -I\${includedir}/freetype2

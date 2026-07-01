@@ -130,7 +130,7 @@ get_app_specific_cflags() {
   jpeg)
     APP_FLAGS="-Wno-nullability-completeness"
     ;;
-  kvazaar)
+  kvazaar | libsvtav1 | openssl)
     APP_FLAGS="-std=gnu99 -Wno-unused-function"
     ;;
   leptonica)
@@ -225,8 +225,17 @@ get_cxxflags() {
   rubberband)
     echo "-fno-rtti -Wno-c++11-narrowing ${BITCODE_FLAGS} ${COMMON_CFLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
     ;;
+  libjxl)
+    echo "-std=c++17 ${BITCODE_FLAGS} ${COMMON_CFLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
+    ;;
+  libsvtav1)
+    echo "-std=c++11 ${BITCODE_FLAGS} ${COMMON_CFLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
+    ;;
   srt | tesseract | zimg)
     echo "-std=c++11 ${BITCODE_FLAGS} ${COMMON_CFLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
+    ;;
+  vvenc)
+    echo "-std=c++14 ${BITCODE_FLAGS} ${COMMON_CFLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
     ;;
   x265)
     echo "-std=c++11 -fno-exceptions ${BITCODE_FLAGS} ${COMMON_CFLAGS} ${EXTRA_CXXFLAGS}"
@@ -335,7 +344,7 @@ set_toolchain_paths() {
 
     # patch gas-preprocessor.pl against the following warning
     # Unescaped left brace in regex is deprecated here (and will be fatal in Perl 5.32), passed through in regex; marked by <-- HERE in m/(?:ld|st)\d\s+({ <-- HERE \s*v(\d+)\.(\d[bhsdBHSD])\s*-\s*v(\d+)\.(\d[bhsdBHSD])\s*})/ at /Users/taner/Projects/ffmpeg-kit/.tmp/gas-preprocessor.pl line 1065.
-    sed -i .tmp "s/s\+({/s\+(\\\\{/g;s/s\*})/s\*\\\\})/g" "${FFMPEG_KIT_TMPDIR}"/gas-preprocessor.pl
+    ${SED_INLINE} 's/s+({/s+(\\{/g;s/s\*})/s*\\})/g' "${FFMPEG_KIT_TMPDIR}"/gas-preprocessor.pl
   fi
 
   LOCAL_GAS_PREPROCESSOR="${FFMPEG_KIT_TMPDIR}/gas-preprocessor.pl"

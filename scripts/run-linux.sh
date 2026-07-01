@@ -20,7 +20,7 @@ HOST=$(get_host)
 export CFLAGS=$(get_cflags "${LIB_NAME}")
 export CXXFLAGS=$(get_cxxflags "${LIB_NAME}")
 export LDFLAGS=$(get_ldflags "${LIB_NAME}")
-export PKG_CONFIG_LIBDIR="${INSTALL_PKG_CONFIG_DIR}${FFMPEG_KIT_NIX_PKG_CONFIG_LIBDIR:+:${FFMPEG_KIT_NIX_PKG_CONFIG_LIBDIR}}"
+export PKG_CONFIG_LIBDIR="$(get_linux_pkg_config_libdir)"
 unset PKG_CONFIG_PATH
 
 cd "${BASEDIR}"/src/"${LIB_NAME}" || return 1

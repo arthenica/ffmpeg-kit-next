@@ -59,6 +59,7 @@ fi
   --with-included-unistring \
   --without-idn \
   --without-p11-kit \
+  --without-brotli \
   ${ASM_OPTIONS} \
   --enable-static \
   --disable-openssl-compatibility \

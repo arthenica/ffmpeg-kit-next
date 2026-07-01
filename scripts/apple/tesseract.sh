@@ -41,4 +41,4 @@ make -j$(get_cpu_count) || return 1
 make install || return 1
 
 # CREATE PACKAGE CONFIG MANUALLY
-create_tesseract_package_config "5.3.2" || return 1
+create_tesseract_package_config "5.4.1" || return 1

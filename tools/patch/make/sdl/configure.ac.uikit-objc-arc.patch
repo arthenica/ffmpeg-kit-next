@@ -1,0 +1,19 @@
+--- a/configure.ac
++++ b/configure.ac
+@@ -4265,7 +4265,8 @@
+                 have_tvos=no
+                 ;;
+         esac
+ 
++        CheckObjectiveCARC
+         CheckVisibilityHidden
+         CheckWerror
+         CheckNoErrorDeprecatedDeclarationsWerror
+@@ -4352,6 +4353,7 @@
+             AC_DEFINE(SDL_VIDEO_OPENGL_ES, 1, [ ])
+             AC_DEFINE(SDL_VIDEO_RENDER_OGL_ES, 1, [ ])
+             AC_DEFINE(SDL_VIDEO_RENDER_OGL_ES2, 1, [ ])
++            EXTRA_CFLAGS="$EXTRA_CFLAGS -DGLES_SILENCE_DEPRECATION"
+         fi
+         SOURCES="$SOURCES $srcdir/src/video/uikit/*.m"
+         SUMMARY_video="${SUMMARY_video} uikit"

@@ -41,6 +41,7 @@ fi
   --with-included-unistring \
   --without-idn \
   --without-p11-kit \
+  --without-brotli \
   --enable-hardware-acceleration \
   --enable-static \
   --disable-openssl-compatibility \

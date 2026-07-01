@@ -1,0 +1,19 @@
+--- a/include/SDL_config.h.in
++++ b/include/SDL_config.h.in
+@@ -374,6 +374,7 @@
+ /* Enable various video drivers */
+ #undef SDL_VIDEO_DRIVER_HAIKU
+ #undef SDL_VIDEO_DRIVER_COCOA
++#undef SDL_VIDEO_DRIVER_UIKIT
+ #undef SDL_VIDEO_DRIVER_DIRECTFB
+ #undef SDL_VIDEO_DRIVER_DIRECTFB_DYNAMIC
+ #undef SDL_VIDEO_DRIVER_DUMMY
+@@ -449,6 +450,7 @@
+ #undef SDL_POWER_WINDOWS
+ #undef SDL_POWER_MACOSX
+ #undef SDL_POWER_HAIKU
+ #undef SDL_POWER_ANDROID
++#undef SDL_POWER_UIKIT
+ #undef SDL_POWER_EMSCRIPTEN
+ #undef SDL_POWER_HARDWIRED
+ 

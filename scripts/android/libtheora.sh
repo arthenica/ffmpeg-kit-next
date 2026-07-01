@@ -1,11 +1,7 @@
 #!/bin/bash
 
 # SET BUILD OPTIONS
-if [[ -z ${FFMPEG_KIT_LTS_BUILD} ]]; then
-  ASM_OPTIONS="--enable-asm"
-else
-  ASM_OPTIONS="--disable-asm"
-fi
+ASM_OPTIONS="--enable-asm"
 
 # ALWAYS CLEAN THE PREVIOUS BUILD
 make distclean 2>/dev/null 1>/dev/null

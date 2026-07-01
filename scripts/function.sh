@@ -211,6 +211,10 @@ get_library_name() {
   90) echo "linux-vaapi" ;;
   91) echo "linux-vo-amrwbenc" ;;
   92) echo "linux-harfbuzz" ;;
+  93) echo "vvenc" ;;
+  94) echo "libsvtav1" ;;
+  95) echo "libjxl" ;;
+  96) echo "liblc3" ;;
   esac
 }
 
@@ -309,7 +313,21 @@ from_library_name() {
   linux-vaapi) echo 90 ;;
   linux-vo-amrwbenc) echo 91 ;;
   linux-harfbuzz) echo 92 ;;
+  vvenc) echo 93 ;;
+  libsvtav1) echo 94 ;;
+  libjxl) echo 95 ;;
+  liblc3) echo 96 ;;
   esac
+}
+
+get_common_library_indexes() {
+  for library in {0..49}; do
+    echo "${library}"
+  done
+  echo "${LIBRARY_VVENC}"
+  echo "${LIBRARY_LIBSVTAV1}"
+  echo "${LIBRARY_LIBJXL}"
+  echo "${LIBRARY_LIBLC3}"
 }
 
 #
@@ -319,7 +337,7 @@ is_library_supported_on_platform() {
   local library_index=$(from_library_name "$1")
   case ${library_index} in
   # ALL
-  16 | 17 | 18 | 23 | 27 | 28 | 32 | 34 | 35 | 36 | 50)
+  16 | 17 | 18 | 23 | 27 | 28 | 32 | 34 | 35 | 36 | 50 | 93 | 94 | 95 | 96)
     echo "0"
     ;;
 
@@ -464,6 +482,10 @@ get_package_config_file_name() {
   46) echo "lept" ;;
   47) echo "samplerate" ;;
   58) echo "uuid" ;;
+  93) echo "libvvenc" ;;
+  94) echo "SvtAv1Enc" ;;
+  95) echo "libjxl" ;;
+  96) echo "lc3" ;;
   *) echo "$(get_library_name "$1")" ;;
   esac
 }
@@ -881,6 +903,9 @@ display_help_common_libraries() {
   echo -e "  --enable-lame\t\t\tbuild with lame [no]"
   echo -e "  --enable-libaom\t\tbuild with libaom [no]"
   echo -e "  --enable-libass\t\tbuild with libass [no]"
+  echo -e "  --enable-libjxl\t\tbuild with libjxl [no]"
+  echo -e "  --enable-liblc3\t\tbuild with liblc3 [no]"
+  echo -e "  --enable-libsvtav1\t\tbuild with libsvtav1 [no]"
 
   case ${FFMPEG_KIT_BUILD_TYPE} in
   android)
@@ -907,6 +932,7 @@ display_help_common_libraries() {
   echo -e "  --enable-tesseract\t\tbuild with tesseract [no]"
   echo -e "  --enable-twolame\t\tbuild with twolame [no]"
   echo -e "  --enable-vo-amrwbenc\t\tbuild with vo-amrwbenc [no]"
+  echo -e "  --enable-vvenc\t\tbuild with vvenc [no]"
   echo -e "  --enable-zimg\t\t\tbuild with zimg [no]\n"
 }
 
@@ -957,7 +983,7 @@ reconf_library() {
   local RECONF_VARIABLE=$(echo "RECONF_$1" | sed "s/\-/\_/g")
   local library_supported=0
 
-  for library in {0..49}; do
+  for library in $(get_common_library_indexes); do
     library_name=$(get_library_name ${library})
     local library_supported_on_platform=$(is_library_supported_on_platform "${library_name}")
 
@@ -984,7 +1010,7 @@ rebuild_library() {
   local REBUILD_VARIABLE=$(echo "REBUILD_$1" | sed "s/\-/\_/g")
   local library_supported=0
 
-  for library in {0..49}; do
+  for library in $(get_common_library_indexes); do
     library_name=$(get_library_name ${library})
     local library_supported_on_platform=$(is_library_supported_on_platform "${library_name}")
 
@@ -1011,7 +1037,7 @@ redownload_library() {
   local REDOWNLOAD_VARIABLE=$(echo "REDOWNLOAD_$1" | sed "s/\-/\_/g")
   local library_supported=0
 
-  for library in {0..49}; do
+  for library in $(get_common_library_indexes); do
     library_name=$(get_library_name ${library})
     local library_supported_on_platform=$(is_library_supported_on_platform "${library_name}")
 
@@ -1120,6 +1146,7 @@ set_library() {
     ENABLED_LIBRARIES[LIBRARY_FREETYPE]=$2
     set_virtual_library "zlib" $2
     set_library "libpng" $2
+    set_library "libjxl" $2
     ;;
   fribidi)
     ENABLED_LIBRARIES[LIBRARY_FRIBIDI]=$2
@@ -1164,9 +1191,18 @@ set_library() {
   libilbc)
     ENABLED_LIBRARIES[LIBRARY_LIBILBC]=$2
     ;;
+  libjxl)
+    ENABLED_LIBRARIES[LIBRARY_LIBJXL]=$2
+    ;;
+  liblc3)
+    ENABLED_LIBRARIES[LIBRARY_LIBLC3]=$2
+    ;;
   libpng)
     ENABLED_LIBRARIES[LIBRARY_LIBPNG]=$2
     set_virtual_library "zlib" $2
+    ;;
+  libsvtav1)
+    ENABLED_LIBRARIES[LIBRARY_LIBSVTAV1]=$2
     ;;
   libtheora)
     ENABLED_LIBRARIES[LIBRARY_LIBTHEORA]=$2
@@ -1250,6 +1286,9 @@ set_library() {
     ;;
   vo-amrwbenc)
     ENABLED_LIBRARIES[LIBRARY_VO_AMRWBENC]=$2
+    ;;
+  vvenc)
+    ENABLED_LIBRARIES[LIBRARY_VVENC]=$2
     ;;
   x264)
     ENABLED_LIBRARIES[LIBRARY_X264]=$2
@@ -1528,6 +1567,9 @@ check_if_dependency_rebuilt() {
     set_dependency_rebuilt_flag "libass"
     set_dependency_rebuilt_flag "libxml2"
     ;;
+  libjxl)
+    set_dependency_rebuilt_flag "freetype"
+    ;;
   libogg)
     set_dependency_rebuilt_flag "libvorbis"
     set_dependency_rebuilt_flag "libtheora"
@@ -1624,7 +1666,7 @@ print_enabled_libraries() {
   let enabled=0
 
   # SUPPLEMENTARY LIBRARIES NOT PRINTED
-  for library in {50..57} {59..92} {0..36}; do
+  for library in {50..57} {59..92} {0..36} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3}; do
     if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
       if [[ ${enabled} -ge 1 ]]; then
         echo -n ", "
@@ -1647,7 +1689,7 @@ print_enabled_xcframeworks() {
   let enabled=0
 
   # SUPPLEMENTARY LIBRARIES NOT PRINTED
-  for library in {0..49}; do
+  for library in $(get_common_library_indexes); do
     if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
       if [[ ${enabled} -ge 1 ]]; then
         echo -n ", "
@@ -1802,16 +1844,16 @@ get_external_library_license_path() {
   case $1 in
   1) echo "${BASEDIR}/src/$(get_library_name "$1")/LICENSE.TXT" ;;
   12) echo "${BASEDIR}/src/$(get_library_name "$1")/Copyright" ;;
-  35) echo "${BASEDIR}/src/$(get_library_name "$1")/LICENSE.txt" ;;
+  30 | 35) echo "${BASEDIR}/src/$(get_library_name "$1")/LICENSE.txt" ;;
   3 | 42) echo "${BASEDIR}/src/$(get_library_name "$1")/COPYING.LESSERv3" ;;
   5 | 44) echo "${BASEDIR}/src/$(get_library_name "$1")/$(get_library_name "$1")/COPYING" ;;
   19) echo "${BASEDIR}/src/$(get_library_name "$1")/$(get_library_name "$1")/LICENSE" ;;
   26) echo "${BASEDIR}/src/$(get_library_name "$1")/COPYING.LGPL" ;;
   28 | 38) echo "${BASEDIR}/src/$(get_library_name "$1")/LICENSE.md " ;;
-  30) echo "${BASEDIR}/src/$(get_library_name "$1")/COPYING.txt" ;;
-  43) echo "${BASEDIR}/src/$(get_library_name "$1")/COPYRIGHT" ;;
   46) echo "${BASEDIR}/src/$(get_library_name "$1")/leptonica-license.txt" ;;
-  4 | 10 | 13 | 17 | 21 | 27 | 31 | 32 | 36 | 40 | 49) echo "${BASEDIR}/src/$(get_library_name "$1")/LICENSE" ;;
+  93) echo "${BASEDIR}/src/$(get_library_name "$1")/LICENSE.txt" ;;
+  43 |94) echo "${BASEDIR}/src/$(get_library_name "$1")/LICENSE.md" ;;
+  4 | 10 | 13 | 17 | 21 | 27 | 31 | 32 | 36 | 40 | 49 | 95 | 96) echo "${BASEDIR}/src/$(get_library_name "$1")/LICENSE" ;;
   *) echo "${BASEDIR}/src/$(get_library_name "$1")/COPYING" ;;
   esac
 }
@@ -2062,9 +2104,9 @@ downloaded_library_sources() {
   fi
 
   # DOWNLOAD LIBRARY SOURCES
-  for library in {1..50}; do
-    if [[ ${!library} -eq 1 ]]; then
-      library_name=$(get_library_name $((library - 1)))
+  for library in $(get_common_library_indexes); do
+    if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
+      library_name=$(get_library_name "${library}")
       echo -e "\nDEBUG: Downloading library ${library_name}\n" 1>>"${BASEDIR}"/build.log 2>&1
       if [[ $(download_library_source "${library_name}") -ne 0 ]]; then
         exit 1

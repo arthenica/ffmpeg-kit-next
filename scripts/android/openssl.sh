@@ -1,12 +1,5 @@
 #!/bin/bash
 
-if [[ ${ARCH} == "x86" ]]; then
-
-  # openssl does not support 32-bit apple architectures
-  echo -e "ERROR: openssl is not supported on $ARCH architecture for $FFMPEG_KIT_BUILD_TYPE platform.\n" 1>>"${BASEDIR}"/build.log 2>&1
-  return 200
-fi
-
 # SET BUILD OPTIONS
 ASM_OPTIONS=""
 case ${ARCH} in
@@ -51,4 +44,4 @@ make -j$(get_cpu_count) build_sw || return 1
 make install_sw install_ssldirs || return 1
 
 # MANUALLY COPY PKG-CONFIG FILES
-cp ./*.pc "${INSTALL_PKG_CONFIG_DIR}" || return 1
+cp ./exporters/*.pc "${INSTALL_PKG_CONFIG_DIR}" || return 1

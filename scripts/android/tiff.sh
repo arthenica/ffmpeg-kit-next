@@ -20,7 +20,16 @@ fi
   --disable-maintainer-mode \
   --disable-cxx \
   --disable-win32-io \
+  --disable-libdeflate \
+  --disable-jbig \
+  --disable-lerc \
   --disable-lzma \
+  --disable-zstd \
+  --disable-webp \
+  --disable-tools \
+  --disable-tests \
+  --disable-contrib \
+  --disable-docs \
   --host="${HOST}" || return 1
 
 make -j$(get_cpu_count) || return 1

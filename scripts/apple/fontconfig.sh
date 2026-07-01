@@ -1,5 +1,9 @@
 #!/bin/bash
 
+export ac_cv_va_copy=C99
+export FREETYPE_CFLAGS="$(pkg-config --cflags freetype2)"
+export FREETYPE_LIBS="$(pkg-config --libs --static freetype2)"
+
 # ALWAYS CLEAN THE PREVIOUS BUILD
 make distclean 2>/dev/null 1>/dev/null
 
@@ -20,6 +24,7 @@ fi
   --enable-static \
   --disable-shared \
   --disable-fast-install \
+  --disable-cache-build \
   --disable-rpath \
   --disable-libxml2 \
   --disable-docs \
@@ -34,4 +39,4 @@ make -j$(get_cpu_count) || return 1
 make install || return 1
 
 # CREATE PACKAGE CONFIG MANUALLY
-create_fontconfig_package_config "2.14.2" || return 1
+create_fontconfig_package_config "2.18.1" || return 1

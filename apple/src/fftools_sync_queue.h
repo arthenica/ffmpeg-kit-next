@@ -1,29 +1,42 @@
 /*
+ * Original FFmpeg source:
+ * Derived from FFmpeg source file fftools/sync_queue.h.
+ *
+ * FFmpegKitNext modifications:
  * Copyright (c) 2026 Taner Sener
  *
- * This file is part of FFmpegKitNext.
+ * This modified file is part of FFmpegKitNext.
+ * It is derived from FFmpeg's fftools/sync_queue.h at tag n7.1.5.
  *
- * FFmpegKitNext is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General License as published by
+ * The original FFmpeg source is licensed under the GNU Lesser General
+ * Public License version 2.1 or later. FFmpegKitNext distributes this
+ * modified file under the GNU Lesser General Public License version 3 or
+ * later, as permitted by that original "or later" license.
+ *
+ * This file is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * FFmpegKitNext is distributed in the hope that it will be useful,
+ * This file is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with FFmpegKitNext. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
- * This file is the modified version of sync_queue.h file living in ffmpeg
- * source code under the fftools folder. We manually update it each time we
- * depend on a new ffmpeg version. Below you can see the list of changes applied
- * by us to develop ffmpeg-kit library.
+ * Modification history:
  *
  * ffmpeg-kit changes by ARTHENICA LTD
+ *
+ * 06.2026
+ * --------------------------------------------------------
+ * - FFmpeg 7.1.5 changes migrated
+ * - FFmpegKitNext integration updates preserved, including wrapper API,
+ *   callbacks, cancellation and thread/session-local execution where applicable
  *
  * 11.2024
  * --------------------------------------------------------
@@ -49,12 +62,12 @@ enum SyncQueueType {
 };
 
 typedef union SyncQueueFrame {
-    AVFrame *f;
+    AVFrame  *f;
     AVPacket *p;
 } SyncQueueFrame;
 
-#define SQFRAME(frame) ((SyncQueueFrame){.f = (frame)})
-#define SQPKT(pkt) ((SyncQueueFrame){.p = (pkt)})
+#define SQFRAME(frame) ((SyncQueueFrame){ .f = (frame) })
+#define SQPKT(pkt)     ((SyncQueueFrame){ .p = (pkt) })
 
 /**
  * A sync queue provides timestamp synchronization between multiple streams.
@@ -69,7 +82,7 @@ typedef struct SyncQueue SyncQueue;
  * @param buf_size_us maximum duration that will be buffered in microseconds
  */
 SyncQueue *sq_alloc(enum SyncQueueType type, int64_t buf_size_us, void *logctx);
-void sq_free(SyncQueue **sq);
+void       sq_free(SyncQueue **sq);
 
 /**
  * Add a new stream to the sync queue.

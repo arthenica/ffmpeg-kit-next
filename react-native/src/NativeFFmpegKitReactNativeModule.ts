@@ -79,7 +79,7 @@ export interface Spec extends TurboModule {
   getSessionsByState(sessionState: number): Promise<Object[]>;
   getLogRedirectionStrategy(): Promise<number>;
   setLogRedirectionStrategy(logRedirectionStrategy: number): Promise<void>;
-  messagesInTransmit(sessionId: number): Promise<boolean>;
+  messagesInTransmit(sessionId: number): Promise<number>;
   getPlatform(): Promise<string>;
   writeToPipe(inputPath: string, namedPipePath: string): Promise<number>;
 

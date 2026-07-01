@@ -152,7 +152,7 @@ CONFIGURE_POSTFIX=""
 HIGH_PRIORITY_LDFLAGS=""
 
 # SET CONFIGURE OPTIONS
-for library in {0..61}; do
+for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3}; do
   if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
     ENABLED_LIBRARY=$(get_library_name ${library})
 
@@ -204,6 +204,11 @@ for library in {0..61}; do
       FFMPEG_LDFLAGS+=" $(pkg-config --libs --static kvazaar 2>>"${BASEDIR}"/build.log)"
       CONFIGURE_POSTFIX+=" --enable-libkvazaar"
       ;;
+    vvenc)
+      FFMPEG_CFLAGS+=" $(pkg-config --cflags libvvenc 2>>"${BASEDIR}"/build.log)"
+      FFMPEG_LDFLAGS+=" $(pkg-config --libs --static libvvenc 2>>"${BASEDIR}"/build.log)"
+      CONFIGURE_POSTFIX+=" --enable-libvvenc"
+      ;;
     lame)
       FFMPEG_CFLAGS+=" $(pkg-config --cflags libmp3lame 2>>"${BASEDIR}"/build.log)"
       FFMPEG_LDFLAGS+=" $(pkg-config --libs --static libmp3lame 2>>"${BASEDIR}"/build.log)"
@@ -213,6 +218,21 @@ for library in {0..61}; do
       FFMPEG_CFLAGS+=" $(pkg-config --cflags aom 2>>"${BASEDIR}"/build.log)"
       FFMPEG_LDFLAGS+=" $(pkg-config --libs --static aom 2>>"${BASEDIR}"/build.log)"
       CONFIGURE_POSTFIX+=" --enable-libaom"
+      ;;
+    libjxl)
+      FFMPEG_CFLAGS+=" $(pkg-config --cflags --static libjxl libjxl_threads 2>>"${BASEDIR}"/build.log)"
+      FFMPEG_LDFLAGS+=" $(pkg-config --libs --static libjxl libjxl_threads 2>>"${BASEDIR}"/build.log)"
+      CONFIGURE_POSTFIX+=" --enable-libjxl"
+      ;;
+    liblc3)
+      FFMPEG_CFLAGS+=" $(pkg-config --cflags lc3 2>>"${BASEDIR}"/build.log)"
+      FFMPEG_LDFLAGS+=" $(pkg-config --libs --static lc3 2>>"${BASEDIR}"/build.log)"
+      CONFIGURE_POSTFIX+=" --enable-liblc3"
+      ;;
+    libsvtav1)
+      FFMPEG_CFLAGS+=" $(pkg-config --cflags SvtAv1Enc 2>>"${BASEDIR}"/build.log)"
+      FFMPEG_LDFLAGS+=" $(pkg-config --libs --static SvtAv1Enc 2>>"${BASEDIR}"/build.log)"
+      CONFIGURE_POSTFIX+=" --enable-libsvtav1"
       ;;
     libass)
       FFMPEG_CFLAGS+=" $(pkg-config --cflags libass 2>>"${BASEDIR}"/build.log)"

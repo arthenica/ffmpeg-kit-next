@@ -1,0 +1,20 @@
+--- a/src/joystick/iphoneos/SDL_mfijoystick.m
++++ b/src/joystick/iphoneos/SDL_mfijoystick.m
+@@ -818,7 +818,7 @@
+     return next;
+ }
+ 
+-#if TARGET_OS_TV
++#if TARGET_OS_TV && defined(SDL_JOYSTICK_MFI)
+ static void SDLCALL SDL_AppleTVRemoteRotationHintChanged(void *udata, const char *name, const char *oldValue, const char *newValue)
+ {
+     BOOL allowRotation = newValue != NULL && *newValue != '0';
+@@ -828,7 +828,7 @@
+         }
+     }
+ }
+-#endif /* TARGET_OS_TV */
++#endif /* TARGET_OS_TV && defined(SDL_JOYSTICK_MFI) */
+ 
+ static int IOS_JoystickInit(void)
+ {

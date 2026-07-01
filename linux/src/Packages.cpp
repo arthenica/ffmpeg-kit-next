@@ -173,11 +173,14 @@ ffmpegkit::Packages::getExternalLibraries() {
     const std::set<const char *> supportedExternalLibraries{
         "dav1d",  "fontconfig", "freetype",  "fribidi",      "gmp",
         "gnutls", "harfbuzz",   "kvazaar",   "mp3lame",      "libaom",
-        "libass", "iconv",      "libilbc",   "libtheora",    "libvidstab",
+        "libass", "libjxl",     "liblc3",    "libsvtav1",    "iconv",
+        "libilbc",
+        "libtheora",
+        "libvidstab",
         "libvorbis", "libvpx",  "libwebp",   "libxml2",      "opencore-amr",
         "openh264", "opus",     "rubberband", "sdl2",        "shine",
         "snappy", "soxr",       "speex",     "tesseract",    "twolame",
-        "x264",   "x265",       "xvid"};
+        "vvenc",  "x264",       "x265",      "xvid"};
     std::string buildConfiguration(FFMPEG_CONFIGURATION);
     char libraryName1[50];
     char libraryName2[50];

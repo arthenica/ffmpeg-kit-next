@@ -178,7 +178,7 @@ echo -e "INFO: Using Android toolchain at ${ANDROID_TOOLCHAIN}\n" 1>>"${BASEDIR}
 
 # PROCESS FULL OPTION AS LAST OPTION
 if [[ -n ${BUILD_FULL} ]]; then
-  for library in {0..61}; do
+  for library in {0..61} {93..96}; do
     if [ ${GPL_ENABLED} == "yes" ]; then
       enable_library "$(get_library_name $library)" 1
     else
@@ -259,7 +259,7 @@ for run_arch in {0..12}; do
     . "${SCRIPT_DIR}"/main-android.sh "${ENABLED_LIBRARIES[@]}" || exit 1
 
     # CLEAR FLAGS
-    for library in {0..61}; do
+    for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3}; do
       library_name=$(get_library_name ${library})
       unset "$(echo "OK_${library_name}" | sed "s/\-/\_/g")"
       unset "$(echo "DEPENDENCY_REBUILT_${library_name}" | sed "s/\-/\_/g")"
@@ -325,7 +325,7 @@ if [[ -n ${ANDROID_ARCHITECTURES} ]]; then
   # COPY EXTERNAL LIBRARY LICENSES
   LICENSE_BASEDIR="${BASEDIR}"/android/ffmpeg-kit-next-android-lib/src/main/res/raw
   rm -f "${LICENSE_BASEDIR}"/*.txt 1>>"${BASEDIR}"/build.log 2>&1 || exit 1
-  for library in {0..49}; do
+  for library in $(get_common_library_indexes); do
     if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
       ENABLED_LIBRARY=$(get_library_name ${library} | sed 's/-/_/g')
       LICENSE_FILE="${LICENSE_BASEDIR}/license_${ENABLED_LIBRARY}.txt"

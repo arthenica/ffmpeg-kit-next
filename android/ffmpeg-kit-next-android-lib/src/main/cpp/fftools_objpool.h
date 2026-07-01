@@ -1,29 +1,42 @@
 /*
- * Copyright (c) 2026 Taner Sener
+ * Original FFmpeg source:
+ * Derived from FFmpeg source file fftools/objpool.h.
  *
- * This file is part of FFmpegKitNext.
+ * FFmpegKitNext modifications:
+ * Copyright (c) 2022, 2026 Taner Sener
  *
- * FFmpegKitNext is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General License as published by
+ * This modified file is part of FFmpegKitNext.
+ * It is derived from FFmpeg's fftools/objpool.h at tag n7.1.5.
+ *
+ * The original FFmpeg source is licensed under the GNU Lesser General
+ * Public License version 2.1 or later. FFmpegKitNext distributes this
+ * modified file under the GNU Lesser General Public License version 3 or
+ * later, as permitted by that original "or later" license.
+ *
+ * This file is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * FFmpegKitNext is distributed in the hope that it will be useful,
+ * This file is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with FFmpegKitNext. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
- * This file is the modified version of objpool.h file living in ffmpeg source
- * code under the fftools folder. We manually update it each time we depend on a
- * new ffmpeg version. Below you can see the list of changes applied by us to
- * develop ffmpeg-kit library.
+ * Modification history:
  *
  * ffmpeg-kit changes by ARTHENICA LTD
+ *
+ * 06.2026
+ * --------------------------------------------------------
+ * - FFmpeg 7.1.5 changes migrated
+ * - FFmpegKitNext integration updates preserved, including wrapper API,
+ *   callbacks, cancellation and thread/session-local execution where applicable
  *
  * 07.2023
  * --------------------------------------------------------
@@ -35,17 +48,17 @@
 
 typedef struct ObjPool ObjPool;
 
-typedef void *(*ObjPoolCBAlloc)(void);
-typedef void (*ObjPoolCBReset)(void *);
-typedef void (*ObjPoolCBFree)(void **);
+typedef void* (*ObjPoolCBAlloc)(void);
+typedef void  (*ObjPoolCBReset)(void *);
+typedef void  (*ObjPoolCBFree)(void **);
 
-void objpool_free(ObjPool **op);
+void     objpool_free(ObjPool **op);
 ObjPool *objpool_alloc(ObjPoolCBAlloc cb_alloc, ObjPoolCBReset cb_reset,
                        ObjPoolCBFree cb_free);
 ObjPool *objpool_alloc_packets(void);
 ObjPool *objpool_alloc_frames(void);
 
-int objpool_get(ObjPool *op, void **obj);
+int  objpool_get(ObjPool *op, void **obj);
 void objpool_release(ObjPool *op, void **obj);
 
 #endif // FFTOOLS_OBJPOOL_H

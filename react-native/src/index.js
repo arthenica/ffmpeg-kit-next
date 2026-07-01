@@ -1622,8 +1622,7 @@ export class FFmpegKitConfig {
   static async messagesInTransmit(sessionId) {
     await FFmpegKitConfig.init();
 
-    const sessionMap = await FFmpegKitReactNativeModule.messagesInTransmit(sessionId);
-    return FFmpegKitFactory.mapToSession(sessionMap);
+    return FFmpegKitReactNativeModule.messagesInTransmit(sessionId);
   }
 
   /**
@@ -1868,7 +1867,7 @@ class FFmpegKitFactory {
   }
 
   static getVersion() {
-    return "6.1.1";
+    return "7.1.0";
   }
 
   static getLogRedirectionStrategy(sessionId) {
@@ -2927,7 +2926,8 @@ export class MediaInformationJsonParser {
   static async from(ffprobeJsonOutput) {
     await FFmpegKitConfig.init();
 
-    return FFmpegKitReactNativeModule.mediaInformationJsonParserFrom(ffprobeJsonOutput).map(properties => new MediaInformation(properties));
+    const mediaInformationProperties = await FFmpegKitReactNativeModule.mediaInformationJsonParserFrom(ffprobeJsonOutput);
+    return mediaInformationProperties == null ? undefined : new MediaInformation(mediaInformationProperties);
   }
 
   /**
@@ -2939,7 +2939,8 @@ export class MediaInformationJsonParser {
   static async fromWithError(ffprobeJsonOutput) {
     await FFmpegKitConfig.init();
 
-    return FFmpegKitReactNativeModule.mediaInformationJsonParserFrom(ffprobeJsonOutput).map(properties => new MediaInformation(properties));
+    const mediaInformationProperties = await FFmpegKitReactNativeModule.mediaInformationJsonParserFromWithError(ffprobeJsonOutput);
+    return new MediaInformation(mediaInformationProperties);
   }
 
 }

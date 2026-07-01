@@ -1,29 +1,42 @@
 /*
- * Copyright (c) 2026 Taner Sener
+ * Original FFmpeg source:
+ * Derived from FFmpeg source file fftools/objpool.c.
  *
- * This file is part of FFmpegKitNext.
+ * FFmpegKitNext modifications:
+ * Copyright (c) 2022, 2026 Taner Sener
  *
- * FFmpegKitNext is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General License as published by
+ * This modified file is part of FFmpegKitNext.
+ * It is derived from FFmpeg's fftools/objpool.c at tag n7.1.5.
+ *
+ * The original FFmpeg source is licensed under the GNU Lesser General
+ * Public License version 2.1 or later. FFmpegKitNext distributes this
+ * modified file under the GNU Lesser General Public License version 3 or
+ * later, as permitted by that original "or later" license.
+ *
+ * This file is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * FFmpegKitNext is distributed in the hope that it will be useful,
+ * This file is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with FFmpegKitNext. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
- * This file is the modified version of objpool.c file living in ffmpeg source
- * code under the fftools folder. We manually update it each time we depend on a
- * new ffmpeg version. Below you can see the list of changes applied by us to
- * develop ffmpeg-kit library.
+ * Modification history:
  *
  * ffmpeg-kit changes by ARTHENICA LTD
+ *
+ * 06.2026
+ * --------------------------------------------------------
+ * - FFmpeg 7.1.5 changes migrated
+ * - FFmpegKitNext integration updates preserved, including wrapper API,
+ *   callbacks, cancellation and thread/session-local execution where applicable
  *
  * 07.2023
  * --------------------------------------------------------
@@ -43,16 +56,17 @@
 #include "fftools_objpool.h"
 
 struct ObjPool {
-    void *pool[32];
+    void        *pool[32];
     unsigned int pool_count;
 
     ObjPoolCBAlloc alloc;
     ObjPoolCBReset reset;
-    ObjPoolCBFree free;
+    ObjPoolCBFree  free;
 };
 
 ObjPool *objpool_alloc(ObjPoolCBAlloc cb_alloc, ObjPoolCBReset cb_reset,
-                       ObjPoolCBFree cb_free) {
+                       ObjPoolCBFree cb_free)
+{
     ObjPool *op = av_mallocz(sizeof(*op));
 
     if (!op)
@@ -60,12 +74,13 @@ ObjPool *objpool_alloc(ObjPoolCBAlloc cb_alloc, ObjPoolCBReset cb_reset,
 
     op->alloc = cb_alloc;
     op->reset = cb_reset;
-    op->free = cb_free;
+    op->free  = cb_free;
 
     return op;
 }
 
-void objpool_free(ObjPool **pop) {
+void objpool_free(ObjPool **pop)
+{
     ObjPool *op = *pop;
 
     if (!op)
@@ -77,7 +92,8 @@ void objpool_free(ObjPool **pop) {
     av_freep(pop);
 }
 
-int objpool_get(ObjPool *op, void **obj) {
+int  objpool_get(ObjPool *op, void **obj)
+{
     if (op->pool_count) {
         *obj = op->pool[--op->pool_count];
         op->pool[op->pool_count] = NULL;
@@ -87,7 +103,8 @@ int objpool_get(ObjPool *op, void **obj) {
     return *obj ? 0 : AVERROR(ENOMEM);
 }
 
-void objpool_release(ObjPool *op, void **obj) {
+void objpool_release(ObjPool *op, void **obj)
+{
     if (!*obj)
         return;
 
@@ -101,26 +118,42 @@ void objpool_release(ObjPool *op, void **obj) {
     *obj = NULL;
 }
 
-static void *alloc_packet(void) { return av_packet_alloc(); }
-static void *alloc_frame(void) { return av_frame_alloc(); }
+static void *alloc_packet(void)
+{
+    return av_packet_alloc();
+}
+static void *alloc_frame(void)
+{
+    return av_frame_alloc();
+}
 
-static void reset_packet(void *obj) { av_packet_unref(obj); }
-static void reset_frame(void *obj) { av_frame_unref(obj); }
+static void reset_packet(void *obj)
+{
+    av_packet_unref(obj);
+}
+static void reset_frame(void *obj)
+{
+    av_frame_unref(obj);
+}
 
-static void free_packet(void **obj) {
+static void free_packet(void **obj)
+{
     AVPacket *pkt = *obj;
     av_packet_free(&pkt);
     *obj = NULL;
 }
-static void free_frame(void **obj) {
+static void free_frame(void **obj)
+{
     AVFrame *frame = *obj;
     av_frame_free(&frame);
     *obj = NULL;
 }
 
-ObjPool *objpool_alloc_packets(void) {
+ObjPool *objpool_alloc_packets(void)
+{
     return objpool_alloc(alloc_packet, reset_packet, free_packet);
 }
-ObjPool *objpool_alloc_frames(void) {
+ObjPool *objpool_alloc_frames(void)
+{
     return objpool_alloc(alloc_frame, reset_frame, free_frame);
 }

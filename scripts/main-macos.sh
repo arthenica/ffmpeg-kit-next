@@ -35,9 +35,9 @@ fi
 # FILTER WHICH EXTERNAL LIBRARIES WILL BE BUILT
 # NOTE THAT BUILT-IN LIBRARIES ARE FORWARDED TO FFMPEG SCRIPT WITHOUT ANY PROCESSING
 enabled_library_list=()
-for library in {1..50}; do
-  if [[ ${!library} -eq 1 ]]; then
-    ENABLED_LIBRARY=$(get_library_name $((library - 1)))
+for library in $(get_common_library_indexes); do
+  if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
+    ENABLED_LIBRARY=$(get_library_name "${library}")
     enabled_library_list+=(${ENABLED_LIBRARY})
 
     echo -e "INFO: Enabled library ${ENABLED_LIBRARY} will be built\n" 1>>"${BASEDIR}"/build.log 2>&1
@@ -56,7 +56,7 @@ while [ ${#enabled_library_list[@]} -gt $completed ]; do
       fi
       ;;
     freetype)
-      if [[ $OK_libpng -eq 1 ]]; then
+      if [[ $OK_libpng -eq 1 ]] && [[ $OK_libjxl -eq 1 ]]; then
         run=1
       fi
       ;;
