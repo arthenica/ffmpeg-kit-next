@@ -1236,7 +1236,6 @@ strip = '$STRIP'
 pkgconfig = 'pkg-config'
 
 [properties]
-sys_root = '$SDK_PATH'
 has_function_printf = true
 
 [host_machine]

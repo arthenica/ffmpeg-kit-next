@@ -484,7 +484,6 @@ strip = '$STRIP'
 pkgconfig = 'pkg-config'
 
 [properties]
-sys_root = '$ANDROID_SYSROOT'
 has_function_printf = true
 
 [host_machine]
