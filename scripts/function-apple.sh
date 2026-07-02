@@ -1233,7 +1233,7 @@ c = '$CC'
 cpp = '$CXX'
 ar = '$AR'
 strip = '$STRIP'
-pkgconfig = 'pkg-config'
+pkg-config = 'pkg-config'
 
 [properties]
 has_function_printf = true

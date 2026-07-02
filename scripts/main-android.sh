@@ -69,7 +69,7 @@ while [ ${#enabled_library_list[@]} -gt $completed ]; do
       fi
       ;;
     harfbuzz)
-      if [[ $OK_fontconfig -eq 1 ]] && [[ $OK_freetype -eq 1 ]]; then
+      if [[ $OK_freetype -eq 1 ]]; then
         run=1
       fi
       ;;
