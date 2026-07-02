@@ -19,7 +19,7 @@
 
 #include "ffmpegkit_abidetect.h"
 #include "cpu-features.h"
-#include "fftools_ffmpeg.h"
+#include "fftools/ffmpeg.h"
 
 /** Full name of the Java class that owns native functions in this file. */
 const char *abiDetectClassName = "com/arthenica/ffmpegkit/AbiDetect";

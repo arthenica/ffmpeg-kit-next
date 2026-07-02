@@ -27,7 +27,7 @@
 #include "libavutil/bprint.h"
 #include "libavutil/mem.h"
 
-/** Forward declaration for function defined in fftools_ffprobe.c */
+/** Forward declaration for function defined in fftools/ffprobe.c */
 int ffprobe_execute(int argc, char **argv);
 
 extern int configuredLogLevel;

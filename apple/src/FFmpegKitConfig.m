@@ -28,7 +28,7 @@
 #import "LogRedirectionStrategy.h"
 #import "MediaInformationSession.h"
 #import "SessionState.h"
-#import "fftools_ffmpeg.h"
+#import "fftools/ffmpeg.h"
 #import "libavformat/avio.h"
 #import "libavutil/bprint.h"
 #import "libavutil/common.h"
@@ -44,7 +44,7 @@
 #import <sys/types.h>
 
 /** Global library version */
-NSString *const FFmpegKitVersion = @"7.1.0";
+NSString *const FFmpegKitVersion = @"8.1.0";
 
 /**
  * Prefix of named pipes created by ffmpeg-kit.
@@ -180,10 +180,10 @@ extern void av_set_ffkitstream_functions(
     ffkit_local_protocol_close_function close_function);
 #endif
 
-/** Forward declaration for function defined in fftools_ffmpeg.c */
+/** Forward declaration for function defined in fftools/ffmpeg.c */
 int ffmpeg_execute(int argc, char **argv);
 
-/** Forward declaration for function defined in fftools_ffprobe.c */
+/** Forward declaration for function defined in fftools/ffprobe.c */
 int ffprobe_execute(int argc, char **argv);
 
 typedef NS_ENUM(NSUInteger, CallbackType) { LogType, StatisticsType };
@@ -1053,6 +1053,33 @@ static int ffkit_stream_close(void *opaque) {
     return 0;
 }
 
+/*
+ * FFmpegKitNext per-session log "duties".
+ *
+ * -report (ffmpeg) and -show_log (ffprobe) used to each install their own global
+ * av_log callback, hijacking redirection and (for ffprobe) needing a manual
+ * restore. Instead they now just leave a signal in place (report_file != NULL,
+ * do_show_log != 0) and the single, always-installed FFmpegKit callback invokes
+ * these passive duty routines for every log line. Each duty self-guards, so both
+ * are cheap no-ops when their feature is inactive. A va_list is consumed once, so
+ * each duty gets its own va_copy. Neither duty may call av_log() (it would recurse
+ * back into the callback).
+ */
+extern void ffmpegkit_report_write(void *ptr, int level, const char *fmt, va_list vl);
+extern void ffmpegkit_show_log_capture(void *ptr, int level, const char *fmt, va_list vl);
+
+static void run_duties(void *ptr, int level, const char *format, va_list vargs) {
+    va_list copy;
+
+    va_copy(copy, vargs);
+    ffmpegkit_report_write(ptr, level, format, copy);
+    va_end(copy);
+
+    va_copy(copy, vargs);
+    ffmpegkit_show_log_capture(ptr, level, format, copy);
+    va_end(copy);
+}
+
 /**
  * Callback function for FFmpeg/FFprobe logs.
  *
@@ -1071,6 +1098,11 @@ void ffmpegkit_log_callback_function(void *ptr, int level, const char *format,
     if (level >= 0) {
         level &= 0xff;
     }
+
+    // Run -report / -show_log capture for every line, independent of the console
+    // log-level filter below (the report keeps its own report_file_level threshold).
+    run_duties(ptr, level, format, vargs);
+
     int activeLogLevel = av_log_get_level();
 
     // LevelAVLogStdErr logs are always redirected
@@ -1100,6 +1132,24 @@ void ffmpegkit_log_callback_function(void *ptr, int level, const char *format,
     av_bprint_finalize(part + 2, NULL);
     av_bprint_finalize(part + 3, NULL);
     av_bprint_finalize(&fullLine, NULL);
+}
+
+int ffmpegkit_redirection_enabled(void) { return redirectionEnabled; }
+
+/*
+ * FFmpegKitNext: av_log callback installed when redirection is DISABLED.
+ * Reproduces stock ffmpeg logging (stderr) while still running the per-session
+ * duties, so -report / -show_log keep working even with redirection off.
+ */
+static void ffmpegkit_log_callback_default(void *ptr, int level,
+                                           const char *format, va_list vargs) {
+    va_list copy;
+
+    va_copy(copy, vargs);
+    av_log_default_callback(ptr, level, format, copy);
+    va_end(copy);
+
+    run_duties(ptr, level, format, vargs);
 }
 
 /**
@@ -1849,7 +1899,7 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
 
     [lock unlock];
 
-    av_log_set_callback(av_log_default_callback);
+    av_log_set_callback(ffmpegkit_log_callback_default);
     set_report_callback(nil);
 
     callbackNotify();

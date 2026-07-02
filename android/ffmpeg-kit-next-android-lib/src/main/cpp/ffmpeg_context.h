@@ -30,7 +30,7 @@
 #ifndef FFMPEG_CONTEXT_H
 #define FFMPEG_CONTEXT_H
 
-#include "fftools_ffmpeg.h"
+#include "fftools/ffmpeg.h"
 #include "libavformat/avio.h"
 #include "libavutil/dict.h"
 
@@ -49,9 +49,12 @@ extern __thread int nb_hw_devices;
 extern __thread HWDevice **hw_devices;
 extern __thread struct EncStatsFile *enc_stats_files;
 extern __thread int nb_enc_stats_files;
-extern __thread float audio_drift_threshold;
 extern __thread int file_overwrite;
 extern __thread int no_file_overwrite;
+extern __thread int filter_buffered_frames;
+extern __thread int print_graphs;
+extern __thread char *print_graphs_file;
+extern __thread char *print_graphs_format;
 extern __thread FILE *report_file;
 extern __thread int report_file_level;
 extern __thread int warned_cfg;
@@ -108,7 +111,6 @@ typedef struct FFmpegContext {
     const OptionDef *options;
     HWDevice *filter_hw_device;
     char *vstats_filename;
-    float audio_drift_threshold;
     float dts_delta_threshold;
     float dts_error_threshold;
     enum VideoSyncMethod video_sync_method;
@@ -128,7 +130,11 @@ typedef struct FFmpegContext {
     float max_error_rate;
     char *filter_nbthreads;
     int filter_complex_nbthreads;
+    int filter_buffered_frames;
     int vstats_version;
+    int print_graphs;
+    char *print_graphs_file;
+    char *print_graphs_format;
     int auto_conversion_filters;
     int64_t stats_period;
     int file_overwrite;
