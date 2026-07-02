@@ -6,7 +6,10 @@
  * Copyright (c) 2026 Taner Sener
  *
  * This file is part of FFmpegKitNext.
- * It is copied unmodified from FFmpeg's compat/android/binder.c at tag n8.1.2.
+ * It is based on FFmpeg's compat/android/binder.c at tag n8.1.2, modified so
+ * that it does not shrink the binder threadpool max thread count. Unlike the
+ * standalone ffmpeg CLI, FFmpegKitNext runs inside a host Android app whose
+ * binder threadpool is already started, and shrinking it aborts the process.
  *
  * The original FFmpeg source is licensed under the GNU Lesser General
  * Public License version 2.1 or later. FFmpegKitNext distributes this
@@ -37,8 +40,6 @@
 #include "libavutil/log.h"
 #include "binder.h"
 
-#define THREAD_POOL_SIZE 1
-
 static void *dlopen_libbinder_ndk(void)
 {
     /*
@@ -60,21 +61,14 @@ static void *dlopen_libbinder_ndk(void)
 
 static void android_binder_threadpool_init(void)
 {
-    typedef int (*set_thread_pool_max_fn)(uint32_t);
     typedef void (*start_thread_pool_fn)(void);
 
-    set_thread_pool_max_fn set_thread_pool_max = NULL;
     start_thread_pool_fn start_thread_pool = NULL;
 
     void *h = dlopen_libbinder_ndk();
     if (h == NULL)
         return;
 
-    unsigned thead_pool_size = THREAD_POOL_SIZE;
-
-    set_thread_pool_max =
-        (set_thread_pool_max_fn) dlsym(h,
-                                       "ABinderProcess_setThreadPoolMaxThreadCount");
     start_thread_pool =
         (start_thread_pool_fn) dlsym(h, "ABinderProcess_startThreadPool");
 
@@ -84,15 +78,20 @@ static void android_binder_threadpool_init(void)
         return;
     }
 
-    if (set_thread_pool_max != NULL) {
-        int ok = set_thread_pool_max(thead_pool_size);
-        av_log(NULL, AV_LOG_DEBUG,
-               "android/binder: ABinderProcess_setThreadPoolMaxThreadCount(%u) => %s\n",
-               thead_pool_size, ok ? "ok" : "fail");
-    } else {
-        av_log(NULL, AV_LOG_DEBUG,
-               "android/binder: ABinderProcess_setThreadPoolMaxThreadCount is unavailable; using the library default\n");
-    }
+    /*
+     * FFmpegKitNext modification:
+     *
+     * Upstream also calls ABinderProcess_setThreadPoolMaxThreadCount(1) here.
+     * That is safe for the standalone ffmpeg CLI, whose process has a fresh
+     * binder threadpool that has not started yet. FFmpegKitNext, however, runs
+     * inside a host Android app whose binder threadpool has already been started
+     * by the framework with the default max thread count (15). libbinder aborts
+     * with "Binder threadpool cannot be shrunk after starting" when the max is
+     * lowered after the pool has started, so we deliberately skip
+     * setThreadPoolMaxThreadCount and only ensure the pool is running. Calling
+     * ABinderProcess_startThreadPool() on an already-started pool is a safe
+     * no-op.
+     */
 
     start_thread_pool();
     av_log(NULL, AV_LOG_DEBUG,
