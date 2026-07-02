@@ -36,7 +36,7 @@
  * former globals in thread-local (__thread) storage, one independent copy per
  * session thread. Starting with the FFmpeg 7.x scheduler, a single invocation
  * fans out into several worker threads (demuxer, decoder(s), filtergraph(s),
- * encoder(s), muxer) created in task_start() in fftools_ffmpeg_sched.c. A newly
+ * encoder(s), muxer) created in task_start() in fftools/ffmpeg_sched.c. A newly
  * created pthread gets ZERO-INITIALIZED thread-local storage, NOT a copy of the
  * parent's, so without intervention every worker would see globalSessionId == 0,
  * options == NULL, etc.
@@ -115,7 +115,6 @@ FFmpegContext *saveFFmpegContext(void *arg) {
     context->options = options;
     context->filter_hw_device = filter_hw_device;
     context->vstats_filename = vstats_filename;
-    context->audio_drift_threshold = audio_drift_threshold;
     context->dts_delta_threshold = dts_delta_threshold;
     context->dts_error_threshold = dts_error_threshold;
     context->video_sync_method = video_sync_method;
@@ -135,7 +134,11 @@ FFmpegContext *saveFFmpegContext(void *arg) {
     context->max_error_rate = max_error_rate;
     context->filter_nbthreads = filter_nbthreads;
     context->filter_complex_nbthreads = filter_complex_nbthreads;
+    context->filter_buffered_frames = filter_buffered_frames;
     context->vstats_version = vstats_version;
+    context->print_graphs = print_graphs;
+    context->print_graphs_file = print_graphs_file;
+    context->print_graphs_format = print_graphs_format;
     context->auto_conversion_filters = auto_conversion_filters;
     context->stats_period = stats_period;
     context->file_overwrite = file_overwrite;
@@ -208,7 +211,6 @@ void *loadFFmpegContext(FFmpegContext *context) {
     options = context->options;
     filter_hw_device = context->filter_hw_device;
     vstats_filename = context->vstats_filename;
-    audio_drift_threshold = context->audio_drift_threshold;
     dts_delta_threshold = context->dts_delta_threshold;
     dts_error_threshold = context->dts_error_threshold;
     video_sync_method = context->video_sync_method;
@@ -228,7 +230,11 @@ void *loadFFmpegContext(FFmpegContext *context) {
     max_error_rate = context->max_error_rate;
     filter_nbthreads = context->filter_nbthreads;
     filter_complex_nbthreads = context->filter_complex_nbthreads;
+    filter_buffered_frames = context->filter_buffered_frames;
     vstats_version = context->vstats_version;
+    print_graphs = context->print_graphs;
+    print_graphs_file = context->print_graphs_file;
+    print_graphs_format = context->print_graphs_format;
     auto_conversion_filters = context->auto_conversion_filters;
     stats_period = context->stats_period;
     file_overwrite = context->file_overwrite;

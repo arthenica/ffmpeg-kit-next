@@ -33,7 +33,7 @@ get_library_source() {
     ;;
   ffmpeg)
     SOURCE_REPO_URL="https://github.com/arthenica/FFmpeg"
-    SOURCE_ID="n7.1.5"
+    SOURCE_ID="n8.1.2"
     SOURCE_TYPE="TAG"
     ;;
   fontconfig)
@@ -68,7 +68,7 @@ get_library_source() {
     ;;
   harfbuzz)
     SOURCE_REPO_URL="https://github.com/arthenica/harfbuzz"
-    SOURCE_ID="8.0.1"
+    SOURCE_ID="14.2.1"
     SOURCE_TYPE="TAG"
     ;;
   jpeg)
@@ -208,7 +208,7 @@ get_library_source() {
     ;;
   rubberband)
     SOURCE_REPO_URL="https://github.com/arthenica/rubberband"
-    SOURCE_ID="v1.8.2"
+    SOURCE_ID="v4.0.0"
     SOURCE_TYPE="TAG"
     ;;
   sdl)

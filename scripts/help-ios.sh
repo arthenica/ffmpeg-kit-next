@@ -10,8 +10,8 @@ display_help() {
     PROFILE_OPTION="  -p, --profile PROFILE\t\tnix develop profile to use\n      --list-profiles\t\tlist local nix develop profiles"
   fi
 
-  echo -e "\n'$COMMAND' builds FFmpegKit for iOS platform. By default nine architectures (armv7, armv7s, arm64, \
-arm64-mac-catalyst, arm64-simulator, arm64e, i386, x86-64 and x86-64-mac-catalyst) are enabled without any external \
+  echo -e "\n'$COMMAND' builds FFmpegKit for iOS platform. By default six architectures (arm64, arm64-mac-catalyst, \
+arm64-simulator, arm64e, x86-64 and x86-64-mac-catalyst) are enabled without any external \
 libraries. Options can be used to disable architectures and/or enable external libraries. Please note that GPL \
 libraries (external libraries with GPL license) need --enable-gpl flag to be set explicitly. When compilation ends, \
 libraries are created under the prebuilt folder.\n"
@@ -22,13 +22,10 @@ libraries are created under the prebuilt folder.\n"
   display_help_licensing
 
   echo -e "Architectures:"
-  echo -e "  --disable-armv7\t\tdo not build armv7 architecture [yes]"
-  echo -e "  --disable-armv7s\t\tdo not build armv7s architecture [yes]"
   echo -e "  --disable-arm64\t\tdo not build arm64 architecture [yes]"
   echo -e "  --disable-arm64-mac-catalyst\tdo not build arm64-mac-catalyst architecture [yes]"
   echo -e "  --disable-arm64-simulator\tdo not build arm64-simulator architecture [yes]"
   echo -e "  --disable-arm64e\t\tdo not build arm64e architecture [yes]"
-  echo -e "  --disable-i386\t\tdo not build i386 architecture [yes]"
   echo -e "  --disable-x86-64\t\tdo not build x86-64 architecture [yes]"
   echo -e "  --disable-x86-64-mac-catalyst\tdo not build x86-64-mac-catalyst architecture [yes]\n"
 

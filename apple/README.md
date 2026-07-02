@@ -5,8 +5,8 @@
 ### 1. Features
 #### 1.1 iOS
 - Supports `iOS 12.1+` deployment targets
-- Includes `armv7`, `armv7s`, `arm64`, `arm64-simulator`, `arm64e`, `i386`, `x86_64`, `x86_64-mac-catalyst` and 
-  `arm64-mac-catalyst` architectures
+- Includes `arm64`, `arm64-simulator`, `arm64e`, `x86_64`, `x86_64-mac-catalyst` and `arm64-mac-catalyst`
+  architectures
 - Objective-C API
 - Camera access
 - `ARC` enabled library
@@ -90,7 +90,7 @@ Use `--enable-<library name>` flag to support additional external or system libr
 `--disable-<architecture name>` to disable architectures you don't want to build.
 
 ```
-./nix-ios.sh -p xcode26 --enable-fontconfig --disable-armv7
+./nix-ios.sh -p xcode26 --enable-fontconfig --disable-arm64e
 
 ./nix-macos.sh -p xcode26 --enable-freetype --enable-macos-avfoundation --disable-arm64
 

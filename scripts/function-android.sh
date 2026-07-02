@@ -481,10 +481,9 @@ c = '$CC'
 cpp = '$CXX'
 ar = '$AR'
 strip = '$STRIP'
-pkgconfig = 'pkg-config'
+pkg-config = 'pkg-config'
 
 [properties]
-sys_root = '$ANDROID_SYSROOT'
 has_function_printf = true
 
 [host_machine]

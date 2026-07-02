@@ -1,39 +1,19 @@
 /*
- * Original FFmpeg source:
  * Copyright (C) 2023 Rémi Denis-Courmont
  *
- * FFmpegKitNext modifications:
- * Copyright (c) 2026 Taner Sener
- *
- * This modified file is part of FFmpegKitNext.
- * It is derived from FFmpeg's compat/stdbit/stdbit.h at tag n7.1.5.
- *
- * The original FFmpeg source is licensed under the GNU Lesser General
- * Public License version 2.1 or later. FFmpegKitNext distributes this
- * modified file under the GNU Lesser General Public License version 3 or
- * later, as permitted by that original "or later" license.
- *
- * This file is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation; either version 2.1 of the License, or
  * (at your option) any later version.
  *
- * This file is distributed in the hope that it will be useful,
+ * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with FFmpegKitNext. If not, see <http://www.gnu.org/licenses/>.
- */
-
-/*
- * Modification history:
- *
- * 06.2026
- * --------------------------------------------------------
- * - Added to FFmpegKitNext from FFmpeg n7.1.5 compat/stdbit
- *   for Apple SDKs without C23 <stdbit.h>.
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
  */
 
 #ifndef __STDC_VERSION_STDBIT_H__

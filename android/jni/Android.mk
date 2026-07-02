@@ -61,7 +61,7 @@ include $(BUILD_SHARED_LIBRARY)
 
 $(call import-module, cpu-features)
 
-MY_SRC_FILES := ffmpegkit.c ffprobekit.c ffmpegkit_exception.c fftools_cmdutils.c fftools_ffmpeg.c fftools_ffprobe.c fftools_ffmpeg_mux.c fftools_ffmpeg_mux_init.c fftools_ffmpeg_demux.c fftools_ffmpeg_enc.c fftools_ffmpeg_dec.c fftools_ffmpeg_opt.c fftools_ffmpeg_sched.c fftools_opt_common.c fftools_ffmpeg_hw.c fftools_ffmpeg_filter.c fftools_objpool.c fftools_sync_queue.c fftools_thread_queue.c android_support.c ffmpeg_context.c
+MY_SRC_FILES := ffmpegkit.c ffprobekit.c ffmpegkit_exception.c fftools/cmdutils.c fftools/ffmpeg.c fftools/ffprobe.c fftools/ffmpeg_mux.c fftools/ffmpeg_mux_init.c fftools/ffmpeg_demux.c fftools/ffmpeg_enc.c fftools/ffmpeg_dec.c fftools/ffmpeg_opt.c fftools/ffmpeg_sched.c fftools/opt_common.c fftools/ffmpeg_hw.c fftools/ffmpeg_filter.c fftools/graph/graphprint.c fftools/resources/graph_resources.c fftools/resources/resman.c fftools/textformat/avtextformat.c fftools/textformat/tf_compact.c fftools/textformat/tf_default.c fftools/textformat/tf_flat.c fftools/textformat/tf_ini.c fftools/textformat/tf_json.c fftools/textformat/tf_mermaid.c fftools/textformat/tf_xml.c fftools/sync_queue.c fftools/thread_queue.c fftools/textformat/tw_avio.c fftools/textformat/tw_buffer.c fftools/textformat/tw_stdout.c android_support.c ffmpeg_context.c compat/android/binder.c
 
 MY_CFLAGS := -Wall -Werror -Wno-unused-parameter -Wno-switch -Wno-sign-compare
 MY_LDLIBS := -llog -lz -landroid
@@ -74,13 +74,11 @@ ifeq ($(MY_ARMV7_NEON), true)
     LOCAL_ARM_MODE := $(MY_ARM_MODE)
     LOCAL_MODULE := ffmpegkit_armv7a_neon
     LOCAL_SRC_FILES := $(MY_SRC_FILES)
+    LOCAL_C_INCLUDES := $(LOCAL_PATH)
     LOCAL_CFLAGS := $(MY_CFLAGS)
     LOCAL_LDFLAGS := $(MY_LDFLAGS)
     LOCAL_LDLIBS := $(MY_LDLIBS)
     LOCAL_SHARED_LIBRARIES := libavcodec_neon libavfilter_neon libswscale_neon libavformat_neon libavutil_neon libswresample_neon libavdevice_neon
-    ifeq ($(APP_STL), c++_shared)
-        LOCAL_SHARED_LIBRARIES += c++_shared # otherwise NDK will not add the library for packaging
-    endif
     LOCAL_ARM_NEON := true
     include $(BUILD_SHARED_LIBRARY)
 
@@ -97,13 +95,11 @@ ifeq ($(MY_BUILD_GENERIC_FFMPEG_KIT), true)
     LOCAL_ARM_MODE := $(MY_ARM_MODE)
     LOCAL_MODULE := ffmpegkit
     LOCAL_SRC_FILES := $(MY_SRC_FILES)
+    LOCAL_C_INCLUDES := $(LOCAL_PATH)
     LOCAL_CFLAGS := $(MY_CFLAGS)
     LOCAL_LDFLAGS := $(MY_LDFLAGS)
     LOCAL_LDLIBS := $(MY_LDLIBS)
     LOCAL_SHARED_LIBRARIES := libavfilter libavformat libavcodec libavutil libswresample libavdevice libswscale
-    ifeq ($(APP_STL), c++_shared)
-        LOCAL_SHARED_LIBRARIES += c++_shared # otherwise NDK will not add the library for packaging
-    endif
     LOCAL_ARM_NEON := ${MY_ARM_NEON}
     include $(BUILD_SHARED_LIBRARY)
 

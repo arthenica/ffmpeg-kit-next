@@ -15,8 +15,8 @@ android {
     defaultConfig {
         minSdk 24
         targetSdk 34
-        versionCode 240710
-        versionName "7.1.0"
+        versionCode 240810
+        versionName "8.1.0"
         consumerProguardFiles "consumer-rules.pro"
     }
 

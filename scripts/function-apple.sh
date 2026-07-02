@@ -25,8 +25,8 @@ disable_ios_architecture_not_supported_on_detected_sdk_version() {
   case ${ARCH_NAME} in
   armv7 | armv7s | i386)
 
-    # SUPPORTED UNTIL IOS SDK 10.3.1
-    if [[ $(compare_versions "$IOS_MIN_VERSION" "10.3.1") -le 0 ]]; then
+    # SUPPORTED UNTIL IOS SDK 10.3.1, AND REMOVED FROM MODERN XCODE SDKS
+    if [[ $(compare_versions "$DETECTED_IOS_SDK_VERSION" "10.3.1") -le 0 ]] && [[ $(compare_versions "$IOS_MIN_VERSION" "10.3.1") -le 0 ]]; then
       local SUPPORTED=1
     else
       local SUPPORTED=0
@@ -1233,10 +1233,9 @@ c = '$CC'
 cpp = '$CXX'
 ar = '$AR'
 strip = '$STRIP'
-pkgconfig = 'pkg-config'
+pkg-config = 'pkg-config'
 
 [properties]
-sys_root = '$SDK_PATH'
 has_function_printf = true
 
 [host_machine]

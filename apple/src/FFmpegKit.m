@@ -17,7 +17,7 @@
  * along with FFmpegKitNext. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#import "fftools_ffmpeg.h"
+#import "fftools/ffmpeg.h"
 #import "ArchDetect.h"
 #import "AtomicLong.h"
 #import "FFmpegKit.h"

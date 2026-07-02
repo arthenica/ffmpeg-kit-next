@@ -506,6 +506,9 @@ get_meson_target_host_family() {
 
 get_meson_target_cpu_family() {
   case ${ARCH} in
+  arm64*)
+    echo "aarch64"
+    ;;
   arm*)
     echo "arm"
     ;;

@@ -1,0 +1,120 @@
+/*
+ * Original FFmpeg source:
+ * Copyright (c) 2025 Dmitrii Okunev
+ *
+ * FFmpegKitNext modifications:
+ * Copyright (c) 2026 Taner Sener
+ *
+ * This file is part of FFmpegKitNext.
+ * It is based on FFmpeg's compat/android/binder.c at tag n8.1.2, modified so
+ * that it does not shrink the binder threadpool max thread count. Unlike the
+ * standalone ffmpeg CLI, FFmpegKitNext runs inside a host Android app whose
+ * binder threadpool is already started, and shrinking it aborts the process.
+ *
+ * The original FFmpeg source is licensed under the GNU Lesser General
+ * Public License version 2.1 or later. FFmpegKitNext distributes this
+ * file under the GNU Lesser General Public License version 3 or later,
+ * as permitted by that original "or later" license.
+ *
+ * This file is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This file is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with FFmpegKitNext. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+
+#if defined(__ANDROID__)
+
+#include <dlfcn.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+#include "libavutil/log.h"
+#include "binder.h"
+
+static void *dlopen_libbinder_ndk(void)
+{
+    /*
+     * libbinder_ndk.so often does not contain the functions we need, so making
+     * this dependency optional, thus using dlopen/dlsym instead of linking.
+     *
+     * See also: https://source.android.com/docs/core/architecture/aidl/aidl-backends
+     */
+
+    void *h = dlopen("libbinder_ndk.so", RTLD_NOW | RTLD_LOCAL);
+    if (h != NULL)
+        return h;
+
+    av_log(NULL, AV_LOG_WARNING,
+           "android/binder: unable to load libbinder_ndk.so: '%s'; skipping binder threadpool init (MediaCodec likely won't work)\n",
+           dlerror());
+    return NULL;
+}
+
+static void android_binder_threadpool_init(void)
+{
+    typedef void (*start_thread_pool_fn)(void);
+
+    start_thread_pool_fn start_thread_pool = NULL;
+
+    void *h = dlopen_libbinder_ndk();
+    if (h == NULL)
+        return;
+
+    start_thread_pool =
+        (start_thread_pool_fn) dlsym(h, "ABinderProcess_startThreadPool");
+
+    if (start_thread_pool == NULL) {
+        av_log(NULL, AV_LOG_WARNING,
+               "android/binder: ABinderProcess_startThreadPool not found; skipping threadpool init (MediaCodec likely won't work)\n");
+        return;
+    }
+
+    /*
+     * FFmpegKitNext modification:
+     *
+     * Upstream also calls ABinderProcess_setThreadPoolMaxThreadCount(1) here.
+     * That is safe for the standalone ffmpeg CLI, whose process has a fresh
+     * binder threadpool that has not started yet. FFmpegKitNext, however, runs
+     * inside a host Android app whose binder threadpool has already been started
+     * by the framework with the default max thread count (15). libbinder aborts
+     * with "Binder threadpool cannot be shrunk after starting" when the max is
+     * lowered after the pool has started, so we deliberately skip
+     * setThreadPoolMaxThreadCount and only ensure the pool is running. Calling
+     * ABinderProcess_startThreadPool() on an already-started pool is a safe
+     * no-op.
+     */
+
+    start_thread_pool();
+    av_log(NULL, AV_LOG_DEBUG,
+           "android/binder: ABinderProcess_startThreadPool() called\n");
+}
+
+void android_binder_threadpool_init_if_required(void)
+{
+#if __ANDROID_API__ >= 24
+    if (android_get_device_api_level() < 35) {
+        // the issue with the thread pool was introduced in Android 15 (API 35)
+        av_log(NULL, AV_LOG_DEBUG,
+               "android/binder: API<35, thus no need to initialize a thread pool\n");
+        return;
+    }
+    android_binder_threadpool_init();
+#else
+    // android_get_device_api_level was introduced in API 24, so we cannot use it
+    // to detect the API level in API<24. For simplicity we just assume
+    // libbinder_ndk.so on the system running this code would have API level < 35;
+    av_log(NULL, AV_LOG_DEBUG,
+           "android/binder: is built with API<24, assuming this is not Android 15+\n");
+#endif
+}
+
+#endif                          /* __ANDROID__ */

@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'ffmpeg_kit_next_flutter'
-  s.version          = '7.1.0'
+  s.version          = '8.1.0'
   s.summary          = 'FFmpeg Kit Next for Flutter'
   s.description      = 'A Flutter plugin for running FFmpeg and FFprobe commands.'
   s.homepage         = 'https://github.com/arthenica/ffmpeg-kit-next'
