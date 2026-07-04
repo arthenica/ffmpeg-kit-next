@@ -1,6 +1,6 @@
 # FFmpegKitNext
 
-<img src="https://github.com/arthenica/ffmpeg-kit-next/blob/main/docs/assets/ffmpeg-kit-next-icon-v1.png" width="240">
+<img src="https://raw.githubusercontent.com/arthenica/ffmpeg-kit-next/main/docs/assets/ffmpeg-kit-next-icon-v1.png" width="240">
 
 `FFmpegKitNext` is the official continuation of `FFmpegKit`.
 
