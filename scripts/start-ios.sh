@@ -246,8 +246,8 @@ if [[ ${NO_FRAMEWORK} -ne 1 ]] && [[ -z ${FFMPEG_KIT_XCF_BUILD} ]] && [[ ${ENABL
   disable_arch "arm64-simulator"
 fi
 
-echo -e "\nBuilding ffmpeg-kit ${BUILD_TYPE_ID}shared library for iOS\n"
-echo -e -n "INFO: Building ffmpeg-kit ${BUILD_VERSION} ${BUILD_TYPE_ID}for iOS: " 1>>"${BASEDIR}"/build.log 2>&1
+echo -e "\nBuilding ffmpeg-kit-next ${BUILD_TYPE_ID}shared library for iOS\n"
+echo -e -n "INFO: Building ffmpeg-kit-next ${BUILD_VERSION} ${BUILD_TYPE_ID}for iOS: " 1>>"${BASEDIR}"/build.log 2>&1
 echo -e "$(date)\n" 1>>"${BASEDIR}"/build.log 2>&1
 
 # PRINT BUILD SUMMARY
