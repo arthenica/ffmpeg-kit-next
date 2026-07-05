@@ -22,6 +22,7 @@
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -123,6 +124,31 @@ int configuredLogLevel = AV_LOG_INFO;
 #define FFKIT_RESOURCE_OUTPUT 2
 #define FFKIT_DEFAULT_OUTPUT_CAPACITY 4096
 #define FFKIT_DEFAULT_STREAM_CAPACITY 1048576
+
+/*
+ * The two helpers below (ffkit_max_alloc_size and ffkit_int64_add_overflow)
+ * are duplicated verbatim in the Android, Apple and Linux FFmpegKit sources
+ * because there is no shared native layer between the platforms. Keep all
+ * three copies in sync: any change here must be mirrored in the others.
+ */
+static int64_t ffkit_max_alloc_size(void) {
+#if SIZE_MAX > INT64_MAX
+    return INT64_MAX;
+#else
+    return (int64_t)SIZE_MAX;
+#endif
+}
+
+static int ffkit_int64_add_overflow(int64_t left, int64_t right,
+                                    int64_t *result) {
+    if ((right > 0 && left > INT64_MAX - right) ||
+        (right < 0 && left < INT64_MIN - right)) {
+        return 1;
+    }
+
+    *result = left + right;
+    return 0;
+}
 
 typedef struct FFKitMemoryResource {
     int64_t id;
@@ -1097,8 +1123,7 @@ static int ffkit_memory_write(void *opaque, const unsigned char *buf, int size) 
         return AVERROR(EBADF);
     }
 
-    requiredSize = handle->position + size;
-    if (requiredSize < handle->position) {
+    if (ffkit_int64_add_overflow(handle->position, size, &requiredSize)) {
         pthread_mutex_unlock(&resource->mutex);
         return AVERROR(EOVERFLOW);
     }
@@ -1115,9 +1140,9 @@ static int ffkit_memory_write(void *opaque, const unsigned char *buf, int size) 
     }
 
     memcpy(resource->data + handle->position, buf, size);
-    handle->position += size;
-    if (handle->position > resource->size) {
-        resource->size = handle->position;
+    handle->position = requiredSize;
+    if (requiredSize > resource->size) {
+        resource->size = requiredSize;
     }
     pthread_mutex_unlock(&resource->mutex);
 
@@ -1145,9 +1170,15 @@ static int64_t ffkit_memory_seek(void *opaque, int64_t pos, int whence) {
     if (whence == SEEK_SET) {
         newPosition = pos;
     } else if (whence == SEEK_CUR) {
-        newPosition = handle->position + pos;
+        if (ffkit_int64_add_overflow(handle->position, pos, &newPosition)) {
+            pthread_mutex_unlock(&resource->mutex);
+            return AVERROR(EOVERFLOW);
+        }
     } else if (whence == SEEK_END) {
-        newPosition = resource->size + pos;
+        if (ffkit_int64_add_overflow(resource->size, pos, &newPosition)) {
+            pthread_mutex_unlock(&resource->mutex);
+            return AVERROR(EOVERFLOW);
+        }
     } else {
         pthread_mutex_unlock(&resource->mutex);
         return AVERROR(EINVAL);
@@ -1753,6 +1784,10 @@ Java_com_arthenica_ffmpegkit_FFmpegKitConfig_registerNativeFFmpegKitInputBuffer(
     }
 
     size = (*env)->GetArrayLength(env, data);
+    if (size < 0 || (int64_t)size > ffkit_max_alloc_size()) {
+        return 0;
+    }
+
     resource = av_mallocz(sizeof(FFKitMemoryResource));
     if (resource == NULL) {
         return 0;
@@ -1790,7 +1825,8 @@ Java_com_arthenica_ffmpegkit_FFmpegKitConfig_registerNativeFFmpegKitInputDirectB
     jlong capacity;
     FFKitMemoryResource *resource;
 
-    if (byteBuffer == NULL || size < 0) {
+    if (byteBuffer == NULL || size < 0 ||
+        (int64_t)size > ffkit_max_alloc_size()) {
         return 0;
     }
 
@@ -1831,9 +1867,12 @@ Java_com_arthenica_ffmpegkit_FFmpegKitConfig_registerNativeFFmpegKitOutputBuffer
     FFKitMemoryResource *resource;
     int64_t capacity =
         initialCapacity > 0 ? initialCapacity : FFKIT_DEFAULT_OUTPUT_CAPACITY;
-    int64_t maximumCapacity = maxCapacity > 0 ? maxCapacity : INT64_MAX;
+    int64_t maximumCapacity =
+        maxCapacity > 0 ? maxCapacity : ffkit_max_alloc_size();
 
-    if (capacity > maximumCapacity) {
+    if (initialCapacity < 0 || maxCapacity < 0 ||
+        capacity > maximumCapacity || capacity > ffkit_max_alloc_size() ||
+        maximumCapacity > ffkit_max_alloc_size()) {
         return 0;
     }
 
@@ -1969,7 +2008,8 @@ Java_com_arthenica_ffmpegkit_FFmpegKitConfig_registerNativeFFmpegKitStream(
     int64_t streamCapacity =
         capacity > 0 ? capacity : FFKIT_DEFAULT_STREAM_CAPACITY;
 
-    if (type != FFKIT_RESOURCE_INPUT && type != FFKIT_RESOURCE_OUTPUT) {
+    if (capacity < 0 || streamCapacity > ffkit_max_alloc_size() ||
+        (type != FFKIT_RESOURCE_INPUT && type != FFKIT_RESOURCE_OUTPUT)) {
         return 0;
     }
 
@@ -2004,9 +2044,14 @@ Java_com_arthenica_ffmpegkit_FFmpegKitConfig_nativeFFmpegKitStreamWrite(
     uint8_t *buffer;
     int ret = AVERROR(ENOENT);
     int freeResource = 0;
+    jsize arrayLength;
 
-    if (data == NULL || offset < 0 || length < 0 ||
-        offset + length > (*env)->GetArrayLength(env, data)) {
+    if (data == NULL || offset < 0 || length < 0) {
+        return AVERROR(EINVAL);
+    }
+
+    arrayLength = (*env)->GetArrayLength(env, data);
+    if (offset > arrayLength || length > arrayLength - offset) {
         return AVERROR(EINVAL);
     }
 

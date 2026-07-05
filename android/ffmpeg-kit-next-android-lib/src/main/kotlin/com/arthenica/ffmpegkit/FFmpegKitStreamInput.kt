@@ -51,7 +51,7 @@ class FFmpegKitStreamInput private constructor(private val id: Long, extension: 
         if (inputClosed) {
             throw IllegalStateException("FFmpegKit input stream is closed for writing.")
         }
-        if (offset < 0 || length < 0 || offset + length > data.size) {
+        if (offset < 0 || length < 0 || offset > data.size || length > data.size - offset) {
             throw IllegalArgumentException("offset and length must fit inside data")
         }
 

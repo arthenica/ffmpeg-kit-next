@@ -597,6 +597,7 @@ else
   cat libavformat/protocols.c.tmp > libavformat/protocols.c
   ${SED_INLINE} "s|av_strstart(proto_name, \"file\", NULL))|av_strstart(proto_name, \"file\", NULL) \|\| av_strstart(proto_name, \"ffkitmem\", NULL) \|\| av_strstart(proto_name, \"ffkitstream\", NULL))|g" libavformat/hls.c 1>>"${BASEDIR}"/build.log 2>&1
   echo -e "\nINFO: Enabled custom ffmpeg-kit protocols\n" 1>>"${BASEDIR}"/build.log 2>&1
+  "${BASEDIR}/scripts/apple/ffmpeg-kit-protocols-test.sh" "${BASEDIR}" "${BASEDIR}/src/${LIB_NAME}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 fi
 
 # 3. Use thread local log levels

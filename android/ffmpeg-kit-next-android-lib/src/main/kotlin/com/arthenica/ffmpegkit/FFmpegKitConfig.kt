@@ -1379,9 +1379,12 @@ open class FFmpegKitConfig private constructor() {
                     val parcelFileDescriptor = safProtocolUrl.parcelFileDescriptor
                     if (parcelFileDescriptor != null) {
                         safFileDescriptorMap.delete(fileDescriptor)
-                        parcelFileDescriptor.close()
-                        if (!safUrlsReusable.get()) {
-                            safIdMap.delete(safId)
+                        try {
+                            parcelFileDescriptor.close()
+                        } finally {
+                            if (!safUrlsReusable.get()) {
+                                safIdMap.delete(safId)
+                            }
                         }
                         android.util.Log.d(
                             TAG,

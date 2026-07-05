@@ -116,6 +116,33 @@ int configuredLogLevel = ffmpegkit::LevelAVLogInfo;
 #define FFKIT_DEFAULT_OUTPUT_CAPACITY 4096
 #define FFKIT_DEFAULT_STREAM_CAPACITY 1048576
 
+/*
+ * The two helpers below (ffkit_max_alloc_size and ffkit_int64_add_overflow)
+ * are duplicated verbatim in the Android, Apple and Linux FFmpegKit sources
+ * because there is no shared native layer between the platforms. Keep all
+ * three copies in sync: any change here must be mirrored in the others.
+ */
+static int64_t ffkit_max_alloc_size() {
+    const uint64_t maxSize =
+        (uint64_t)std::numeric_limits<size_t>::max();
+    const uint64_t maxInt64 =
+        (uint64_t)std::numeric_limits<int64_t>::max();
+    return (int64_t)std::min(maxSize, maxInt64);
+}
+
+static bool ffkit_int64_add_overflow(const int64_t left, const int64_t right,
+                                     int64_t *result) {
+    if ((right > 0 &&
+         left > std::numeric_limits<int64_t>::max() - right) ||
+        (right < 0 &&
+         left < std::numeric_limits<int64_t>::min() - right)) {
+        return true;
+    }
+
+    *result = left + right;
+    return false;
+}
+
 typedef struct FFKitMemoryResource {
     int64_t id;
     int type;
@@ -712,7 +739,7 @@ static int ffkit_memory_read(void *opaque, unsigned char *buf, int size) {
 
     if (handle->position >= resource->size) {
         pthread_mutex_unlock(&resource->mutex);
-        return 0;
+        return AVERROR_EOF;
     }
 
     bytesToRead = (int)FFMIN((int64_t)size, resource->size - handle->position);
@@ -773,8 +800,7 @@ static int ffkit_memory_write(void *opaque, const unsigned char *buf, int size) 
         return AVERROR(EBADF);
     }
 
-    requiredSize = handle->position + size;
-    if (requiredSize < handle->position) {
+    if (ffkit_int64_add_overflow(handle->position, size, &requiredSize)) {
         pthread_mutex_unlock(&resource->mutex);
         return AVERROR(EOVERFLOW);
     }
@@ -791,9 +817,9 @@ static int ffkit_memory_write(void *opaque, const unsigned char *buf, int size) 
     }
 
     memcpy(resource->data + handle->position, buf, size);
-    handle->position += size;
-    if (handle->position > resource->size) {
-        resource->size = handle->position;
+    handle->position = requiredSize;
+    if (requiredSize > resource->size) {
+        resource->size = requiredSize;
     }
     pthread_mutex_unlock(&resource->mutex);
 
@@ -821,9 +847,15 @@ static int64_t ffkit_memory_seek(void *opaque, int64_t pos, int whence) {
     if (whence == SEEK_SET) {
         newPosition = pos;
     } else if (whence == SEEK_CUR) {
-        newPosition = handle->position + pos;
+        if (ffkit_int64_add_overflow(handle->position, pos, &newPosition)) {
+            pthread_mutex_unlock(&resource->mutex);
+            return AVERROR(EOVERFLOW);
+        }
     } else if (whence == SEEK_END) {
-        newPosition = resource->size + pos;
+        if (ffkit_int64_add_overflow(resource->size, pos, &newPosition)) {
+            pthread_mutex_unlock(&resource->mutex);
+            return AVERROR(EOVERFLOW);
+        }
     } else {
         pthread_mutex_unlock(&resource->mutex);
         return AVERROR(EINVAL);
@@ -1021,7 +1053,7 @@ static int ffkit_stream_read(void *opaque, unsigned char *buf, int size) {
     }
 
     ret = ffkit_stream_read_bytes(handle->resource, buf, size, -1, NULL, &eof);
-    return eof ? 0 : ret;
+    return eof ? AVERROR_EOF : ret;
 }
 
 static int ffkit_stream_write(void *opaque, const unsigned char *buf, int size) {
@@ -1723,7 +1755,7 @@ long ffmpegkit::FFmpegKitConfig::registerFFmpegKitInputBuffer(
     if (data == NULL && size > 0) {
         return 0;
     }
-    if (size > (size_t)std::numeric_limits<int64_t>::max()) {
+    if (size > (size_t)ffkit_max_alloc_size()) {
         return 0;
     }
 
@@ -1762,10 +1794,11 @@ long ffmpegkit::FFmpegKitConfig::registerFFmpegKitOutputBuffer(
     int64_t capacity =
         initialCapacity > 0 ? initialCapacity : FFKIT_DEFAULT_OUTPUT_CAPACITY;
     int64_t maximumCapacity =
-        maxCapacity > 0 ? maxCapacity : std::numeric_limits<int64_t>::max();
+        maxCapacity > 0 ? maxCapacity : ffkit_max_alloc_size();
 
     if (initialCapacity < 0 || maxCapacity < 0 ||
-        capacity > maximumCapacity) {
+        capacity > maximumCapacity || capacity > ffkit_max_alloc_size() ||
+        maximumCapacity > ffkit_max_alloc_size()) {
         return 0;
     }
 
@@ -1874,7 +1907,8 @@ long ffmpegkit::FFmpegKitConfig::registerFFmpegKitStream(const long capacity,
     int64_t streamCapacity =
         capacity > 0 ? capacity : FFKIT_DEFAULT_STREAM_CAPACITY;
 
-    if (type != FFKIT_RESOURCE_INPUT && type != FFKIT_RESOURCE_OUTPUT) {
+    if (capacity < 0 || streamCapacity > ffkit_max_alloc_size() ||
+        (type != FFKIT_RESOURCE_INPUT && type != FFKIT_RESOURCE_OUTPUT)) {
         return 0;
     }
 

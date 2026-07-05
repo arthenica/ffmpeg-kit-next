@@ -8,19 +8,31 @@ typedef struct FFKitProtocolContext {
 static int ffkit_parse_protocol_id(const char *filename, const char *protocol,
                                    int64_t *id)
 {
-    char *final = NULL;
     const char *id_string = NULL;
+    const char *p;
+    int64_t parsed_id = 0;
 
-    av_strstart(filename, protocol, &id_string);
-    if (id_string == NULL || id_string == filename) {
+    if (!av_strstart(filename, protocol, &id_string)) {
         return AVERROR(EINVAL);
     }
 
-    *id = strtoll(id_string, &final, 10);
-    if (id_string == final || (*final && *final != '.')) {
+    if (!av_isdigit(*id_string)) {
         return AVERROR(EINVAL);
     }
 
+    for (p = id_string; av_isdigit(*p); p++) {
+        int digit = *p - '0';
+        if (parsed_id > (INT64_MAX - digit) / 10) {
+            return AVERROR(EINVAL);
+        }
+        parsed_id = parsed_id * 10 + digit;
+    }
+
+    if (*p && *p != '.') {
+        return AVERROR(EINVAL);
+    }
+
+    *id = parsed_id;
     return 0;
 }
 
@@ -32,10 +44,12 @@ static int ffkitmem_open(URLContext *h, const char *filename, int flags)
     ffkit_protocol_open_function open_function = av_get_ffkitmem_open();
 
     if (ret < 0) {
+        av_log(h, AV_LOG_ERROR, "Invalid ffkitmem URL '%s'.\n", filename);
         return ret;
     }
 
     if (open_function == NULL) {
+        av_log(h, AV_LOG_ERROR, "Cannot open ffkitmem URL '%s': no open callback registered.\n", filename);
         return AVERROR(ENOSYS);
     }
 
@@ -81,6 +95,13 @@ static int ffkitmem_close(URLContext *h)
     FFKitProtocolContext *c = h->priv_data;
     ffkit_protocol_close_function close_function = av_get_ffkitmem_close();
 
+    /*
+     * Return convention: 0 on success, negative AVERROR on failure (FFmpeg's
+     * url_close contract). The ffkitmem close callback already follows this
+     * convention, so its value is passed through unchanged; a missing callback
+     * is a successful no-op. (Unlike saf_close, whose boolean callback must be
+     * translated -- do not unify the two.)
+     */
     return close_function == NULL ? 0 : close_function(c->handle);
 }
 
@@ -92,10 +113,12 @@ static int ffkitstream_open(URLContext *h, const char *filename, int flags)
     ffkit_protocol_open_function open_function = av_get_ffkitstream_open();
 
     if (ret < 0) {
+        av_log(h, AV_LOG_ERROR, "Invalid ffkitstream URL '%s'.\n", filename);
         return ret;
     }
 
     if (open_function == NULL) {
+        av_log(h, AV_LOG_ERROR, "Cannot open ffkitstream URL '%s': no open callback registered.\n", filename);
         return AVERROR(ENOSYS);
     }
 
@@ -141,6 +164,13 @@ static int ffkitstream_close(URLContext *h)
     FFKitProtocolContext *c = h->priv_data;
     ffkit_protocol_close_function close_function = av_get_ffkitstream_close();
 
+    /*
+     * Return convention: 0 on success, negative AVERROR on failure (FFmpeg's
+     * url_close contract). The ffkitstream close callback already follows this
+     * convention, so its value is passed through unchanged; a missing callback
+     * is a successful no-op. (Unlike saf_close, whose boolean callback must be
+     * translated -- do not unify the two.)
+     */
     return close_function == NULL ? 0 : close_function(c->handle);
 }
 
