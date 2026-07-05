@@ -1173,6 +1173,14 @@ get_min_version_cflags() {
   esac
 }
 
+# NOTE: iOS uses a single global minimum (IOS_MIN_VERSION) for every
+# architecture except Mac Catalyst. arm64e is intentionally NOT special-cased
+# here even though its built slice always reports minos 14.0 instead of the
+# requested value. That bump is applied by the linker (ld64), which clamps
+# arm64e to iOS 14.0 because arm64e userland (pointer authentication) does not
+# exist before iOS 14. It is harmless: the fat binary also carries an arm64
+# slice at IOS_MIN_VERSION, and dyld falls back to it on any device that cannot
+# use arm64e, so no device is locked out. See also enable_ios_main_build().
 get_min_sdk_version() {
   case ${ARCH} in
   *-mac-catalyst)
