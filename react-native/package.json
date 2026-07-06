@@ -17,7 +17,8 @@
     "ffmpeg",
     "ffmpeg-kit",
     "ffmpeg-kit-next",
-    "ios"
+    "ios",
+    "ipados"
   ],
   "repository": "https://github.com/arthenica/ffmpeg-kit-next",
   "author": "ARTHENICA <open-source@arthenica.com> (https://www.arthenica.com)",

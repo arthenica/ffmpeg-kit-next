@@ -4,12 +4,13 @@
 
 - Includes both `FFmpeg` and `FFprobe`
 - Supports
-    - `Android`, `iOS` and `macOS`
+    - `Android`, `iOS`, `iPadOS` and `macOS`
     - `arm-v7a`, `arm-v7a-neon`, `arm64-v8a`, `x86` and `x86_64` architectures on Android
     - `Android API Level 24` or later
     - `armv7`, `armv7s`, `arm64`, `arm64-simulator`, `i386`, `x86_64`, `x86_64-mac-catalyst` and `arm64-mac-catalyst`
       architectures on iOS
     - `iOS 12.1+` deployment targets
+    - iPad devices and the iPad Simulator load `iOS` frameworks/xcframeworks
     - `arm64` and `x86_64` architectures on macOS
     - `macOS 10.15+` deployment targets
     - Can process Storage Access Framework (SAF) Uris on Android
@@ -66,7 +67,7 @@ allprojects {
 
 The path is derived from the plugin Flutter already resolved, so the same snippet works for any app. Keep it in
 `build.gradle`, not in `settings.gradle`'s `dependencyResolutionManagement` (that breaks Flutter's engine resolution —
-see [BUILD.md](BUILD.md)). iOS and macOS need no extra repository step.
+see [BUILD.md](BUILD.md)). iOS, iPadOS and macOS need no extra repository step.
 
 #### 2.1 Build Variants and External Libraries
 
@@ -79,14 +80,14 @@ separate `pub.dev` packages such as `min`, `https`, `audio`, `video`, `full`, or
 
 #### 2.2 Platform Support
 
-The following table shows Android API level, iOS deployment target and macOS deployment target requirements in
+The following table shows Android API level, iOS/iPadOS deployment target and macOS deployment target requirements in
 `ffmpeg_kit_next_flutter`.
 
 <table>
 <thead>
 <tr>
 <th align="center">Android<br>API Level</th>
-<th align="center">iOS Minimum<br>Deployment Target</th>
+<th align="center">iOS/iPadOS Minimum<br>Deployment Target</th>
 <th align="center">macOS Minimum<br>Deployment Target</th>
 </tr>
 </thead>

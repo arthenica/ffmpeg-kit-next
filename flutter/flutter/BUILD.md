@@ -13,7 +13,7 @@ with the desired external libraries:
 
 ```bash
 ./nix-android.sh -p <profile>   # produces prebuilt/bundle-android-aar-*-maven/...
-./nix-ios.sh     -p <profile>   # produces prebuilt/bundle-apple-xcframework-ios-*/...
+./nix-ios.sh     -p <profile>   # produces prebuilt/bundle-apple-xcframework-ios-*/... (covers both iOS and iPadOS)
 ./nix-macos.sh   -p <profile>   # produces prebuilt/bundle-apple-xcframework-macos-*/...
 ```
 
@@ -31,7 +31,7 @@ This places:
 | Platform | Destination (git-ignored)                                | Referenced by                       |
 |----------|----------------------------------------------------------|-------------------------------------|
 | Android  | `android/libs-maven/` (local Maven repository)           | `android/build.gradle`              |
-| iOS      | `ios/ffmpeg_kit_next_flutter/Frameworks/*.xcframework`   | `ios/*.podspec` + `Package.swift`   |
+| iOS/iPadOS     | `ios/ffmpeg_kit_next_flutter/Frameworks/*.xcframework`   | `ios/*.podspec` + `Package.swift`   |
 | macOS    | `macos/ffmpeg_kit_next_flutter/Frameworks/*.xcframework` | `macos/*.podspec` + `Package.swift` |
 
 The copied binaries are ignored by git on purpose — every consumer rebuilds and
@@ -44,7 +44,7 @@ On Android the copy is a small local Maven repository at
 `implementation 'com.arthenica:ffmpeg-kit-next:<version>'` (no longer the
 `flatDir` + `implementation(name: 'ffmpeg-kit-next', ext: 'aar')` form).
 
-The iOS/macOS plugins ship both a CocoaPods podspec and a Swift Package Manager
+The Apple plugins ship both a CocoaPods podspec and a Swift Package Manager
 `Package.swift` (under `<platform>/ffmpeg_kit_next_flutter/`). Flutter uses the
 Swift package when Swift Package Manager is enabled and falls back to the podspec
 otherwise; both reference the same `Sources/` and `Frameworks/` trees.
@@ -103,14 +103,14 @@ any consumer without editing.
 Keep this in `build.gradle` (project-level). Do **not** move it into
 `settings.gradle`'s `dependencyResolutionManagement` with
 `RepositoriesMode.PREFER_SETTINGS`: that mode suppresses Flutter's own
-project-level engine repository and breaks `io.flutter:*` resolution. iOS and
-macOS need no extra repository step — their frameworks are vendored via the
-podspec / Swift package.
+project-level engine repository and breaks `io.flutter:*` resolution. iOS,
+iPadOS and macOS need no extra repository step — their frameworks are vendored
+via the podspec / Swift package.
 
 ## Notes / caveats
 
 - **ABIs / archs are whatever you built.** The Android AAR contains only the
-  ABIs compiled by your nix profile, and the iOS/macOS xcframeworks only the
+  ABIs compiled by your nix profile, and the Apple xcframeworks only the
   built slices. If the AAR lacks an ABI your build targets (e.g. `x86_64` for an
   emulator), restrict the app with `ndk { abiFilters ... }` or build that ABI.
 - **`smart-exception-java` is still fetched from Maven Central.** It is a small
