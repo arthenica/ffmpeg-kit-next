@@ -13,7 +13,7 @@ with the desired external libraries:
 
 ```bash
 ./nix-android.sh -p <profile>   # produces prebuilt/bundle-android-aar-*-maven/...
-./nix-ios.sh     -p <profile>   # produces prebuilt/bundle-apple-xcframework-ios-*/...
+./nix-ios.sh     -p <profile>   # produces prebuilt/bundle-apple-xcframework-ios-*/... (covers both iOS and iPadOS)
 ```
 
 Then copy the built artifacts into this plugin:
@@ -31,7 +31,7 @@ This places:
 | Platform | Destination (git-ignored)      | Referenced by                                |
 |----------|---------------------------------|-----------------------------------------------|
 | Android  | `android/libs-maven/` (local Maven repository) | `android/build.gradle`          |
-| iOS      | `ios/Frameworks/*.xcframework`  | `ffmpeg-kit-next-react-native.podspec`         |
+| iOS/iPadOS      | `ios/Frameworks/*.xcframework`  | `ffmpeg-kit-next-react-native.podspec`         |
 
 The copied binaries are ignored by git on purpose — every consumer rebuilds and
 copies them. Re-run `copy_local_binaries.sh` whenever you rebuild.
@@ -42,7 +42,7 @@ On Android the copy is a small local Maven repository at
 `maven { url "$projectDir/libs-maven" }` and depends on it by Maven coordinate
 `implementation 'com.arthenica:ffmpeg-kit-next:<version>'`.
 
-The iOS plugin ships a CocoaPods podspec
+The iOS/iPadOS plugin ships a CocoaPods podspec
 (`ffmpeg-kit-next-react-native.podspec`) that vendors the frameworks directly
 via `s.vendored_frameworks = "ios/Frameworks/*.xcframework"`.
 
@@ -92,10 +92,10 @@ allprojects {
 
 `ffmpegKitProject.projectDir` is the plugin's `android/` folder inside
 `node_modules` wherever autolinking resolved the dependency, so the same
-snippet works for any consumer without editing. iOS needs no extra repository
-step — its framework is vendored via the podspec.
+snippet works for any consumer without editing. iOS and iPadOS need no extra
+repository step — the framework is vendored via the podspec.
 
-### iOS: install pods after copying binaries
+### iOS/iPadOS: install pods after copying binaries
 
 After running `copy_local_binaries.sh ios`, run `pod install` (or
 `bundle exec pod install`) in the app's `ios/` directory so CocoaPods picks up
@@ -105,7 +105,7 @@ whenever you rebuild and re-copy the binaries.
 ## Notes / caveats
 
 - **ABIs / archs are whatever you built.** The Android AAR contains only the
-  ABIs compiled by your nix profile, and the iOS xcframework only the built
+  ABIs compiled by your nix profile, and the Apple xcframeworks only the built
   slices. If the AAR lacks an ABI your build targets (e.g. `x86_64` for an
   emulator), restrict the app with `ndk { abiFilters ... }` or build that ABI.
 - **`smart-exception-java` is still fetched from Maven Central.** It is a small
