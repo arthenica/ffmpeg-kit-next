@@ -268,7 +268,7 @@ get_library_source() {
     ;;
   x264)
     SOURCE_REPO_URL="https://github.com/arthenica/x264"
-    SOURCE_ID="55d517bc4569272a2c9a367a4106c234aba2ffbc"
+    SOURCE_ID="b35605ace3ddf7c1a5d67a2eb553f034aef41d55"
     SOURCE_TYPE="COMMIT"
     ;;
   x265)
