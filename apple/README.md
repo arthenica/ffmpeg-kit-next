@@ -1,12 +1,13 @@
-# FFmpegKitNext for iOS, macOS and tvOS
+# FFmpegKitNext for iOS, iPadOS, macOS and tvOS
 
 `FFmpegKitNext` for Apple platforms can be built via [Nix](https://nixos.org/) and integrated locally.
 
 ### 1. Features
-#### 1.1 iOS
+#### 1.1 iOS / iPadOS
 - Supports `iOS 12.1+` deployment targets
 - Includes `arm64`, `arm64-simulator`, `arm64e`, `x86_64`, `x86_64-mac-catalyst` and `arm64-mac-catalyst`
   architectures
+- iPad devices and the iPad Simulator load `iOS` frameworks/xcframeworks
 - Objective-C API
 - Camera access
 - `ARC` enabled library
@@ -66,7 +67,7 @@ the build tools and pkg-config inputs. Xcode provides the Apple SDKs and Apple t
 
 Apple builds require the following tools.
 
-##### 2.1.1 iOS
+##### 2.1.1 iOS / iPadOS
 
 - **Nix**
 - **Xcode 26.0** or later
@@ -310,5 +311,5 @@ Build it locally first, then integrate the generated artifacts.
 
 ### 4. Test Application
 
-You can see how `FFmpegKitNext` is used inside an application by running `iOS`, `macOS` and `tvOS` test applications
-developed under the [FFmpegKitNext Test](https://github.com/arthenica/ffmpeg-kit-next-test) project.
+You can see how `FFmpegKitNext` is used inside an application by running `iOS`, `iPadOS`, `macOS` and `tvOS` test
+applications developed under the [FFmpegKitNext Test](https://github.com/arthenica/ffmpeg-kit-next-test) project.

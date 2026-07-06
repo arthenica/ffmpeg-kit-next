@@ -16,4 +16,3 @@
 - Adds Flutter support for the native "ffkit" protocol classes:
   `FFmpegKitInputBuffer`, `FFmpegKitOutputBuffer`, `FFmpegKitStreamInput` and
   `FFmpegKitStreamOutput` for in-memory and streaming input/output
-- Requires `ffmpeg_kit_next_flutter_platform_interface` 0.3.0
