@@ -11,10 +11,11 @@ rm -rf "${BUILD_DIR}" || return 1
 
 "${MESON:-meson}" setup "${BUILD_DIR}" \
   --cross-file="$CROSS_FILE" \
+  --buildtype=release \
   --default-library=static \
   -Db_staticpic=true \
   -Db_lto=false \
-  -Db_ndebug=false \
+  -Db_ndebug=if-release \
   -Dfft=vdsp \
   -Dresampler=libsamplerate \
   -Dcmdline=disabled \

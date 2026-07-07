@@ -8,10 +8,11 @@ create_mason_cross_file "$CROSS_FILE" || return 1
 
 "${MESON:-meson}" setup "${BUILD_DIR}" \
   --cross-file="$CROSS_FILE" \
+  --buildtype=release \
   --default-library=static \
   -Db_staticpic=true \
   -Db_lto=false \
-  -Db_ndebug=false \
+  -Db_ndebug=if-release \
   -Dfreetype=enabled \
   -Dglib=disabled \
   -Dgobject=disabled \

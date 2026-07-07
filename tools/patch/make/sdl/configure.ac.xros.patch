@@ -1,0 +1,11 @@
+--- a/configure.ac
++++ b/configure.ac
+@@ -4271,7 +4271,7 @@
+         SOURCES="$srcdir/src/main/haiku/*.cc $SOURCES"
+         EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lroot -lbe -lmedia -lgame -ldevice -ltextencoding"
+         ;;
+-    *-ios-*|*-tvos-*)
++    *-ios-*|*-tvos-*|*-xros-*)
+         ARCH=ios
+         case $host in
+             *-tvos-*)

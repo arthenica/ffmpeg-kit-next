@@ -139,6 +139,27 @@ disable_macos_architecture_not_supported_on_detected_sdk_version() {
   fi
 }
 
+#
+# 1. architecture index
+#
+disable_visionos_architecture_not_supported_on_detected_sdk_version() {
+  local ARCH_NAME=$(get_arch_name $1)
+
+  # arm64 and arm64-simulator are both supported since visionOS (xros) SDK 1.0
+  case ${ARCH_NAME} in
+  *)
+    local SUPPORTED=1
+    ;;
+  esac
+
+  if [[ ${SUPPORTED} -ne 1 ]]; then
+    if [[ -z ${BUILD_FORCE} ]]; then
+      echo -e "INFO: Disabled ${ARCH_NAME} architecture which is not supported on visionOS SDK $DETECTED_VISIONOS_SDK_VERSION\n" 1>>"${BASEDIR}"/build.log 2>&1
+      disable_arch "${ARCH_NAME}"
+    fi
+  fi
+}
+
 disable_tvos_videotoolbox_on_not_supported_sdk_version() {
 
   # INTRODUCED IN TVOS SDK 10.2
@@ -157,6 +178,9 @@ build_apple_architecture_variant_strings() {
   export APPLETVOS_ARCHITECTURES="$(get_apple_architectures_for_variant "${ARCH_VAR_APPLETVOS}")"
   export APPLETV_SIMULATOR_ARCHITECTURES="$(get_apple_architectures_for_variant "${ARCH_VAR_APPLETVSIMULATOR}")"
   export MACOSX_ARCHITECTURES="$(get_apple_architectures_for_variant "${ARCH_VAR_MACOS}")"
+  export ALL_VISIONOS_ARCHITECTURES="$(get_apple_architectures_for_variant "${ARCH_VAR_VISIONOS}")"
+  export XROS_ARCHITECTURES="$(get_apple_architectures_for_variant "${ARCH_VAR_XROS}")"
+  export XRSIMULATOR_ARCHITECTURES="$(get_apple_architectures_for_variant "${ARCH_VAR_XRSIMULATOR}")"
 }
 
 #
@@ -618,6 +642,14 @@ enable_tvos_main_build() {
   fi
 }
 
+enable_visionos_main_build() {
+  if [[ $(compare_versions "$DETECTED_VISIONOS_SDK_VERSION" "1.0") -le 0 ]]; then
+    export VISIONOS_MIN_VERSION=$DETECTED_VISIONOS_SDK_VERSION
+  else
+    export VISIONOS_MIN_VERSION=1.0
+  fi
+}
+
 #
 # DEPENDS TARGET_ARCH_LIST VARIABLE
 #
@@ -671,6 +703,15 @@ get_framework_directory() {
   "${ARCH_VAR_MACOS}")
     echo "bundle-apple-framework-macos-${MACOS_MIN_VERSION}"
     ;;
+  "${ARCH_VAR_VISIONOS}")
+    echo "bundle-apple-framework-visionos-${VISIONOS_MIN_VERSION}"
+    ;;
+  "${ARCH_VAR_XROS}")
+    echo "bundle-apple-framework-xros-${VISIONOS_MIN_VERSION}"
+    ;;
+  "${ARCH_VAR_XRSIMULATOR}")
+    echo "bundle-apple-framework-xrsimulator-${VISIONOS_MIN_VERSION}"
+    ;;
   esac
 }
 
@@ -709,6 +750,15 @@ get_universal_library_directory() {
   "${ARCH_VAR_MACOS}")
     echo "bundle-apple-universal-macos-$(get_min_sdk_version)"
     ;;
+  "${ARCH_VAR_VISIONOS}")
+    echo "bundle-apple-universal-visionos-$(get_min_sdk_version)"
+    ;;
+  "${ARCH_VAR_XROS}")
+    echo "bundle-apple-universal-xros-$(get_min_sdk_version)"
+    ;;
+  "${ARCH_VAR_XRSIMULATOR}")
+    echo "bundle-apple-universal-xrsimulator-$(get_min_sdk_version)"
+    ;;
   esac
 }
 
@@ -742,6 +792,15 @@ get_apple_architecture_variant() {
     ;;
   "${ARCH_VAR_MACOS}")
     echo "macos"
+    ;;
+  "${ARCH_VAR_VISIONOS}")
+    echo "visionos"
+    ;;
+  "${ARCH_VAR_XROS}")
+    echo "xros"
+    ;;
+  "${ARCH_VAR_XRSIMULATOR}")
+    echo "xrsimulator"
     ;;
   esac
 }
@@ -792,6 +851,21 @@ get_apple_architectures_for_variant() {
     ;;
   "${ARCH_VAR_MACOS}")
     for index in ${ARCH_ARM64} ${ARCH_X86_64}; do
+      ARCHITECTURES+=" $(get_full_arch_name "${index}") "
+    done
+    ;;
+  "${ARCH_VAR_VISIONOS}")
+    for index in ${ARCH_ARM64} ${ARCH_ARM64_SIMULATOR}; do
+      ARCHITECTURES+=" $(get_full_arch_name "${index}") "
+    done
+    ;;
+  "${ARCH_VAR_XROS}")
+    for index in ${ARCH_ARM64}; do
+      ARCHITECTURES+=" $(get_full_arch_name "${index}") "
+    done
+    ;;
+  "${ARCH_VAR_XRSIMULATOR}")
+    for index in ${ARCH_ARM64_SIMULATOR}; do
       ARCHITECTURES+=" $(get_full_arch_name "${index}") "
     done
     ;;
@@ -936,10 +1010,14 @@ create_spm_package() {
   tvos)
     PLATFORMS+="        .tvOS(\"${TVOS_MIN_VERSION:-11.0}\"),"$'\n'
     ;;
+  visionos)
+    PLATFORMS+="        .visionOS(\"${VISIONOS_MIN_VERSION:-1.0}\"),"$'\n'
+    ;;
   *)
     local HAS_IOS=0
     local HAS_MACOS=0
     local HAS_TVOS=0
+    local HAS_VISIONOS=0
     for VARIANT in "${TARGET_ARCHITECTURE_VARIANT_INDEX_ARRAY[@]}"; do
       case ${VARIANT} in
       "${ARCH_VAR_IPHONEOS}" | "${ARCH_VAR_IPHONESIMULATOR}" | "${ARCH_VAR_MAC_CATALYST}")
@@ -950,6 +1028,9 @@ create_spm_package() {
         ;;
       "${ARCH_VAR_MACOS}")
         HAS_MACOS=1
+        ;;
+      "${ARCH_VAR_XROS}" | "${ARCH_VAR_XRSIMULATOR}")
+        HAS_VISIONOS=1
         ;;
       esac
     done
@@ -962,12 +1043,22 @@ create_spm_package() {
     if [[ ${HAS_TVOS} -eq 1 ]]; then
       PLATFORMS+="        .tvOS(\"${TVOS_MIN_VERSION:-11.0}\"),"$'\n'
     fi
+    if [[ ${HAS_VISIONOS} -eq 1 ]]; then
+      PLATFORMS+="        .visionOS(\"${VISIONOS_MIN_VERSION:-1.0}\"),"$'\n'
+    fi
     ;;
   esac
 
+  # .visionOS(...) in a Package manifest requires swift-tools-version 5.9 or
+  # later; keep the historical 5.7 for packages that do not include visionOS.
+  local SWIFT_TOOLS_VERSION="5.7"
+  if [[ ${PLATFORMS} == *".visionOS("* ]]; then
+    SWIFT_TOOLS_VERSION="5.9"
+  fi
+
   # 3. WRITE THE MANIFEST NEXT TO THE UMBRELLA XCFRAMEWORKS
   cat >"${PACKAGE_FILE}" <<EOF
-// swift-tools-version:5.7
+// swift-tools-version:${SWIFT_TOOLS_VERSION}
 import PackageDescription
 
 let package = Package(
@@ -1021,6 +1112,11 @@ build_info_plist() {
     local MINIMUM_OS_VERSION="${MACOS_MIN_VERSION}"
     local SUPPORTED_PLATFORMS="MacOSX"
     ;;
+  visionos)
+    local MINIMUM_VERSION_KEY="MinimumOSVersion"
+    local MINIMUM_OS_VERSION="${VISIONOS_MIN_VERSION}"
+    local SUPPORTED_PLATFORMS="XROS"
+    ;;
   esac
 
   cat >${FILE_PATH} <<EOF
@@ -1070,6 +1166,9 @@ get_default_sdk_name() {
   macos)
     echo "macosx"
     ;;
+  visionos)
+    echo "xros"
+    ;;
   esac
 }
 
@@ -1088,6 +1187,9 @@ get_sdk_name() {
       ;;
     macos)
       echo "macosx"
+      ;;
+    visionos)
+      echo "xros"
       ;;
     esac
     ;;
@@ -1115,6 +1217,9 @@ get_sdk_name() {
     tvos)
       echo "appletvsimulator"
       ;;
+    visionos)
+      echo "xrsimulator"
+      ;;
     esac
     ;;
   *-mac-catalyst)
@@ -1138,6 +1243,9 @@ get_min_version_cflags() {
       ;;
     macos)
       echo "-mmacosx-version-min=$(get_min_sdk_version)"
+      ;;
+    visionos)
+      echo ""
       ;;
     esac
     ;;
@@ -1164,6 +1272,9 @@ get_min_version_cflags() {
       ;;
     tvos)
       echo "-mappletvsimulator-version-min=$(get_min_sdk_version)"
+      ;;
+    visionos)
+      echo ""
       ;;
     esac
     ;;
@@ -1196,6 +1307,9 @@ get_min_sdk_version() {
       ;;
     macos)
       echo "${MACOS_MIN_VERSION}"
+      ;;
+    visionos)
+      echo "${VISIONOS_MIN_VERSION}"
       ;;
     esac
     ;;

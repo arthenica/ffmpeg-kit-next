@@ -15,7 +15,7 @@ To use it, build it locally for your target platform via [Nix](https://nixos.org
 ### 1. Features
 - Nix-based scripts to build FFmpeg native libraries
 - `FFmpegKitNext` wrapper library to run `FFmpeg`/`FFprobe` commands in applications
-- Supports native platforms: Android, iOS, iPadOS, Linux, macOS and tvOS
+- Supports native platforms: Android, iOS, iPadOS, Linux, macOS, tvOS and visionOS
 - Supports hybrid platforms: Flutter, React Native
 - Based on FFmpeg `v6.1.x` or later with optional system and external libraries
 - Licensed under `LGPL 3.0` by default, `GPL v3.0` if GPL licensed libraries are enabled
@@ -24,9 +24,9 @@ To use it, build it locally for your target platform via [Nix](https://nixos.org
 
 See [Android](android) to learn more about `FFmpegKitNext` for `Android`.
 
-### 3. iOS, iPadOS, macOS, tvOS
+### 3. iOS, iPadOS, macOS, tvOS, visionOS
 
-See [Apple](apple) to use `FFmpegKitNext` on `Apple` platforms (`iOS`, `iPadOS`, `macOS`, `tvOS`).
+See [Apple](apple) to use `FFmpegKitNext` on `Apple` platforms (`iOS`, `iPadOS`, `macOS`, `tvOS`, `visionOS`).
 
 ### 4. Flutter
 
@@ -44,7 +44,7 @@ See [React Native](react-native) to learn more about `FFmpegKitNext` for `React 
 
 `FFmpegKitNext` build scripts depend on [Nix](https://nixos.org/). Nix provides the build environment, inputs and toolchains required to produce the same binaries across machines.
 
-Use `nix-android.sh`, `nix-ios.sh` (both for iOS and iPadOS), `nix-linux.sh`, `nix-macos.sh` and `nix-tvos.sh` to build `FFmpegKitNext` locally for each native platform.
+Use `nix-android.sh`, `nix-ios.sh` (both for iOS and iPadOS), `nix-linux.sh`, `nix-macos.sh`, `nix-tvos.sh` and `nix-visionos.sh` to build `FFmpegKitNext` locally for each native platform.
 
 All scripts support additional options to enable optional libraries and disable platform architectures. See [Building](https://github.com/arthenica/ffmpeg-kit-next/wiki/Building) wiki page for the details.
 
@@ -54,7 +54,7 @@ All scripts support additional options to enable optional libraries and disable 
 provides additional features on top of `FFmpeg` to enable platform specific resources, control how commands are 
 executed and how the results are handled.
 
-`Android` library of `FFmpegKitNext` has a `Kotlin` API, `Apple` libraries (`iOS`, `iPadOS`, `macOS`, `tvOS`) have an
+`Android` library of `FFmpegKitNext` has a `Kotlin` API, `Apple` libraries (`iOS`, `iPadOS`, `macOS`, `tvOS`, `visionOS`) have an
 `Objective-C` API, `Flutter` library comes with a `Dart` API, `Linux` library has a `C++` API and `React Native`
 library provides a `JavaScript` API with `Typescript` definitions, which are identical in terms of features and
 capabilities.

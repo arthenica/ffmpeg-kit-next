@@ -1,4 +1,4 @@
-# FFmpegKitNext for iOS, iPadOS, macOS and tvOS
+# FFmpegKitNext for iOS, iPadOS, macOS, tvOS and visionOS
 
 `FFmpegKitNext` for Apple platforms can be built via [Nix](https://nixos.org/) and integrated locally.
 
@@ -31,6 +31,14 @@
 - Custom `FFmpegKit` protocols: `ffkitmem:` for finite in-memory input/output and `ffkitstream:` for memory-backed streaming input/output
 - Creates local shared `frameworks`, `xcframeworks` and Swift package manifests
 
+#### 1.4 visionOS
+- Supports `visionOS 1.0+` deployment targets
+- Includes `arm64` and `arm64-simulator` architectures
+- Objective-C API
+- `ARC` enabled library
+- Custom `FFmpegKit` protocols: `ffkitmem:` for finite in-memory input/output and `ffkitstream:` for memory-backed streaming input/output
+- Creates local shared `frameworks`, `xcframeworks` and Swift package manifests
+
 ### 2. Building
 
 Apple builds are Nix-based. You must install [Nix](https://nixos.org/) first to build the binaries. Then run the `nix-*` wrappers from the project root.
@@ -49,6 +57,7 @@ The current Apple profile is `xcode26`.
 ./nix-ios.sh -p xcode26 -x --spm
 ./nix-macos.sh -p xcode26 -x --spm
 ./nix-tvos.sh -p xcode26 -x --spm
+./nix-visionos.sh -p xcode26 -x --spm
 ```
 
 These commands build local `xcframeworks` and create a local `Package.swift` next to them. Omit `-x --spm` if you want
@@ -85,6 +94,12 @@ Apple builds require the following tools.
 - **Xcode 26.0** or later
 - **Command Line Tools**
 
+##### 2.1.4 visionOS
+
+- **Nix**
+- **Xcode 26.0** or later with the **visionOS (xros) SDK** installed
+- **Command Line Tools**
+
 #### 2.2 Options
 
 Use `--enable-<library name>` flag to support additional external or system libraries and
@@ -96,6 +111,8 @@ Use `--enable-<library name>` flag to support additional external or system libr
 ./nix-macos.sh -p xcode26 --enable-freetype --enable-macos-avfoundation --disable-arm64
 
 ./nix-tvos.sh -p xcode26 --enable-dav1d --enable-libvpx --disable-arm64-simulator
+
+./nix-visionos.sh -p xcode26 --enable-visionos-videotoolbox --enable-visionos-avfoundation --disable-arm64-simulator
 ```
 
 Run `--help` to see all available build options.

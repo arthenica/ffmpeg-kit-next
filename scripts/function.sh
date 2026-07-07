@@ -9,14 +9,14 @@ get_arch_name() {
   2) echo "armv7" ;; # ios
   3) echo "armv7s" ;; # ios
   4) echo "arm64-v8a" ;; # android
-  5) echo "arm64" ;; # ios, tvos, macos
+  5) echo "arm64" ;; # ios, tvos, macos, visionos
   6) echo "arm64e" ;; # ios
   7) echo "i386" ;; # ios
   8) echo "x86" ;; # android
   9) echo "x86-64" ;; # android, ios, linux, macos, tvos
   10) echo "x86-64-mac-catalyst" ;; # ios
   11) echo "arm64-mac-catalyst" ;; # ios
-  12) echo "arm64-simulator" ;; # ios, tvos
+  12) echo "arm64-simulator" ;; # ios, tvos, visionos
   esac
 }
 
@@ -35,14 +35,14 @@ from_arch_name() {
   armv7) echo 2 ;; # ios
   armv7s) echo 3 ;; # ios
   arm64-v8a) echo 4 ;; # android
-  arm64) echo 5 ;; # ios, tvos, macos
+  arm64) echo 5 ;; # ios, tvos, macos, visionos
   arm64e) echo 6 ;; # ios
   i386) echo 7 ;; # ios
   x86) echo 8 ;; # android
   x86-64) echo 9 ;; # android, ios, linux, macos, tvos
   x86-64-mac-catalyst) echo 10 ;; # ios
   arm64-mac-catalyst) echo 11 ;; # ios
-  arm64-simulator) echo 12 ;; # ios
+  arm64-simulator) echo 12 ;; # ios, visionos
   esac
 }
 
@@ -109,6 +109,8 @@ get_library_name() {
       echo "macos-zlib"
     elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]]; then
       echo "tvos-zlib"
+    elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then
+      echo "visionos-zlib"
     fi
     ;;
   51) echo "linux-alsa" ;;
@@ -120,6 +122,8 @@ get_library_name() {
       echo "macos-audiotoolbox"
     elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]]; then
       echo "tvos-audiotoolbox"
+    elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then
+      echo "visionos-audiotoolbox"
     fi
     ;;
   54)
@@ -129,6 +133,8 @@ get_library_name() {
       echo "macos-bzip2"
     elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]]; then
       echo "tvos-bzip2"
+    elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then
+      echo "visionos-bzip2"
     fi
     ;;
   55)
@@ -138,6 +144,8 @@ get_library_name() {
       echo "macos-videotoolbox"
     elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]]; then
       echo "tvos-videotoolbox"
+    elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then
+      echo "visionos-videotoolbox"
     fi
     ;;
   56)
@@ -154,6 +162,8 @@ get_library_name() {
       echo "macos-libiconv"
     elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]]; then
       echo "tvos-libiconv"
+    elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then
+      echo "visionos-libiconv"
     fi
     ;;
   58)
@@ -163,6 +173,8 @@ get_library_name() {
       echo "macos-libuuid"
     elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]]; then
       echo "tvos-libuuid"
+    elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then
+      echo "visionos-libuuid"
     fi
     ;;
   59)
@@ -270,15 +282,15 @@ from_library_name() {
   libsamplerate) echo 47 ;;
   harfbuzz) echo 48 ;;
   cpu-features) echo 49 ;;
-  android-zlib | ios-zlib | linux-zlib | macos-zlib | tvos-zlib) echo 50 ;;
+  android-zlib | ios-zlib | linux-zlib | macos-zlib | tvos-zlib | visionos-zlib) echo 50 ;;
   linux-alsa) echo 51 ;;
   android-media-codec) echo 52 ;;
-  ios-audiotoolbox | macos-audiotoolbox | tvos-audiotoolbox) echo 53 ;;
-  ios-bzip2 | macos-bzip2 | tvos-bzip2) echo 54 ;;
-  ios-videotoolbox | macos-videotoolbox | tvos-videotoolbox) echo 55 ;;
+  ios-audiotoolbox | macos-audiotoolbox | tvos-audiotoolbox | visionos-audiotoolbox) echo 53 ;;
+  ios-bzip2 | macos-bzip2 | tvos-bzip2 | visionos-bzip2) echo 54 ;;
+  ios-videotoolbox | macos-videotoolbox | tvos-videotoolbox | visionos-videotoolbox) echo 55 ;;
   ios-avfoundation | macos-avfoundation) echo 56 ;;
-  ios-libiconv | macos-libiconv | tvos-libiconv) echo 57 ;;
-  ios-libuuid | macos-libuuid | tvos-libuuid) echo 58 ;;
+  ios-libiconv | macos-libiconv | tvos-libiconv | visionos-libiconv) echo 57 ;;
+  ios-libuuid | macos-libuuid | tvos-libuuid | visionos-libuuid) echo 58 ;;
   macos-coreimage) echo 59 ;;
   macos-opencl) echo 60 ;;
   macos-opengl) echo 61 ;;
@@ -368,7 +380,7 @@ is_library_supported_on_platform() {
     fi
     ;;
 
-  # ONLY IOS AND MACOS
+  # ONLY IOS, MACOS AND VISIONOS
   56)
     if [[ ${FFMPEG_KIT_BUILD_TYPE} == "ios" ]] && [[ $1 == "ios-avfoundation" ]]; then
       echo "0"
@@ -379,9 +391,9 @@ is_library_supported_on_platform() {
     fi
     ;;
 
-  # IOS, MACOS AND TVOS
+  # IOS, MACOS, TVOS AND VISIONOS
   53 | 54 | 55 | 57 | 58)
-    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "ios" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "macos" ]]; then
+    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "ios" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "macos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then
       echo "0"
     else
       echo "1"
@@ -439,18 +451,18 @@ is_arch_supported_on_platform() {
     fi
     ;;
 
-    # IOS OR TVOS
+    # IOS, TVOS OR VISIONOS
   $ARCH_ARM64_SIMULATOR)
-    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "ios" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]]; then
+    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "ios" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then
       echo 1
     else
       echo 0
     fi
     ;;
 
-    # IOS, MACOS OR TVOS
+    # IOS, MACOS, TVOS OR VISIONOS
   $ARCH_ARM64)
-    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "ios" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "macos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]]; then
+    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "ios" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "macos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then
       echo 1
     else
       echo 0
@@ -542,6 +554,8 @@ get_target() {
       echo "$(get_target_cpu)-apple-macos$(get_min_sdk_version)"
     elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]]; then
       echo "$(get_target_cpu)-apple-tvos$(get_min_sdk_version)"
+    elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then
+      echo "$(get_target_cpu)-apple-xros$(get_min_sdk_version)"
     fi
     ;;
   arm64-simulator)
@@ -549,6 +563,8 @@ get_target() {
       echo "$(get_target_cpu)-apple-ios$(get_min_sdk_version)-simulator"
     elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]]; then
       echo "$(get_target_cpu)-apple-tvos$(get_min_sdk_version)-simulator"
+    elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then
+      echo "$(get_target_cpu)-apple-xros$(get_min_sdk_version)-simulator"
     fi
     ;;
   x86-64)
@@ -583,6 +599,8 @@ get_host() {
       echo "$(get_target_cpu)-ios-darwin"
     elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]]; then
       echo "$(get_target_cpu)-tvos-darwin"
+    elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then
+      echo "$(get_target_cpu)-xros-darwin"
     fi
     ;;
   arm64-v8a)
@@ -595,6 +613,8 @@ get_host() {
       echo "$(get_target_cpu)-apple-darwin"
     elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]]; then
       echo "$(get_target_cpu)-tvos-darwin"
+    elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then
+      echo "$(get_target_cpu)-xros-darwin"
     fi
     ;;
   x86)
@@ -1092,7 +1112,7 @@ set_library() {
   fi
 
   case $1 in
-  android-zlib | ios-zlib | linux-zlib | macos-zlib | tvos-zlib)
+  android-zlib | ios-zlib | linux-zlib | macos-zlib | tvos-zlib | visionos-zlib)
     ENABLED_LIBRARIES[LIBRARY_SYSTEM_ZLIB]=$2
     ;;
   linux-alsa)
@@ -1101,22 +1121,22 @@ set_library() {
   android-media-codec)
     ENABLED_LIBRARIES[LIBRARY_ANDROID_MEDIA_CODEC]=$2
     ;;
-  ios-audiotoolbox | macos-audiotoolbox | tvos-audiotoolbox)
+  ios-audiotoolbox | macos-audiotoolbox | tvos-audiotoolbox | visionos-audiotoolbox)
     ENABLED_LIBRARIES[LIBRARY_APPLE_AUDIOTOOLBOX]=$2
     ;;
-  ios-bzip2 | macos-bzip2 | tvos-bzip2)
+  ios-bzip2 | macos-bzip2 | tvos-bzip2 | visionos-bzip2)
     ENABLED_LIBRARIES[LIBRARY_APPLE_BZIP2]=$2
     ;;
-  ios-videotoolbox | macos-videotoolbox | tvos-videotoolbox)
+  ios-videotoolbox | macos-videotoolbox | tvos-videotoolbox | visionos-videotoolbox)
     ENABLED_LIBRARIES[LIBRARY_APPLE_VIDEOTOOLBOX]=$2
     ;;
   ios-avfoundation | macos-avfoundation)
     ENABLED_LIBRARIES[LIBRARY_APPLE_AVFOUNDATION]=$2
     ;;
-  ios-libiconv | macos-libiconv | tvos-libiconv)
+  ios-libiconv | macos-libiconv | tvos-libiconv | visionos-libiconv)
     ENABLED_LIBRARIES[LIBRARY_APPLE_LIBICONV]=$2
     ;;
-  ios-libuuid | macos-libuuid | tvos-libuuid)
+  ios-libuuid | macos-libuuid | tvos-libuuid | visionos-libuuid)
     ENABLED_LIBRARIES[LIBRARY_APPLE_LIBUUID]=$2
     ;;
   macos-coreimage)
@@ -1443,14 +1463,14 @@ set_library() {
 set_virtual_library() {
   case $1 in
   libiconv)
-    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "ios" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "macos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "apple" ]]; then
+    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "ios" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "macos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "apple" ]]; then
       ENABLED_LIBRARIES[LIBRARY_APPLE_LIBICONV]=$2
     else
       ENABLED_LIBRARIES[LIBRARY_LIBICONV]=$2
     fi
     ;;
   libuuid)
-    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "ios" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "macos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "apple" ]]; then
+    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "ios" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "macos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "apple" ]]; then
       ENABLED_LIBRARIES[LIBRARY_APPLE_LIBUUID]=$2
     else
       ENABLED_LIBRARIES[LIBRARY_LIBUUID]=$2
@@ -1646,7 +1666,7 @@ print_enabled_architecture_variants() {
   echo -n "Architecture variants: "
 
   let enabled=0
-  for print_arch_var in {1..8}; do
+  for print_arch_var in {1..11}; do
     if [[ ${ENABLED_ARCHITECTURE_VARIANTS[$print_arch_var]} -eq 1 ]]; then
       if [[ ${enabled} -ge 1 ]]; then
         echo -n ", "
@@ -1897,6 +1917,9 @@ get_apple_cmake_system_name() {
     ;;
   tvos)
     echo "tvOS"
+    ;;
+  visionos)
+    echo "visionOS"
     ;;
   *)
     case ${ARCH} in

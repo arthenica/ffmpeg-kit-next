@@ -7,6 +7,8 @@ enable_default_architecture_variants() {
   ENABLED_ARCHITECTURE_VARIANTS[ARCH_VAR_APPLETVOS]=1
   ENABLED_ARCHITECTURE_VARIANTS[ARCH_VAR_APPLETVSIMULATOR]=1
   ENABLED_ARCHITECTURE_VARIANTS[ARCH_VAR_MACOS]=1
+  ENABLED_ARCHITECTURE_VARIANTS[ARCH_VAR_XROS]=1
+  ENABLED_ARCHITECTURE_VARIANTS[ARCH_VAR_XRSIMULATOR]=1
 }
 
 get_umbrella_xcframework_directory() {
@@ -26,6 +28,10 @@ get_umbrella_xcframework_directory() {
 
   if [[ ${ENABLED_ARCHITECTURE_VARIANTS[ARCH_VAR_APPLETVOS]} == 1 || ${ENABLED_ARCHITECTURE_VARIANTS[ARCH_VAR_APPLETVSIMULATOR]} == 1 ]]; then
     UMBRELLA_XCF_DIR+="-tvos${TVOS_MIN_VERSION}"
+  fi
+
+  if [[ ${ENABLED_ARCHITECTURE_VARIANTS[ARCH_VAR_XROS]} == 1 || ${ENABLED_ARCHITECTURE_VARIANTS[ARCH_VAR_XRSIMULATOR]} == 1 ]]; then
+    UMBRELLA_XCF_DIR+="-visionos${VISIONOS_MIN_VERSION}"
   fi
 
   echo "${UMBRELLA_XCF_DIR}"
@@ -95,6 +101,12 @@ disable_arch_variant() {
   macosx)
     ENABLED_ARCHITECTURE_VARIANTS[ARCH_VAR_MACOS]=0
     ;;
+  xros)
+    ENABLED_ARCHITECTURE_VARIANTS[ARCH_VAR_XROS]=0
+    ;;
+  xrsimulator)
+    ENABLED_ARCHITECTURE_VARIANTS[ARCH_VAR_XRSIMULATOR]=0
+    ;;
   *)
     print_unknown_arch_variant "$1"
     ;;
@@ -134,9 +146,11 @@ fi
 DETECTED_IOS_SDK_VERSION="$(xcrun --sdk iphoneos --show-sdk-version 2>>"${BASEDIR}"/build.log)"
 DETECTED_TVOS_SDK_VERSION="$(xcrun --sdk appletvos --show-sdk-version 2>>"${BASEDIR}"/build.log)"
 DETECTED_MACOS_SDK_VERSION="$(xcrun --sdk macosx --show-sdk-version 2>>"${BASEDIR}"/build.log)"
+DETECTED_VISIONOS_SDK_VERSION="$(xcrun --sdk xros --show-sdk-version 2>>"${BASEDIR}"/build.log)"
 enable_ios_main_build
 enable_macos_main_build
 enable_tvos_main_build
+enable_visionos_main_build
 XCODE_PATH=$(xcode-select -p 2>>"${BASEDIR}"/build.log)
 echo -e "INFO: Build options: $*\n" 1>>"${BASEDIR}"/build.log 2>&1
 
@@ -186,6 +200,11 @@ while [ ! $# -eq 0 ]; do
 
     export TVOS_MIN_VERSION=${TARGET}
     ;;
+  --visionos-target=*)
+    TARGET="${1#--visionos-target=}"
+
+    export VISIONOS_MIN_VERSION=${TARGET}
+    ;;
   --disable-*)
     DISABLED_ARCH_VARIANT=$(echo $1 | sed -e 's/^--[A-Za-z]*-//g')
 
@@ -201,7 +220,7 @@ while [ ! $# -eq 0 ]; do
   shift
 done
 
-echo -e "INFO: Using iOS min target: ${IOS_MIN_VERSION}, Mac Catalyst min target: ${MAC_CATALYST_MIN_VERSION}, macOS min target: ${MACOS_MIN_VERSION}, tvOS min target: ${TVOS_MIN_VERSION} by Xcode provided at ${XCODE_PATH}\n" 1>>"${BASEDIR}"/build.log 2>&1
+echo -e "INFO: Using iOS min target: ${IOS_MIN_VERSION}, Mac Catalyst min target: ${MAC_CATALYST_MIN_VERSION}, macOS min target: ${MACOS_MIN_VERSION}, tvOS min target: ${TVOS_MIN_VERSION}, visionOS min target: ${VISIONOS_MIN_VERSION} by Xcode provided at ${XCODE_PATH}\n" 1>>"${BASEDIR}"/build.log 2>&1
 
 # IF HELP DISPLAYED EXIT
 if [[ -n ${DISPLAY_HELP} ]]; then
@@ -223,10 +242,10 @@ echo ""
 TARGET_ARCHITECTURE_VARIANT_INDEX_ARRAY=()
 
 # SAVE ARCHITECTURE VARIANTS
-for run_arch_variant in {1..8}; do
+for run_arch_variant in {1..11}; do
   if [[ ${ENABLED_ARCHITECTURE_VARIANTS[$run_arch_variant]} -eq 1 ]]; then
     case "$run_arch_variant" in
-    1 | 5) ;;
+    1 | 5 | 9) ;;
     *)
       TARGET_ARCHITECTURE_VARIANT_INDEX_ARRAY+=("${run_arch_variant}")
       ;;

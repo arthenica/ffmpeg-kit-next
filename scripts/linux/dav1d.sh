@@ -10,8 +10,9 @@ rm -rf "${BUILD_DIR}" || return 1
 
 "${MESON:-meson}" "${BUILD_DIR}" \
   --cross-file="$CROSS_FILE" \
+  --buildtype=release \
   -Db_lto=false \
-  -Db_ndebug=false \
+  -Db_ndebug=if-release \
   -Denable_asm=true \
   -Denable_tools=false \
   -Denable_examples=false \

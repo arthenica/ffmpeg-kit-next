@@ -12,10 +12,11 @@ rm -rf "${BUILD_DIR}" || return 1
 # ENABLING LTO CAUSES SYMBOL NOT FOUND ERRORS ON NDKS >= 23b
 "${MESON:-meson}" setup "${BUILD_DIR}" \
   --cross-file="$CROSS_FILE" \
+  --buildtype=release \
   --default-library=static \
   -Db_staticpic=true \
   -Db_lto=false \
-  -Db_ndebug=false \
+  -Db_ndebug=if-release \
   -Dfft=builtin \
   -Dresampler=libsamplerate \
   -Dcmdline=disabled \

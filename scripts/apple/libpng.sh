@@ -32,7 +32,8 @@ export LDFLAGS="$(pkg-config --libs zlib) ${LDFLAGS}"
 # WORKAROUND TO FIX ZLIB VERSION DETECTED - OCCURS ON XCODE 14.3.1
 if [[ -n "$DETECTED_IOS_SDK_VERSION" && $(compare_versions "$DETECTED_IOS_SDK_VERSION" "16.4") -ge 0 ]] ||
  [[ -n "$DETECTED_MACOS_SDK_VERSION" && $(compare_versions "$DETECTED_MACOS_SDK_VERSION" "13.3") -eq 0 ]] ||
- [[ -n "$DETECTED_TVOS_SDK_VERSION" && $(compare_versions "$DETECTED_TVOS_SDK_VERSION" "16.4") -ge 0 ]]; then
+ [[ -n "$DETECTED_TVOS_SDK_VERSION" && $(compare_versions "$DETECTED_TVOS_SDK_VERSION" "16.4") -ge 0 ]] ||
+ [[ -n "$DETECTED_VISIONOS_SDK_VERSION" && $(compare_versions "$DETECTED_VISIONOS_SDK_VERSION" "1.0") -ge 0 ]]; then
   ${SED_INLINE} "s|ZLIB_VERNUM default .*|ZLIB_VERNUM default 0|g" "${BASEDIR}"/src/"${LIB_NAME}"/scripts/pnglibconf.dfa
 fi
 

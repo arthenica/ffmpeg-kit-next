@@ -9,11 +9,11 @@ display_help() {
   fi
 
   echo -e "\n'$COMMAND' combines FFmpegKit frameworks created for Apple architecture variants in an xcframework. \
-It uses frameworks created under the prebuilt folder for iOS, tvOS and macOS architecture variants (iphoneos, \
-iphonesimulator, mac-catalyst, appletvos, appletvsimulator, macosx) as input and builds an umbrella xcframework under \
+It uses frameworks created under the prebuilt folder for iOS, tvOS, macOS and visionOS architecture variants (iphoneos, \
+iphonesimulator, mac-catalyst, appletvos, appletvsimulator, macosx, xros, xrsimulator) as input and builds an umbrella xcframework under \
 the prebuilt folder.\n\nPlease note that this script is only responsible of packaging existing frameworks, created by \
-'start-ios.sh', 'start-tvos.sh' and 'start-macos.sh'. Running it will not compile any of these libraries again. Top level build scripts \
-('start-ios.sh', 'start-tvos.sh', 'start-macos.sh') must be used to build ffmpeg with support for a specific external library first. \
+'start-ios.sh', 'start-tvos.sh', 'start-macos.sh' and 'start-visionos.sh'. Running it will not compile any of these libraries again. Top level build scripts \
+('start-ios.sh', 'start-tvos.sh', 'start-macos.sh', 'start-visionos.sh') must be used to build ffmpeg with support for a specific external library first. \
 After that this script should be used to create an umbrella xcframework.\n"
   echo -e "Usage: ./$COMMAND ${PROFILE_USAGE}[OPTION]...\n"
   echo -e "Specify environment variables as VARIABLE=VALUE to override default build options.\n"
@@ -30,7 +30,8 @@ After that this script should be used to create an umbrella xcframework.\n"
   echo -e "  --ios-target=ios sdk version\t\toverride minimum deployment target for iOS [12.1]"
   echo -e "  --mac-catalyst-target=ios sdk version\toverride minimum deployment target for Mac Catalyst [14.0]"
   echo -e "  --macos-target=macos sdk version\toverride minimum deployment target for macOS [10.15]"
-  echo -e "  --tvos-target=tvos sdk version\toverride minimum deployment target for tvOS [11.0]\n"
+  echo -e "  --tvos-target=tvos sdk version\toverride minimum deployment target for tvOS [11.0]"
+  echo -e "  --visionos-target=visionos sdk version\toverride minimum deployment target for visionOS [1.0]\n"
 
   echo -e "Architectures:"
   echo -e "  --disable-iphoneos\t\tdo not include iphoneos architecture variant [yes]"
@@ -38,5 +39,7 @@ After that this script should be used to create an umbrella xcframework.\n"
   echo -e "  --disable-mac-catalyst\tdo not include ios mac-catalyst architecture variant [yes]"
   echo -e "  --disable-appletvos\t\tdo not include appletvos architecture variant [yes]"
   echo -e "  --disable-appletvsimulator\tdo not include appletvsimulator architecture variant [yes]"
-  echo -e "  --disable-macosx\t\tdo not include macosx architecture variant [yes]\n"
+  echo -e "  --disable-macosx\t\tdo not include macosx architecture variant [yes]"
+  echo -e "  --disable-xros\t\tdo not include xros architecture variant [yes]"
+  echo -e "  --disable-xrsimulator\t\tdo not include xrsimulator architecture variant [yes]\n"
 }

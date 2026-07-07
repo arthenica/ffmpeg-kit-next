@@ -11,8 +11,9 @@ rm -rf "${BUILD_DIR}" || return 1
 
 "${MESON:-meson}" setup "${BUILD_DIR}" \
   --cross-file="$CROSS_FILE" \
+  --buildtype=release \
   -Db_lto=false \
-  -Db_ndebug=false \
+  -Db_ndebug=if-release \
   -Dtools=false \
   -Dpython=false || return 1
 

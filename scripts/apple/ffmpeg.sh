@@ -102,7 +102,7 @@ arm64)
   TARGET_CPU="armv8"
   TARGET_ARCH="aarch64"
   ASM_OPTIONS=" --enable-neon --enable-asm"
-  if [[ ${FFMPEG_KIT_BUILD_TYPE} != "macos" ]]; then
+  if [[ ${FFMPEG_KIT_BUILD_TYPE} != "macos" ]] && [[ ${FFMPEG_KIT_BUILD_TYPE} != "visionos" ]]; then
     BITCODE_FLAGS="-fembed-bitcode -Wc,-fembed-bitcode"
   fi
   ;;
@@ -386,7 +386,7 @@ for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} $
       FFMPEG_CFLAGS+=" $(pkg-config --cflags hogweed 2>>"${BASEDIR}"/build.log)"
       FFMPEG_LDFLAGS+=" $(pkg-config --libs --static hogweed 2>>"${BASEDIR}"/build.log)"
       ;;
-    ios-* | tvos-* | macos-*)
+    ios-* | tvos-* | macos-* | visionos-*)
 
       # BUILT-IN LIBRARIES SHARE INCLUDE AND LIB DIRECTORIES
       # INCLUDING ONLY ONE OF THEM IS ENOUGH
@@ -454,6 +454,10 @@ for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} $
             CONFIGURE_POSTFIX+=" --disable-filter=scale_vt"
             echo -e "WARN: Disabled scale_vt filter as it requires min sdk version >= 16.0 for tvos. Currently it is set to $TVOS_MIN_VERSION.\n" 1>>"${BASEDIR}"/build.log 2>&1
           fi
+        elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then
+
+          # visionOS 1.0 ships modern VideoToolbox; scale_vt is available
+          CONFIGURE_POSTFIX+=" --enable-videotoolbox"
         fi
         ;;
       *-zlib)
@@ -579,8 +583,8 @@ git checkout libavutil 1>>"${BASEDIR}"/build.log 2>&1
 # 1. Workaround to prevent adding of -mdynamic-no-pic flag
 ${SED_INLINE} 's/check_cflags -mdynamic-no-pic && add_asflags -mdynamic-no-pic;/check_cflags -mdynamic-no-pic;/g' "${BASEDIR}"/src/${LIB_NAME}/configure 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 
-# 2. Workaround for videotoolbox on mac catalyst
-if [[ ${ARCH} == *-mac-catalyst ]]; then
+# 2. Workaround for videotoolbox on mac catalyst and visionOS
+if [[ ${ARCH} == *-mac-catalyst ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then
   ${SED_INLINE} 's/    CFDictionarySetValue(buffer_attributes\, kCVPixelBufferOpenGLESCompatibilityKey/   \/\/ CFDictionarySetValue(buffer_attributes\, kCVPixelBufferOpenGLESCompatibilityKey/g' "${BASEDIR}"/src/${LIB_NAME}/libavcodec/videotoolbox.c || return 1
 else
   ${SED_INLINE} 's/   \/\/ CFDictionarySetValue(buffer_attributes\, kCVPixelBufferOpenGLESCompatibilityKey/    CFDictionarySetValue(buffer_attributes\, kCVPixelBufferOpenGLESCompatibilityKey/g' "${BASEDIR}"/src/${LIB_NAME}/libavcodec/videotoolbox.c || return 1

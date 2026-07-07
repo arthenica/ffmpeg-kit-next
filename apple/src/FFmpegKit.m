@@ -33,6 +33,8 @@
 
     #if TARGET_OS_MACCATALYST
         NSString* osType = @"maccatalyst";
+    #elif TARGET_OS_VISION
+        NSString* osType = @"visionos";
     #elif TARGET_OS_TV
         NSString* osType = @"tvos";
     #elif TARGET_OS_IOS

@@ -1,0 +1,23 @@
+--- a/include/SDL_platform.h
++++ b/include/SDL_platform.h
+@@ -97,12 +97,19 @@
+ #ifndef TARGET_OS_TV
+ #define TARGET_OS_TV 0
+ #endif
++#ifndef TARGET_OS_VISION
++#define TARGET_OS_VISION 0
++#endif
+ #ifndef TARGET_OS_SIMULATOR
+ #define TARGET_OS_SIMULATOR 0
+ #endif
+ 
+ #if TARGET_OS_TV
+ #undef __TVOS__
+ #define __TVOS__ 1
++#endif
++#if TARGET_OS_VISION
++#undef SDL_PLATFORM_VISIONOS
++#define SDL_PLATFORM_VISIONOS 1
+ #endif
+ #if TARGET_OS_IPHONE
+ /* if compiling for iOS */
