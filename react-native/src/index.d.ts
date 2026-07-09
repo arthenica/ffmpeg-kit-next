@@ -208,6 +208,8 @@ declare module 'ffmpeg-kit-react-native' {
 
     static getSafParameter(uriString: String, openMode: String): Promise<string>;
 
+    static getSupportedCameraIds(): Promise<string[]>;
+
     static getSessionHistorySize(): Promise<number>;
 
     static setSessionHistorySize(sessionHistorySize: number): Promise<void>;

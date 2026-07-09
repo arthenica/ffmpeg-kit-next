@@ -1459,6 +1459,20 @@ export class FFmpegKitConfig {
   }
 
   /**
+   * <p>Returns the list of camera ids supported. These devices can be used in FFmpeg commands.
+   *
+   * <p>Note that this method is Android only. It will fail if called on other platforms. It also
+   * requires API Level &ge; 24. On older API levels it returns an empty list.
+   *
+   * @return list of camera ids supported or an empty list if no supported cameras are found
+   */
+  static async getSupportedCameraIds() {
+    await FFmpegKitConfig.init();
+
+    return FFmpegKitReactNativeModule.getSupportedCameraIds();
+  }
+
+  /**
    * Returns the session history size.
    *
    * @return session history size

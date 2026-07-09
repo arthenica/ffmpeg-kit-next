@@ -808,6 +808,18 @@ public class FFmpegKitReactNativeModule extends NativeFFmpegKitReactNativeModule
     }
   }
 
+  @ReactMethod
+  public void getSupportedCameraIds(final Promise promise) {
+    final ReactApplicationContext reactContext = getReactApplicationContext();
+
+    if (reactContext != null) {
+      promise.resolve(toStringArray(FFmpegKitConfig.getSupportedCameraIds(reactContext)));
+    } else {
+      Log.w(LIBRARY_NAME, "Cannot getSupportedCameraIds. React context is null.");
+      promise.reject("INVALID_CONTEXT", "React context is null.");
+    }
+  }
+
   // FFmpegKit
 
   @ReactMethod

@@ -87,6 +87,9 @@ export interface Spec extends TurboModule {
   selectDocument(writable: boolean, title?: string, type?: string, extraTypes?: string[]): Promise<string>;
   getSafParameter(uriString: string, openMode: string): Promise<string>;
 
+  // Camera (Android)
+  getSupportedCameraIds(): Promise<string[]>;
+
   // Cancel
   cancel(): Promise<void>;
   cancelSession(sessionId: number): Promise<void>;
