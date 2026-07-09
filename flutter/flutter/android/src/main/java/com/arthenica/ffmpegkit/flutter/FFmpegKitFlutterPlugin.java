@@ -639,6 +639,9 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
             case "getExternalLibraries":
                 getExternalLibraries(result);
                 break;
+            case "getSupportedCameraIds":
+                getSupportedCameraIds(result);
+                break;
 
             // FFmpegKitInputBuffer
 
@@ -1592,6 +1595,15 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
             }
         } else {
             Log.w(LIBRARY_NAME, String.format("Cannot getSafParameter using parameters uriString: %s, openMode: %s. Context is null.", uriString, openMode));
+            resultHandler.errorAsync(result, "INVALID_CONTEXT", "Context is null.");
+        }
+    }
+
+    protected void getSupportedCameraIds(@NonNull final Result result) {
+        if (context != null) {
+            resultHandler.successAsync(result, FFmpegKitConfig.getSupportedCameraIds(context));
+        } else {
+            Log.w(LIBRARY_NAME, "Cannot getSupportedCameraIds. Context is null.");
             resultHandler.errorAsync(result, "INVALID_CONTEXT", "Context is null.");
         }
     }

@@ -468,6 +468,8 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
     [self getPackageName:result];
   } else if ([@"getExternalLibraries" isEqualToString:call.method]) {
     [self getExternalLibraries:result];
+  } else if ([@"getSupportedCameraIds" isEqualToString:call.method]) {
+    [self getSupportedCameraIds:result];
   } else if ([@"inputBufferFromByteArray" isEqualToString:call.method]) {
     FlutterStandardTypedData* data = call.arguments[@"data"];
     NSString* extension = call.arguments[@"extension"];
@@ -1128,6 +1130,10 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
 }
 
 - (void)getSafParameter:(FlutterResult)result {
+  result([FlutterError errorWithCode:@"NOT_SUPPORTED" message:@"Not supported on iOS platform." details:nil]);
+}
+
+- (void)getSupportedCameraIds:(FlutterResult)result {
   result([FlutterError errorWithCode:@"NOT_SUPPORTED" message:@"Not supported on iOS platform." details:nil]);
 }
 

@@ -415,6 +415,28 @@ class FFmpegKitConfig {
     }
   }
 
+  /// Returns the list of camera ids supported. These devices can be used in
+  /// FFmpeg commands.
+  ///
+  /// Note that this method is Android only. It will fail if called on other
+  /// platforms. It also requires API Level &ge; 24. On older API levels it
+  /// returns an empty list.
+  static Future<List<String>> getSupportedCameraIds() async {
+    try {
+      await init();
+      return _platform.getSupportedCameraIds().then((cameraIds) {
+        if (cameraIds == null) {
+          return List.empty();
+        } else {
+          return cameraIds.cast<String>();
+        }
+      });
+    } on PlatformException catch (e, stack) {
+      print("Plugin getSupportedCameraIds error: ${e.message}");
+      return Future.error("getSupportedCameraIds failed.", stack);
+    }
+  }
+
   /// Returns the session history size.
   static Future<int?> getSessionHistorySize() async {
     try {

@@ -366,6 +366,10 @@ class MethodChannelFFmpegKit extends FFmpegKitPlatform {
   Future<List<dynamic>?> getExternalLibraries() async =>
       _channel.invokeMethod<List<dynamic>>('getExternalLibraries');
 
+  @override
+  Future<List<dynamic>?> getSupportedCameraIds() async =>
+      _channel.invokeMethod<List<dynamic>>('getSupportedCameraIds');
+
   // FFmpegKitInputBuffer
 
   @override

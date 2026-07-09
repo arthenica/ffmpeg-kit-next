@@ -399,6 +399,11 @@ abstract class FFmpegKitPlatform extends PlatformInterface {
         'getExternalLibraries() has not been implemented!');
   }
 
+  Future<List<dynamic>?> getSupportedCameraIds() async {
+    throw UnimplementedError(
+        'getSupportedCameraIds() has not been implemented!');
+  }
+
   // FFmpegKitInputBuffer
 
   Future<String?> inputBufferFromByteArray(
