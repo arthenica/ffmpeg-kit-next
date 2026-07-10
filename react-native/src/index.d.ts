@@ -202,11 +202,11 @@ declare module 'ffmpeg-kit-react-native' {
 
     static setLogLevel(level: Level): Promise<void>;
 
-    static getSafParameterForRead(uriString: String): Promise<string>;
+    static getSafParameterForRead(uriString: String, reusable?: boolean): Promise<string>;
 
-    static getSafParameterForWrite(uriString: String): Promise<string>;
+    static getSafParameterForWrite(uriString: String, reusable?: boolean): Promise<string>;
 
-    static getSafParameter(uriString: String, openMode: String): Promise<string>;
+    static getSafParameter(uriString: String, openMode: String, reusable?: boolean): Promise<string>;
 
     static getSupportedCameraIds(): Promise<string[]>;
 

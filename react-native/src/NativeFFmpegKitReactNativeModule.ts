@@ -85,7 +85,7 @@ export interface Spec extends TurboModule {
 
   // Storage Access Framework (Android)
   selectDocument(writable: boolean, title?: string, type?: string, extraTypes?: string[]): Promise<string>;
-  getSafParameter(uriString: string, openMode: string): Promise<string>;
+  getSafParameter(uriString: string, openMode: string, reusable?: boolean): Promise<string>;
 
   // Camera (Android)
   getSupportedCameraIds(): Promise<string[]>;

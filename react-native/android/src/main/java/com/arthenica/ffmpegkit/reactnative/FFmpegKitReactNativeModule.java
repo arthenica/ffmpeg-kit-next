@@ -791,7 +791,7 @@ public class FFmpegKitReactNativeModule extends NativeFFmpegKitReactNativeModule
   }
 
   @ReactMethod
-  public void getSafParameter(final String uriString, final String openMode, final Promise promise) {
+  public void getSafParameter(final String uriString, final String openMode, final Boolean reusable, final Promise promise) {
     final ReactApplicationContext reactContext = getReactApplicationContext();
 
     final Uri uri = Uri.parse(uriString);
@@ -800,9 +800,13 @@ public class FFmpegKitReactNativeModule extends NativeFFmpegKitReactNativeModule
       promise.reject("GET_SAF_PARAMETER_FAILED", "Uri string cannot be parsed.");
     } else {
       final String safParameter;
-      safParameter = FFmpegKitConfig.getSafParameter(reactContext, uri, openMode);
+      if (reusable != null) {
+        safParameter = FFmpegKitConfig.getSafParameter(reactContext, uri, openMode, reusable);
+      } else {
+        safParameter = FFmpegKitConfig.getSafParameter(reactContext, uri, openMode);
+      }
 
-      Log.d(LIBRARY_NAME, String.format("getSafParameter using parameters uriString: %s, openMode: %s completed with saf parameter: %s.", uriString, openMode, safParameter));
+      Log.d(LIBRARY_NAME, String.format("getSafParameter using parameters uriString: %s, openMode: %s, reusable: %s completed with saf parameter: %s.", uriString, openMode, reusable, safParameter));
 
       promise.resolve(safParameter);
     }

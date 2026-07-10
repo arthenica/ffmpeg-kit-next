@@ -1418,12 +1418,14 @@ export class FFmpegKitConfig {
    * API Level &ge; 19. On older API levels it returns an empty url.
    *
    * @param uriString SAF uri (<code>"content:…"</code>)
+   * @param reusable when provided, defines whether the generated url can be used more than once;
+   * when omitted the native library's global reuse setting is used, captured at creation time
    * @return input url that can be passed to FFmpegKit or FFprobeKit
    */
-  static async getSafParameterForRead(uriString) {
+  static async getSafParameterForRead(uriString, reusable) {
     await FFmpegKitConfig.init();
 
-    return FFmpegKitReactNativeModule.getSafParameter(uriString, "r");
+    return FFmpegKitReactNativeModule.getSafParameter(uriString, "r", reusable);
   }
 
   /**
@@ -1434,12 +1436,14 @@ export class FFmpegKitConfig {
    * API Level &ge; 19. On older API levels it returns an empty url.
    *
    * @param uriString SAF uri (<code>"content:…"</code>)
+   * @param reusable when provided, defines whether the generated url can be used more than once;
+   * when omitted the native library's global reuse setting is used, captured at creation time
    * @return output url that can be passed to FFmpegKit or FFprobeKit
    */
-  static async getSafParameterForWrite(uriString) {
+  static async getSafParameterForWrite(uriString, reusable) {
     await FFmpegKitConfig.init();
 
-    return FFmpegKitReactNativeModule.getSafParameter(uriString, "w");
+    return FFmpegKitReactNativeModule.getSafParameter(uriString, "w", reusable);
   }
 
   /**
@@ -1450,12 +1454,14 @@ export class FFmpegKitConfig {
    *
    * @param uriString SAF uri (<code>"content:…"</code>)
    * @param openMode file mode to use as defined in Android Structured Access Framework documentation
+   * @param reusable when provided, defines whether the generated url can be used more than once;
+   * when omitted the native library's global reuse setting is used, captured at creation time
    * @return saf protocol url that can be passed to FFmpegKit or FFprobeKit
    */
-  static async getSafParameter(uriString, openMode) {
+  static async getSafParameter(uriString, openMode, reusable) {
     await FFmpegKitConfig.init();
 
-    return FFmpegKitReactNativeModule.getSafParameter(uriString, openMode);
+    return FFmpegKitReactNativeModule.getSafParameter(uriString, openMode, reusable);
   }
 
   /**
