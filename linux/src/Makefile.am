@@ -87,7 +87,6 @@ include_HEADERS = \
     ReturnCode.h \
     Session.h \
     SessionState.h \
-    Signal.h \
     Statistics.h \
     StatisticsCallback.h \
     StreamInformation.h \
