@@ -1465,6 +1465,22 @@ export class FFmpegKitConfig {
   }
 
   /**
+   * <p>Unregisters a previously created SAF protocol url and releases the resources associated with it.
+   *
+   * <p>Use this to release a url that was created with the reusable flag enabled. Urls that are not
+   * reusable are unregistered automatically when the file associated with them is closed.
+   *
+   * <p>Note that this method is Android only. It will fail if called on other platforms.
+   *
+   * @param safUrl SAF protocol url previously returned by getSafParameter
+   */
+  static async unregisterSafProtocolUrl(safUrl) {
+    await FFmpegKitConfig.init();
+
+    return FFmpegKitReactNativeModule.unregisterSafProtocolUrl(safUrl);
+  }
+
+  /**
    * <p>Returns the list of camera ids supported. These devices can be used in FFmpeg commands.
    *
    * <p>Note that this method is Android only. It will fail if called on other platforms. It also

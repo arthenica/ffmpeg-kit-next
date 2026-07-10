@@ -813,6 +813,15 @@ public class FFmpegKitReactNativeModule extends NativeFFmpegKitReactNativeModule
   }
 
   @ReactMethod
+  public void unregisterSafProtocolUrl(final String safUrl, final Promise promise) {
+    FFmpegKitConfig.unregisterSafProtocolUrl(safUrl);
+
+    Log.d(LIBRARY_NAME, String.format("unregisterSafProtocolUrl using parameter safUrl: %s completed.", safUrl));
+
+    promise.resolve(null);
+  }
+
+  @ReactMethod
   public void getSupportedCameraIds(final Promise promise) {
     final ReactApplicationContext reactContext = getReactApplicationContext();
 

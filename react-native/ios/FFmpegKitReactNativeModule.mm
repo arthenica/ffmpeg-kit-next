@@ -654,6 +654,10 @@ RCT_EXPORT_METHOD(getSafParameter:(NSString*)uriString openMode:(NSString*)openM
   reject(@"Not Supported", @"Not supported on iOS platform.", nil);
 }
 
+RCT_EXPORT_METHOD(unregisterSafProtocolUrl:(NSString*)safUrl resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
+  reject(@"Not Supported", @"Not supported on iOS platform.", nil);
+}
+
 RCT_EXPORT_METHOD(getSupportedCameraIds:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
   reject(@"Not Supported", @"Not supported on iOS platform.", nil);
 }
