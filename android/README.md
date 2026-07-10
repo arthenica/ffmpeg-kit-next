@@ -218,7 +218,35 @@ methods and callbacks work identically from Kotlin (callbacks accept lambdas, an
         FFmpegKit.cancel(sessionId);
         ```
 
-7. Get previous `FFmpeg` and `FFprobe` sessions from session history.
+7. (Android) Convert Storage Access Framework (SAF) `Uri` values into paths that can be read or
+   written by `FFmpegKit` and `FFprobeKit`. The `Uri` is obtained from the system document picker
+   (`ACTION_OPEN_DOCUMENT` / `ACTION_CREATE_DOCUMENT`).
+
+    - Reading a file. By default a saf url can be used only once and is released automatically when
+      the execution completes. Pass the optional `reusable` flag to use the same url in more than
+      one command and release it manually afterwards with `unregisterSafProtocolUrl`.
+
+        ```java
+        // uri comes from an ACTION_OPEN_DOCUMENT result
+        String safUrl = FFmpegKitConfig.getSafParameterForRead(context, uri, true);
+        FFmpegKit.executeAsync(String.format("-i %s -c:v mpeg4 file2.mp4", safUrl), session -> {
+            FFmpegKitConfig.unregisterSafProtocolUrl(safUrl);
+        });
+        ```
+
+    - Writing to a file.
+
+        ```java
+        // uri comes from an ACTION_CREATE_DOCUMENT result
+        String safUrl = FFmpegKitConfig.getSafParameterForWrite(context, uri);
+        FFmpegKit.executeAsync(String.format("-i file1.mp4 -c:v mpeg4 %s", safUrl));
+        ```
+
+    Reusability can also be enabled globally for every generated url with
+    `FFmpegKitConfig.setSafUrlsReusable(true)`; a per-call `reusable` flag overrides that default,
+    captured when the url is created.
+
+8. Get previous `FFmpeg` and `FFprobe` sessions from session history.
 
     ```java
     List<Session> sessions = FFmpegKitConfig.getSessions();
@@ -234,7 +262,7 @@ methods and callbacks work identically from Kotlin (callbacks accept lambdas, an
     }
     ```
 
-8. Enable global callbacks.
+9. Enable global callbacks.
 
     - Session type specific Complete Callbacks, called when an async session has been completed
 
@@ -268,13 +296,13 @@ methods and callbacks work identically from Kotlin (callbacks accept lambdas, an
         });
         ```
 
-9. Ignore the handling of a signal. Required by `Mono` and frameworks that use `Mono`, e.g. `Unity` and `Xamarin`.
+10. Ignore the handling of a signal. Required by `Mono` and frameworks that use `Mono`, e.g. `Unity` and `Xamarin`.
 
     ```java
     FFmpegKitConfig.ignoreSignal(Signal.SIGXCPU);
     ```
 
-10. Register system fonts and custom font directories.
+11. Register system fonts and custom font directories.
 
     ```java
     FFmpegKitConfig.setFontDirectoryList(context, Arrays.asList("/system/fonts", "<folder with fonts>"), Collections.emptyMap());
