@@ -369,13 +369,18 @@ class FFmpegKitConfig {
   /// Converts the given Structured Access Framework Uri ("content:…") into
   /// an input url that can be used in FFmpeg and FFprobe commands.
   ///
+  /// When [reusable] is provided it defines whether the generated url can be
+  /// used more than once. When it is omitted the url follows the native
+  /// library's global reuse setting, captured at creation time.
+  ///
   /// Note that this method is Android only. It will fail if called on other
   /// platforms. It also requires API Level &ge; 19. On older API levels it
   /// returns an empty url.
-  static Future<String?> getSafParameterForRead(String uriString) async {
+  static Future<String?> getSafParameterForRead(String uriString,
+      [bool? reusable]) async {
     try {
       await init();
-      return _platform.ffmpegKitConfigGetSafParameter(uriString, "r");
+      return _platform.ffmpegKitConfigGetSafParameter(uriString, "r", reusable);
     } on PlatformException catch (e, stack) {
       print("Plugin getSafParameterForRead error: ${e.message}");
       return Future.error("getSafParameterForRead failed.", stack);
@@ -385,13 +390,18 @@ class FFmpegKitConfig {
   /// Converts the given Structured Access Framework Uri ("content:…") into
   /// an output url that can be used in FFmpeg and FFprobe commands.
   ///
+  /// When [reusable] is provided it defines whether the generated url can be
+  /// used more than once. When it is omitted the url follows the native
+  /// library's global reuse setting, captured at creation time.
+  ///
   /// Note that this method is Android only. It will fail if called on other
   /// platforms. It also requires API Level &ge; 19. On older API levels it
   /// returns an empty url.
-  static Future<String?> getSafParameterForWrite(String uriString) async {
+  static Future<String?> getSafParameterForWrite(String uriString,
+      [bool? reusable]) async {
     try {
       await init();
-      return _platform.ffmpegKitConfigGetSafParameter(uriString, "w");
+      return _platform.ffmpegKitConfigGetSafParameter(uriString, "w", reusable);
     } on PlatformException catch (e, stack) {
       print("Plugin getSafParameterForWrite error: ${e.message}");
       return Future.error("getSafParameterForWrite failed.", stack);
@@ -401,14 +411,19 @@ class FFmpegKitConfig {
   /// Converts the given Structured Access Framework Uri into an saf protocol
   /// url opened with the given open mode.
   ///
+  /// When [reusable] is provided it defines whether the generated url can be
+  /// used more than once. When it is omitted the url follows the native
+  /// library's global reuse setting, captured at creation time.
+  ///
   /// Note that this method is Android only. It will fail if called on other
   /// platforms. It also requires API Level &ge; 19. On older API levels it
   /// returns an empty url.
-  static Future<String?> getSafParameter(
-      String uriString, String openMode) async {
+  static Future<String?> getSafParameter(String uriString, String openMode,
+      [bool? reusable]) async {
     try {
       await init();
-      return _platform.ffmpegKitConfigGetSafParameter(uriString, openMode);
+      return _platform.ffmpegKitConfigGetSafParameter(
+          uriString, openMode, reusable);
     } on PlatformException catch (e, stack) {
       print("Plugin getSafParameter error: ${e.message}");
       return Future.error("getSafParameter failed.", stack);

@@ -333,7 +333,8 @@ abstract class FFmpegKitPlatform extends PlatformInterface {
   }
 
   Future<String?> ffmpegKitConfigGetSafParameter(
-      String uriString, String openMode) async {
+      String uriString, String openMode,
+      [bool? reusable]) async {
     throw UnimplementedError(
         'ffmpegKitConfigGetSafParameter() has not been implemented!');
   }

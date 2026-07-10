@@ -606,8 +606,9 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
             case "getSafParameter":
                 final String uri = call.argument("uri");
                 final String openMode = call.argument("openMode");
+                final Boolean reusable = call.argument("reusable");
                 if (uri != null && openMode != null) {
-                    getSafParameter(uri, openMode, result);
+                    getSafParameter(uri, openMode, reusable, result);
                 } else if (uri != null) {
                     resultHandler.errorAsync(result, "INVALID_OPEN_MODE", "Invalid openMode value.");
                 } else {
@@ -1574,7 +1575,7 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
         activity.startActivityForResult(intent, requestCode);
     }
 
-    protected void getSafParameter(@NonNull final String uriString, @NonNull final String openMode, @NonNull final Result result) {
+    protected void getSafParameter(@NonNull final String uriString, @NonNull final String openMode, @Nullable final Boolean reusable, @NonNull final Result result) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
             android.util.Log.i(LIBRARY_NAME, String.format(Locale.getDefault(), "getSafParameter is not supported on API Level %d", Build.VERSION.SDK_INT));
             resultHandler.errorAsync(result, "GET_SAF_PARAMETER_FAILED", String.format(Locale.getDefault(), "getSafParameter is not supported on API Level %d", Build.VERSION.SDK_INT));
@@ -1587,9 +1588,11 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
                 Log.w(LIBRARY_NAME, String.format("Cannot getSafParameter using parameters uriString: %s, openMode: %s. Uri string cannot be parsed.", uriString, openMode));
                 resultHandler.errorAsync(result, "GET_SAF_PARAMETER_FAILED", "Uri string cannot be parsed.");
             } else {
-                final String safParameter = FFmpegKitConfig.getSafParameter(context, uri, openMode);
+                final String safParameter = (reusable != null)
+                        ? FFmpegKitConfig.getSafParameter(context, uri, openMode, reusable)
+                        : FFmpegKitConfig.getSafParameter(context, uri, openMode);
 
-                Log.d(LIBRARY_NAME, String.format("getSafParameter using parameters uriString: %s, openMode: %s completed with saf parameter: %s.", uriString, openMode, safParameter));
+                Log.d(LIBRARY_NAME, String.format("getSafParameter using parameters uriString: %s, openMode: %s, reusable: %s completed with saf parameter: %s.", uriString, openMode, reusable, safParameter));
 
                 resultHandler.successAsync(result, safParameter);
             }

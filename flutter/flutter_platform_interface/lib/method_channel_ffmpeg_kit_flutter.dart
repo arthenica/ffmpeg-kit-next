@@ -302,9 +302,10 @@ class MethodChannelFFmpegKit extends FFmpegKitPlatform {
 
   @override
   Future<String?> ffmpegKitConfigGetSafParameter(
-          String uriString, String openMode) async =>
-      _channel.invokeMethod<String>(
-          'getSafParameter', {'uri': uriString, 'openMode': openMode});
+          String uriString, String openMode,
+          [bool? reusable]) async =>
+      _channel.invokeMethod<String>('getSafParameter',
+          {'uri': uriString, 'openMode': openMode, 'reusable': reusable});
 
   // FFmpegKitFlutterInitializer
 
