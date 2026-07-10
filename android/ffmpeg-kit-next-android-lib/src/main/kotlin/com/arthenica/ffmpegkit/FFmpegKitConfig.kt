@@ -58,7 +58,8 @@ open class FFmpegKitConfig private constructor() {
         val safId: Int,
         val uri: Uri,
         val openMode: String,
-        val contentResolver: ContentResolver
+        val contentResolver: ContentResolver,
+        val reusable: Boolean
     ) {
         var parcelFileDescriptor: ParcelFileDescriptor? = null
     }
@@ -1237,6 +1238,11 @@ open class FFmpegKitConfig private constructor() {
          *
          * <p>Requires API Level 19+. On older API levels it returns an empty url.
          *
+         * <p>The generated url inherits the global reuse setting defined via
+         * {@link #setSafUrlsReusable}, captured at the time this method is called. Use the
+         * {@link #getSafParameter(Context, Uri, String, boolean)} overload to define the reuse
+         * behaviour for this url explicitly.
+         *
          * @param context  application context
          * @param uri      SAF uri
          * @param openMode file mode to use as defined in {@link ContentProvider#openFile ContentProvider.openFile}
@@ -1248,6 +1254,35 @@ open class FFmpegKitConfig private constructor() {
             @NonNull context: Context,
             @NonNull uri: Uri,
             @NonNull openMode: String
+        ): String {
+            return getSafParameter(context, uri, openMode, safUrlsReusable.get())
+        }
+
+        /**
+         * <p>Converts the given Structured Access Framework Uri into an
+         * SAF protocol url that can be used in FFmpeg and FFprobe commands.
+         *
+         * <p>Requires API Level 19+. On older API levels it returns an empty url.
+         *
+         * <p>The <code>reusable</code> value is stored per url when the url is created. It defines
+         * whether this specific url will be automatically unregistered when the file associated
+         * with it is closed. Because it is captured at creation time, changing the global reuse
+         * setting via {@link #setSafUrlsReusable} afterwards does not affect urls that were already
+         * created. Reusable urls must be unregistered manually via {@link #unregisterSafProtocolUrl}.
+         *
+         * @param context  application context
+         * @param uri      SAF uri
+         * @param openMode file mode to use as defined in {@link ContentProvider#openFile ContentProvider.openFile}
+         * @param reusable set to true to make this url reusable, false to unregister it automatically on close
+         * @return input/output url that can be passed to FFmpegKit or FFprobeKit
+         */
+        @JvmStatic
+        @NonNull
+        fun getSafParameter(
+            @NonNull context: Context,
+            @NonNull uri: Uri,
+            @NonNull openMode: String,
+            reusable: Boolean
         ): String {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
                 android.util.Log.i(
@@ -1282,7 +1317,7 @@ open class FFmpegKitConfig private constructor() {
             }
 
             val safId = uniqueIdGenerator.getAndIncrement()
-            safIdMap.put(safId, SAFProtocolUrl(safId, uri, openMode, context.contentResolver))
+            safIdMap.put(safId, SAFProtocolUrl(safId, uri, openMode, context.contentResolver, reusable))
 
             return "ffkitsaf:" + safId + "." + extractExtensionFromSafDisplayName(displayName)
         }
@@ -1309,6 +1344,23 @@ open class FFmpegKitConfig private constructor() {
          *
          * <p>Requires API Level &ge; 19. On older API levels it returns an empty url.
          *
+         * @param context  application context
+         * @param uri      SAF uri
+         * @param reusable set to true to make this url reusable, false to unregister it automatically on close
+         * @return input url that can be passed to FFmpegKit or FFprobeKit
+         */
+        @JvmStatic
+        @NonNull
+        fun getSafParameterForRead(@NonNull context: Context, @NonNull uri: Uri, reusable: Boolean): String {
+            return getSafParameter(context, uri, "r", reusable)
+        }
+
+        /**
+         * <p>Converts the given Structured Access Framework Uri (<code>"content:…"</code>) into an
+         * SAF protocol url that can be used in FFmpeg and FFprobe commands.
+         *
+         * <p>Requires API Level &ge; 19. On older API levels it returns an empty url.
+         *
          * @param context application context
          * @param uri     SAF uri
          * @return output url that can be passed to FFmpegKit or FFprobeKit
@@ -1317,6 +1369,23 @@ open class FFmpegKitConfig private constructor() {
         @NonNull
         fun getSafParameterForWrite(@NonNull context: Context, @NonNull uri: Uri): String {
             return getSafParameter(context, uri, "w")
+        }
+
+        /**
+         * <p>Converts the given Structured Access Framework Uri (<code>"content:…"</code>) into an
+         * SAF protocol url that can be used in FFmpeg and FFprobe commands.
+         *
+         * <p>Requires API Level &ge; 19. On older API levels it returns an empty url.
+         *
+         * @param context  application context
+         * @param uri      SAF uri
+         * @param reusable set to true to make this url reusable, false to unregister it automatically on close
+         * @return output url that can be passed to FFmpegKit or FFprobeKit
+         */
+        @JvmStatic
+        @NonNull
+        fun getSafParameterForWrite(@NonNull context: Context, @NonNull uri: Uri, reusable: Boolean): String {
+            return getSafParameter(context, uri, "w", reusable)
         }
 
         /**
@@ -1382,7 +1451,7 @@ open class FFmpegKitConfig private constructor() {
                         try {
                             parcelFileDescriptor.close()
                         } finally {
-                            if (!safUrlsReusable.get()) {
+                            if (!safProtocolUrl.reusable) {
                                 safIdMap.delete(safId)
                             }
                         }
@@ -1740,16 +1809,23 @@ open class FFmpegKitConfig private constructor() {
         }
 
         /**
-         * Defines whether the generated SAF protocol urls will be reusable or not.
+         * Defines the default reuse behaviour applied to SAF protocol urls that are created
+         * without an explicit <code>reusable</code> value.
          *
          * <p>Note that SAF protocol urls are not reusable by default and are automatically
          * unregistered when the file associated with them is closed.
          *
-         * <p>If they are set to be reused using this method, automatic unregistration will be
-         * disabled. Therefore, it will be the developer's responsibility to unregister them via the
+         * <p>This setting is captured per url at the time the url is created. Changing it does not
+         * affect urls that were already created. To define the reuse behaviour of an individual url
+         * regardless of this setting, use the <code>reusable</code> overloads of
+         * {@link #getSafParameter}, {@link #getSafParameterForRead} and
+         * {@link #getSafParameterForWrite}.
+         *
+         * <p>When a url is reusable, automatic unregistration is disabled for that url. Therefore,
+         * it will be the developer's responsibility to unregister it via the
          * {@link #unregisterSafProtocolUrl} method.
          *
-         * @param safUrlsReusable set to true to enable the reuse of SAF protocol urls
+         * @param safUrlsReusable set to true to make newly created SAF protocol urls reusable by default
          */
         @JvmStatic
         fun setSafUrlsReusable(safUrlsReusable: Boolean) {

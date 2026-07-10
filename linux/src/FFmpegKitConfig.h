@@ -25,7 +25,6 @@
 #include "Level.h"
 #include "LogCallback.h"
 #include "MediaInformationSession.h"
-#include "Signal.h"
 #include "StatisticsCallback.h"
 #include <cstddef>
 #include <cstdint>
@@ -37,6 +36,14 @@
 #include <vector>
 
 namespace ffmpegkit {
+
+enum Signal {
+    SignalInt = 2,
+    SignalQuit = 3,
+    SignalPipe = 13,
+    SignalTerm = 15,
+    SignalXcpu = 24
+};
 
 /**
  * <p>Configuration class of <code>FFmpegKit</code> library. Allows customizing
