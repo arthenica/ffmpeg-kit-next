@@ -307,6 +307,11 @@ class MethodChannelFFmpegKit extends FFmpegKitPlatform {
       _channel.invokeMethod<String>('getSafParameter',
           {'uri': uriString, 'openMode': openMode, 'reusable': reusable});
 
+  @override
+  Future<void> ffmpegKitConfigUnregisterSafProtocolUrl(String safUrl) async =>
+      _channel.invokeMethod<void>(
+          'unregisterSafProtocolUrl', {'safUrl': safUrl});
+
   // FFmpegKitFlutterInitializer
 
   Future<int?> ffmpegKitFlutterInitializerGetLogLevel() async =>

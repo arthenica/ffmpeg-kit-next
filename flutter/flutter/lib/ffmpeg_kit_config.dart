@@ -430,6 +430,25 @@ class FFmpegKitConfig {
     }
   }
 
+  /// Unregisters a previously created SAF protocol url and releases the
+  /// resources associated with it.
+  ///
+  /// Use this to release a url that was created with the reusable flag enabled.
+  /// Urls that are not reusable are unregistered automatically when the file
+  /// associated with them is closed.
+  ///
+  /// Note that this method is Android only. It will fail if called on other
+  /// platforms.
+  static Future<void> unregisterSafProtocolUrl(String safUrl) async {
+    try {
+      await init();
+      return _platform.ffmpegKitConfigUnregisterSafProtocolUrl(safUrl);
+    } on PlatformException catch (e, stack) {
+      print("Plugin unregisterSafProtocolUrl error: ${e.message}");
+      return Future.error("unregisterSafProtocolUrl failed.", stack);
+    }
+  }
+
   /// Returns the list of camera ids supported. These devices can be used in
   /// FFmpeg commands.
   ///

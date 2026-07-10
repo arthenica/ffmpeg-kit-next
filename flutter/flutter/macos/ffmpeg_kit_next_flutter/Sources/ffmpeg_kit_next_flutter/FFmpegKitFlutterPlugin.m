@@ -450,6 +450,8 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
     [self selectDocument:result];
   } else if ([@"getSafParameter" isEqualToString:call.method]) {
     [self getSafParameter:result];
+  } else if ([@"unregisterSafProtocolUrl" isEqualToString:call.method]) {
+    [self unregisterSafProtocolUrl:result];
   } else if ([@"cancel" isEqualToString:call.method]) {
     [self cancel:result];
   } else if ([@"cancelSession" isEqualToString:call.method]) {
@@ -1130,6 +1132,10 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
 }
 
 - (void)getSafParameter:(FlutterResult)result {
+  result([FlutterError errorWithCode:@"NOT_SUPPORTED" message:@"Not supported on macOS platform." details:nil]);
+}
+
+- (void)unregisterSafProtocolUrl:(FlutterResult)result {
   result([FlutterError errorWithCode:@"NOT_SUPPORTED" message:@"Not supported on macOS platform." details:nil]);
 }
 

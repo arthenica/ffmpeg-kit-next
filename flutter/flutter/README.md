@@ -228,8 +228,13 @@ The following table shows Android API level, iOS/iPadOS deployment target and ma
 - Reading a file:
   ```dart
   FFmpegKitConfig.selectDocumentForRead('*/*').then((uri) {
-    FFmpegKitConfig.getSafParameterForRead(uri!).then((safUrl) {
-      FFmpegKit.executeAsync("-i ${safUrl!} -c:v mpeg4 file2.mp4");
+    // By default a saf url can be used only once and is released automatically
+    // when the execution completes. Pass the optional reusable flag to use the
+    // same url in more than one command and release it manually afterwards.
+    FFmpegKitConfig.getSafParameterForRead(uri!, true).then((safUrl) {
+      FFmpegKit.executeAsync("-i ${safUrl!} -c:v mpeg4 file2.mp4").then((_) {
+        FFmpegKitConfig.unregisterSafProtocolUrl(safUrl);
+      });
     });
   });
   ```

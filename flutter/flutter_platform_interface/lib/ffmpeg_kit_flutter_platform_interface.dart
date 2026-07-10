@@ -339,6 +339,11 @@ abstract class FFmpegKitPlatform extends PlatformInterface {
         'ffmpegKitConfigGetSafParameter() has not been implemented!');
   }
 
+  Future<void> ffmpegKitConfigUnregisterSafProtocolUrl(String safUrl) async {
+    throw UnimplementedError(
+        'ffmpegKitConfigUnregisterSafProtocolUrl() has not been implemented!');
+  }
+
   // FFmpegKitFlutterInitializer
 
   Future<int?> ffmpegKitFlutterInitializerGetLogLevel() async {

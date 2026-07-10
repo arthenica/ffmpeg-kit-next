@@ -615,6 +615,14 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
                     resultHandler.errorAsync(result, "INVALID_URI", "Invalid uri value.");
                 }
                 break;
+            case "unregisterSafProtocolUrl":
+                final String safUrl = call.argument("safUrl");
+                if (safUrl != null) {
+                    unregisterSafProtocolUrl(safUrl, result);
+                } else {
+                    resultHandler.errorAsync(result, "INVALID_SAF_URL", "Invalid safUrl value.");
+                }
+                break;
             case "cancel":
                 cancel(result);
                 break;
@@ -1600,6 +1608,14 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
             Log.w(LIBRARY_NAME, String.format("Cannot getSafParameter using parameters uriString: %s, openMode: %s. Context is null.", uriString, openMode));
             resultHandler.errorAsync(result, "INVALID_CONTEXT", "Context is null.");
         }
+    }
+
+    protected void unregisterSafProtocolUrl(@NonNull final String safUrl, @NonNull final Result result) {
+        FFmpegKitConfig.unregisterSafProtocolUrl(safUrl);
+
+        Log.d(LIBRARY_NAME, String.format("unregisterSafProtocolUrl using parameter safUrl: %s completed.", safUrl));
+
+        resultHandler.successAsync(result, null);
     }
 
     protected void getSupportedCameraIds(@NonNull final Result result) {
