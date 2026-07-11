@@ -26,6 +26,7 @@
 #import <ffmpegkit/FFmpegKitStreamOutput.h>
 
 static NSString *const PLATFORM_NAME = @"ios";
+static NSString *const LIBRARY_VERSION = @"8.1.0";
 
 static NSString *const METHOD_CHANNEL = @"flutter.arthenica.com/ffmpeg_kit";
 static NSString *const EVENT_CHANNEL = @"flutter.arthenica.com/ffmpeg_kit_event";
@@ -107,7 +108,6 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
 - (FlutterError *)onListenWithArguments:(id)arguments eventSink:(FlutterEventSink)eventSink {
   _eventSink = eventSink;
   NSLog(@"FFmpegKitFlutterPlugin %p started listening to events on %p.\n", self, eventSink);
-  [self registerGlobalCallbacks];
   return nil;
 }
 
@@ -126,45 +126,40 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
   [eventChannel setStreamHandler:instance];
 }
 
-- (void)registerGlobalCallbacks {
-  [FFmpegKitConfig enableFFmpegSessionCompleteCallback:^(FFmpegSession* session){
-    NSDictionary *dictionary = [FFmpegKitFlutterPlugin toSessionDictionary:session];
-    dispatch_async(dispatch_get_main_queue(), ^() {
-      self->_eventSink([FFmpegKitFlutterPlugin toStringDictionary:EVENT_COMPLETE_CALLBACK_EVENT withDictionary:dictionary]);
-    });
-  }];
-
-  [FFmpegKitConfig enableFFprobeSessionCompleteCallback:^(FFprobeSession* session){
-    NSDictionary *dictionary = [FFmpegKitFlutterPlugin toSessionDictionary:session];
-    dispatch_async(dispatch_get_main_queue(), ^() {
-      self->_eventSink([FFmpegKitFlutterPlugin toStringDictionary:EVENT_COMPLETE_CALLBACK_EVENT withDictionary:dictionary]);
-    });
-  }];
-
-  [FFmpegKitConfig enableMediaInformationSessionCompleteCallback:^(MediaInformationSession* session){
-    NSDictionary *dictionary = [FFmpegKitFlutterPlugin toSessionDictionary:session];
-    dispatch_async(dispatch_get_main_queue(), ^() {
-      self->_eventSink([FFmpegKitFlutterPlugin toStringDictionary:EVENT_COMPLETE_CALLBACK_EVENT withDictionary:dictionary]);
-    });
-  }];
-
-  [FFmpegKitConfig enableLogCallback: ^(Log* log){
-    if (self->logsEnabled) {
-      NSDictionary *dictionary = [FFmpegKitFlutterPlugin toLogDictionary:log];
-      dispatch_async(dispatch_get_main_queue(), ^() {
-        self->_eventSink([FFmpegKitFlutterPlugin toStringDictionary:EVENT_LOG_CALLBACK_EVENT withDictionary:dictionary]);
-      });
+- (void)emitSession:(id<Session>)session {
+  NSDictionary *dictionary = [FFmpegKitFlutterPlugin toSessionDictionary:session];
+  dispatch_async(dispatch_get_main_queue(), ^() {
+    FlutterEventSink sink = self->_eventSink;
+    if (sink != nil) {
+      sink([FFmpegKitFlutterPlugin toStringDictionary:EVENT_COMPLETE_CALLBACK_EVENT withDictionary:dictionary]);
     }
-  }];
+  });
+}
 
-  [FFmpegKitConfig enableStatisticsCallback:^(Statistics* statistics){
-    if (self->statisticsEnabled) {
-      NSDictionary *dictionary = [FFmpegKitFlutterPlugin toStatisticsDictionary:statistics];
-      dispatch_async(dispatch_get_main_queue(), ^() {
-        self->_eventSink([FFmpegKitFlutterPlugin toStringDictionary:EVENT_STATISTICS_CALLBACK_EVENT withDictionary:dictionary]);
-      });
+- (void)emitLog:(Log*)log {
+  if (!self->logsEnabled) {
+    return;
+  }
+  NSDictionary *dictionary = [FFmpegKitFlutterPlugin toLogDictionary:log];
+  dispatch_async(dispatch_get_main_queue(), ^() {
+    FlutterEventSink sink = self->_eventSink;
+    if (sink != nil) {
+      sink([FFmpegKitFlutterPlugin toStringDictionary:EVENT_LOG_CALLBACK_EVENT withDictionary:dictionary]);
     }
-  }];
+  });
+}
+
+- (void)emitStatistics:(Statistics*)statistics {
+  if (!self->statisticsEnabled) {
+    return;
+  }
+  NSDictionary *dictionary = [FFmpegKitFlutterPlugin toStatisticsDictionary:statistics];
+  dispatch_async(dispatch_get_main_queue(), ^() {
+    FlutterEventSink sink = self->_eventSink;
+    if (sink != nil) {
+      sink([FFmpegKitFlutterPlugin toStringDictionary:EVENT_STATISTICS_CALLBACK_EVENT withDictionary:dictionary]);
+    }
+  });
 }
 
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
@@ -382,6 +377,8 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
     }
   } else if ([@"getLogLevel" isEqualToString:call.method]) {
     [self getLogLevel:result];
+  } else if ([@"printLoadConfirmation" isEqualToString:call.method]) {
+    [self printLoadConfirmation:result];
   } else if ([@"setLogLevel" isEqualToString:call.method]) {
     NSNumber* level = call.arguments[@"level"];
     if (level != nil) {
@@ -682,7 +679,13 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
 // FFmpegSession
 
 - (void)ffmpegSession:(NSArray*)arguments result:(FlutterResult)result {
-  FFmpegSession* session = [FFmpegSession create:arguments withCompleteCallback:nil withLogCallback:nil withStatisticsCallback:nil withLogRedirectionStrategy:LogRedirectionStrategyNeverPrintLogs];
+  FFmpegSession* session = [FFmpegSession create:arguments withCompleteCallback:^(FFmpegSession* completedSession){
+    [self emitSession:completedSession];
+  } withLogCallback:^(Log* log){
+    [self emitLog:log];
+  } withStatisticsCallback:^(Statistics* statistics){
+    [self emitStatistics:statistics];
+  } withLogRedirectionStrategy:LogRedirectionStrategyNeverPrintLogs];
   result([FFmpegKitFlutterPlugin toSessionDictionary:session]);
 }
 
@@ -723,14 +726,22 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
 // FFprobeSession
 
 - (void)ffprobeSession:(NSArray*)arguments result:(FlutterResult)result {
-  FFprobeSession* session = [FFprobeSession create:arguments withCompleteCallback:nil withLogCallback:nil withLogRedirectionStrategy:LogRedirectionStrategyNeverPrintLogs];
+  FFprobeSession* session = [FFprobeSession create:arguments withCompleteCallback:^(FFprobeSession* completedSession){
+    [self emitSession:completedSession];
+  } withLogCallback:^(Log* log){
+    [self emitLog:log];
+  } withLogRedirectionStrategy:LogRedirectionStrategyNeverPrintLogs];
   result([FFmpegKitFlutterPlugin toSessionDictionary:session]);
 }
 
 // MediaInformationSession
 
 - (void)mediaInformationSession:(NSArray*)arguments result:(FlutterResult)result {
-  MediaInformationSession* session = [MediaInformationSession create:arguments withCompleteCallback:nil withLogCallback:nil];
+  MediaInformationSession* session = [MediaInformationSession create:arguments withCompleteCallback:^(MediaInformationSession* completedSession){
+    [self emitSession:completedSession];
+  } withLogCallback:^(Log* log){
+    [self emitLog:log];
+  }];
   result([FFmpegKitFlutterPlugin toSessionDictionary:session]);
 }
 
@@ -981,6 +992,15 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
 
 - (void)getLogLevel:(FlutterResult)result {
   result([NSNumber numberWithInt:[FFmpegKitConfig getLogLevel]]);
+}
+
+- (void)printLoadConfirmation:(FlutterResult)result {
+  static dispatch_once_t loadedLoggedToken;
+  dispatch_once(&loadedLoggedToken, ^{
+    NSLog(@"Loaded ffmpeg-kit-next-flutter-%@-%@-%@.", PLATFORM_NAME, [ArchDetect getArch], LIBRARY_VERSION);
+  });
+
+  result(nil);
 }
 
 - (void)setLogLevel:(NSNumber*)level result:(FlutterResult)result {

@@ -46,8 +46,12 @@ class FFmpegKitConfig {
   static int _activeLogLevel = Level.avLogTrace;
 
   /// Initializes the library asynchronously.
-  static Future<void> init() async {
-    await FFmpegKitInitializer.initialize();
+  ///
+  /// Set [printLoadConfirmation] to false before the first initialization to
+  /// suppress the native "Loaded ffmpeg-kit-next-flutter" confirmation.
+  static Future<void> init({bool printLoadConfirmation = true}) async {
+    await FFmpegKitInitializer.initialize(
+        printLoadConfirmation: printLoadConfirmation);
   }
 
   /// Enables log and statistics redirection.

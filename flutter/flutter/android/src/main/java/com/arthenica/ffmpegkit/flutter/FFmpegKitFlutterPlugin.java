@@ -87,6 +87,7 @@ import io.flutter.plugin.common.PluginRegistry;
 public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCallHandler, EventChannel.StreamHandler, PluginRegistry.ActivityResultListener {
 
     public static final String LIBRARY_NAME = "ffmpeg-kit-flutter";
+    public static final String LIBRARY_VERSION = "8.1.0";
     public static final String PLATFORM_NAME = "android";
 
     private static final String METHOD_CHANNEL = "flutter.arthenica.com/ffmpeg_kit";
@@ -137,6 +138,7 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
     public static final String ARGUMENT_WRITABLE = "writable";
 
     private static final int asyncConcurrencyLimit = 10;
+    private static final AtomicBoolean loadedLogged = new AtomicBoolean(false);
 
     private final AtomicBoolean logsEnabled;
     private final AtomicBoolean statisticsEnabled;
@@ -152,7 +154,7 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
     private ActivityResultLauncher<Intent> documentActivityResultLauncher;
     private boolean legacyActivityResultListenerRegistered;
 
-    private EventChannel.EventSink eventSink;
+    private volatile EventChannel.EventSink eventSink;
     private final FFmpegKitFlutterMethodResultHandler resultHandler;
 
     // "ffkit" protocol object registries, keyed by the generated protocol url.
@@ -172,38 +174,22 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
         Log.d(LIBRARY_NAME, String.format("FFmpegKitFlutterPlugin created %s.", this));
     }
 
-    protected void registerGlobalCallbacks() {
-        FFmpegKitConfig.enableFFmpegSessionCompleteCallback(this::emitSession);
-        FFmpegKitConfig.enableFFprobeSessionCompleteCallback(this::emitSession);
-        FFmpegKitConfig.enableMediaInformationSessionCompleteCallback(this::emitSession);
-
-        FFmpegKitConfig.enableLogCallback(log -> {
-            if (logsEnabled.get()) {
-                emitLog(log);
-            }
-        });
-
-        FFmpegKitConfig.enableStatisticsCallback(statistics -> {
-            if (statisticsEnabled.get()) {
-                emitStatistics(statistics);
-            }
-        });
-    }
-
     @Override
     public void onAttachedToEngine(@NonNull final FlutterPluginBinding flutterPluginBinding) {
         this.flutterPluginBinding = flutterPluginBinding;
+        init(flutterPluginBinding.getBinaryMessenger(), flutterPluginBinding.getApplicationContext());
     }
 
     @Override
     public void onDetachedFromEngine(@NonNull final FlutterPluginBinding binding) {
+        uninit();
         this.flutterPluginBinding = null;
     }
 
     @Override
     public void onAttachedToActivity(@NonNull ActivityPluginBinding activityPluginBinding) {
         Log.d(LIBRARY_NAME, String.format("FFmpegKitFlutterPlugin %s attached to activity %s.", this, activityPluginBinding.getActivity()));
-        init(flutterPluginBinding.getBinaryMessenger(), flutterPluginBinding.getApplicationContext(), activityPluginBinding.getActivity(), activityPluginBinding);
+        attachActivity(activityPluginBinding.getActivity(), activityPluginBinding);
     }
 
     @Override
@@ -218,7 +204,7 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
 
     @Override
     public void onDetachedFromActivity() {
-        uninit();
+        detachActivity();
         Log.d(LIBRARY_NAME, "FFmpegKitFlutterPlugin detached from activity.");
     }
 
@@ -509,6 +495,9 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
             case "getLogLevel":
                 getLogLevel(result);
                 break;
+            case "printLoadConfirmation":
+                printLoadConfirmation(result);
+                break;
             case "setLogLevel":
                 final Integer level = call.argument("level");
                 if (level != null) {
@@ -783,9 +772,7 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
         }
     }
 
-    protected void init(final BinaryMessenger messenger, final Context context, final Activity activity, final ActivityPluginBinding activityBinding) {
-        registerGlobalCallbacks();
-
+    protected void init(final BinaryMessenger messenger, final Context context) {
         if (methodChannel == null) {
             methodChannel = new MethodChannel(messenger, METHOD_CHANNEL);
             methodChannel.setMethodCallHandler(this);
@@ -801,18 +788,31 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
         }
 
         this.context = context;
-        this.activity = activity;
-        this.activityPluginBinding = activityBinding;
 
-        registerDocumentActivityResultLauncher(activity, activityBinding);
-
-        Log.d(LIBRARY_NAME, String.format("FFmpegKitFlutterPlugin %s initialised with context %s and activity %s.", this, context, activity));
+        Log.d(LIBRARY_NAME, String.format("FFmpegKitFlutterPlugin %s initialised with context %s.", this, context));
     }
 
     protected void uninit() {
         uninitMethodChannel();
         uninitEventChannel();
+        detachActivity();
 
+        this.eventSink = null;
+        this.context = null;
+
+        Log.d(LIBRARY_NAME, "FFmpegKitFlutterPlugin uninitialized.");
+    }
+
+    protected void attachActivity(@NonNull final Activity activity, @NonNull final ActivityPluginBinding activityBinding) {
+        detachActivity();
+
+        this.activity = activity;
+        this.activityPluginBinding = activityBinding;
+
+        registerDocumentActivityResultLauncher(activity, activityBinding);
+    }
+
+    protected void detachActivity() {
         if (documentActivityResultLauncher != null) {
             documentActivityResultLauncher.unregister();
             documentActivityResultLauncher = null;
@@ -822,12 +822,9 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
             this.activityPluginBinding.removeActivityResultListener(this);
         }
 
-        this.context = null;
         this.activity = null;
         this.activityPluginBinding = null;
         this.legacyActivityResultListenerRegistered = false;
-
-        Log.d(LIBRARY_NAME, "FFmpegKitFlutterPlugin uninitialized.");
     }
 
     protected void uninitMethodChannel() {
@@ -1001,7 +998,7 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
     // FFmpegSession
 
     protected void ffmpegSession(@NonNull final List<String> arguments, @NonNull final Result result) {
-        final FFmpegSession session = FFmpegSession.create(arguments.toArray(new String[0]), null, null, null, LogRedirectionStrategy.NEVER_PRINT_LOGS);
+        final FFmpegSession session = FFmpegSession.create(arguments.toArray(new String[0]), this::emitSession, this::emitLogIfEnabled, this::emitStatisticsIfEnabled, LogRedirectionStrategy.NEVER_PRINT_LOGS);
         resultHandler.successAsync(result, toMap(session));
     }
 
@@ -1042,14 +1039,14 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
     // FFprobeSession
 
     protected void ffprobeSession(@NonNull final List<String> arguments, @NonNull final Result result) {
-        final FFprobeSession session = FFprobeSession.create(arguments.toArray(new String[0]), null, null, LogRedirectionStrategy.NEVER_PRINT_LOGS);
+        final FFprobeSession session = FFprobeSession.create(arguments.toArray(new String[0]), this::emitSession, this::emitLogIfEnabled, LogRedirectionStrategy.NEVER_PRINT_LOGS);
         resultHandler.successAsync(result, toMap(session));
     }
 
     // MediaInformationSession
 
     protected void mediaInformationSession(@NonNull final List<String> arguments, @NonNull final Result result) {
-        final MediaInformationSession session = MediaInformationSession.create(arguments.toArray(new String[0]), null, null);
+        final MediaInformationSession session = MediaInformationSession.create(arguments.toArray(new String[0]), this::emitSession, this::emitLogIfEnabled);
         resultHandler.successAsync(result, toMap(session));
     }
 
@@ -1312,6 +1309,14 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
 
     protected void getLogLevel(@NonNull final Result result) {
         resultHandler.successAsync(result, toInt(FFmpegKitConfig.getLogLevel()));
+    }
+
+    protected void printLoadConfirmation(@NonNull final Result result) {
+        if (loadedLogged.compareAndSet(false, true)) {
+            Log.d(LIBRARY_NAME, String.format("Loaded ffmpeg-kit-next-flutter-%s-%s-%s.", PLATFORM_NAME, AbiDetect.getAbi(), LIBRARY_VERSION));
+        }
+
+        resultHandler.successAsync(result, null);
     }
 
     protected void setLogLevel(@NonNull final Integer level, @NonNull final Result result) {
@@ -1884,22 +1889,49 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
         return (value != null) && (value >= 0);
     }
 
+    protected void emitLogIfEnabled(final com.arthenica.ffmpegkit.Log log) {
+        if (logsEnabled.get()) {
+            emitLog(log);
+        }
+    }
+
+    protected void emitStatisticsIfEnabled(final Statistics statistics) {
+        if (statisticsEnabled.get()) {
+            emitStatistics(statistics);
+        }
+    }
+
     protected void emitLog(final com.arthenica.ffmpegkit.Log log) {
+        final EventChannel.EventSink sink = eventSink;
+        if (sink == null) {
+            return;
+        }
+
         final HashMap<String, Object> logMap = new HashMap<>();
         logMap.put(EVENT_LOG_CALLBACK_EVENT, toMap(log));
-        resultHandler.successAsync(eventSink, logMap);
+        resultHandler.successAsync(sink, logMap);
     }
 
     protected void emitStatistics(final Statistics statistics) {
+        final EventChannel.EventSink sink = eventSink;
+        if (sink == null) {
+            return;
+        }
+
         final HashMap<String, Object> statisticsMap = new HashMap<>();
         statisticsMap.put(EVENT_STATISTICS_CALLBACK_EVENT, toMap(statistics));
-        resultHandler.successAsync(eventSink, statisticsMap);
+        resultHandler.successAsync(sink, statisticsMap);
     }
 
     protected void emitSession(final Session session) {
+        final EventChannel.EventSink sink = eventSink;
+        if (sink == null) {
+            return;
+        }
+
         final HashMap<String, Object> sessionMap = new HashMap<>();
         sessionMap.put(EVENT_COMPLETE_CALLBACK_EVENT, toMap(session));
-        resultHandler.successAsync(eventSink, sessionMap);
+        resultHandler.successAsync(sink, sessionMap);
     }
 
 }

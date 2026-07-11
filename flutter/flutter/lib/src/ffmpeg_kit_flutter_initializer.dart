@@ -22,7 +22,6 @@ import 'dart:io';
 import 'package:ffmpeg_kit_next_flutter_platform_interface/ffmpeg_kit_flutter_platform_interface.dart';
 import 'package:flutter/services.dart';
 
-import '../arch_detect.dart';
 import '../ffmpeg_kit_config.dart';
 import '../ffmpeg_session.dart';
 import '../ffmpeg_session_complete_callback.dart';
@@ -33,7 +32,6 @@ import '../log_callback.dart';
 import '../log_redirection_strategy.dart';
 import '../media_information_session.dart';
 import '../media_information_session_complete_callback.dart';
-import '../packages.dart';
 import '../session.dart';
 import '../statistics.dart';
 import '../statistics_callback.dart';
@@ -47,13 +45,46 @@ class FFmpegKitInitializer {
   static FFmpegKitInitializer _instance = new FFmpegKitInitializer();
 
   static bool _initialized = false;
+  static Future<bool>? _initializationFuture;
 
-  static Future<bool> initialize() async {
-    if (!_initialized) {
-      _initialized = true;
-      await _instance._initialize();
+  static Future<bool> initialize({bool printLoadConfirmation = true}) async {
+    if (_initialized) {
+      return true;
     }
-    return _initialized;
+
+    final existingInitialization = _initializationFuture;
+    if (existingInitialization != null) {
+      return existingInitialization;
+    }
+
+    final initialization = _instance._initialize().then((_) async {
+      // Mark initialized BEFORE syncing the log level. _applyInitialLogLevel
+      // calls FFmpegKitConfig.setLogLevel(), which re-enters init(); with the
+      // flag already set that re-entrant call short-circuits at the top guard
+      // instead of awaiting this future (which would deadlock).
+      //
+      // Consequence: a concurrent external caller can observe _initialized ==
+      // true during the brief log-level sync below and proceed. That is safe -
+      // everything functionally required (the event channel listener and
+      // enableRedirection) is already done by this point, and the only value
+      // still lagging is the Dart-side log-level cache. That cache defaults to
+      // Level.avLogTrace (the most permissive level) while native gates logs
+      // first, so the pre-sync filter is a strict superset and never drops a
+      // log native emitted.
+      _initialized = true;
+      await _instance._applyInitialLogLevel();
+      if (printLoadConfirmation) {
+        await _platform.ffmpegKitFlutterInitializerPrintLoadConfirmation();
+      }
+      return true;
+    }).catchError((Object error, StackTrace stackTrace) {
+      _initialized = false;
+      _initializationFuture = null;
+      return Future<bool>.error(error, stackTrace);
+    });
+
+    _initializationFuture = initialization;
+    return initialization;
   }
 
   void _onEvent(dynamic event) {
@@ -306,20 +337,30 @@ class FFmpegKitInitializer {
   }
 
   Future<void> _initialize() async {
-    print("Loading ffmpeg-kit-next-flutter.");
-
     _eventChannel.receiveBroadcastStream().listen(_onEvent, onError: _onError);
+    await _platform.ffmpegKitConfigEnableRedirection();
+  }
 
-    final logLevel = await _getLogLevel();
-    if (logLevel != null) {
-      FFmpegKitConfig.setLogLevel(logLevel);
+  // Syncs the Dart-side log level cache with the native log level. Runs after
+  // _initialized is set, because FFmpegKitConfig.setLogLevel() re-enters init().
+  //
+  // Deliberately non-fatal. It runs only after _initialize() has already
+  // completed enableRedirection (a method-channel round-trip), so the channel is
+  // proven working - a getLogLevel failure here is a rare transient, not a dead
+  // channel (that path fails init earlier and is retryable). Propagating it
+  // would also be worse than swallowing it: _initialized is already true, so a
+  // throw here would flip it true -> false after concurrent callers observed
+  // true, leaving init in an inconsistent state. Falling back to the default
+  // log level keeps _initialized monotonic and the plugin usable.
+  Future<void> _applyInitialLogLevel() async {
+    try {
+      final logLevel = await _getLogLevel();
+      if (logLevel != null) {
+        await FFmpegKitConfig.setLogLevel(logLevel);
+      }
+    } catch (e, stack) {
+      print("Applying initial log level failed. $e");
+      print(stack);
     }
-    final version = FFmpegKitFactory.getVersion();
-    final platform = await FFmpegKitConfig.getPlatform();
-    final arch = await ArchDetect.getArch();
-    await FFmpegKitConfig.enableRedirection();
-
-    final fullVersion = "$platform-$arch-$version";
-    print("Loaded ffmpeg-kit-next-flutter-$fullVersion.");
   }
 }

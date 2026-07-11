@@ -351,6 +351,12 @@ abstract class FFmpegKitPlatform extends PlatformInterface {
         'ffmpegKitFlutterInitializerGetLogLevel() has not been implemented!');
   }
 
+  Future<void> ffmpegKitFlutterInitializerPrintLoadConfirmation() async {
+    throw UnimplementedError(
+        'ffmpegKitFlutterInitializerPrintLoadConfirmation() has not been '
+        'implemented!');
+  }
+
   // FFmpegSession
 
   Future<List<dynamic>?> ffmpegSessionGetAllStatistics(

@@ -317,6 +317,10 @@ class MethodChannelFFmpegKit extends FFmpegKitPlatform {
   Future<int?> ffmpegKitFlutterInitializerGetLogLevel() async =>
       _channel.invokeMethod<int>('getLogLevel');
 
+  @override
+  Future<void> ffmpegKitFlutterInitializerPrintLoadConfirmation() async =>
+      _channel.invokeMethod<void>('printLoadConfirmation');
+
   // FFmpegSession
 
   @override
