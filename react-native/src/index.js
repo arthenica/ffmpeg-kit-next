@@ -1057,9 +1057,12 @@ export class FFmpegKitConfig {
 
   /**
    * Initializes the library asynchronously.
+   *
+   * Set printLoadConfirmation to false before the first initialization to
+   * suppress the native "Loaded ffmpeg-kit-next-react-native" confirmation.
    */
-  static async init() {
-    await FFmpegKitInitializer.initialize();
+  static async init(printLoadConfirmation = true) {
+    await FFmpegKitInitializer.initialize(printLoadConfirmation);
   }
 
   /**
@@ -2043,6 +2046,7 @@ class FFmpegKitFactory {
 
 class FFmpegKitInitializer {
   static #initialized = false;
+  static #initializationPromise;
   static #eventEmitter = new FFmpegKitReactNativeEventEmitter();
 
   static processLogCallbackEvent(event) {
@@ -2204,26 +2208,49 @@ class FFmpegKitInitializer {
     }
   }
 
-  static async initialize() {
+  static async initialize(printLoadConfirmation = true) {
     if (this.#initialized) {
       return;
-    } else {
-      this.#initialized = true;
     }
 
-    console.log("Loading ffmpeg-kit-next-react-native.");
+    const existingInitialization = this.#initializationPromise;
+    if (existingInitialization !== undefined) {
+      return existingInitialization;
+    }
 
+    const initialization = this._initialize().then(async () => {
+      this.#initialized = true;
+      await this._applyInitialLogLevel();
+      if (printLoadConfirmation) {
+        await FFmpegKitReactNativeModule.printLoadConfirmation();
+      }
+    }).catch(error => {
+      this.#initialized = false;
+      this.#initializationPromise = undefined;
+      return Promise.reject(error);
+    });
+
+    this.#initializationPromise = initialization;
+    return initialization;
+  }
+
+  static async _initialize() {
     this.#eventEmitter.addListener(eventLogCallbackEvent, FFmpegKitInitializer.processLogCallbackEvent);
     this.#eventEmitter.addListener(eventStatisticsCallbackEvent, FFmpegKitInitializer.processStatisticsCallbackEvent);
     this.#eventEmitter.addListener(eventCompleteCallbackEvent, FFmpegKitInitializer.processCompleteCallbackEvent);
 
-    FFmpegKitFactory.setLogLevel(await FFmpegKitReactNativeModule.getLogLevel());
-    const version = FFmpegKitFactory.getVersion();
-    const platform = await FFmpegKitConfig.getPlatform();
-    const arch = await ArchDetect.getArch();
-    await FFmpegKitConfig.enableRedirection();
+    await FFmpegKitReactNativeModule.enableRedirection();
+  }
 
-    console.log(`Loaded ffmpeg-kit-next-react-native-${platform}-${arch}-${version}.`);
+  static async _applyInitialLogLevel() {
+    try {
+      const logLevel = await FFmpegKitReactNativeModule.getLogLevel();
+      if (logLevel !== undefined && logLevel !== null) {
+        await FFmpegKitConfig.setLogLevel(logLevel);
+      }
+    } catch (err) {
+      console.log("Applying initial log level failed.", err.stack ?? err);
+    }
   }
 
 }

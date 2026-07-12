@@ -140,7 +140,7 @@ declare module 'ffmpeg-kit-react-native' {
 
   export class FFmpegKitConfig {
 
-    static init(): Promise<void>;
+    static init(printLoadConfirmation?: boolean): Promise<void>;
 
     static uninit(): Promise<void>;
 

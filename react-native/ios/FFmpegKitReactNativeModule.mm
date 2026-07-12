@@ -33,6 +33,7 @@
 #import <ffmpegkit/FFmpegKitStreamOutput.h>
 
 static NSString *const PLATFORM_NAME = @"ios";
+static NSString *const LIBRARY_VERSION = @"8.1.0";
 
 // LOG CLASS
 static NSString *const KEY_LOG_SESSION_ID = @"sessionId";
@@ -94,8 +95,6 @@ RCT_EXPORT_MODULE(FFmpegKitReactNativeModule);
         outputBufferRegistry = [[NSMutableDictionary alloc] init];
         streamInputRegistry = [[NSMutableDictionary alloc] init];
         streamOutputRegistry = [[NSMutableDictionary alloc] init];
-
-        [self registerGlobalCallbacks];
     }
 
     return self;
@@ -109,37 +108,6 @@ RCT_EXPORT_MODULE(FFmpegKitReactNativeModule);
     [array addObject:EVENT_COMPLETE_CALLBACK_EVENT];
 
     return array;
-}
-
-- (void)registerGlobalCallbacks {
-  [FFmpegKitConfig enableFFmpegSessionCompleteCallback:^(FFmpegSession* session){
-    NSDictionary *dictionary = [FFmpegKitReactNativeModule toSessionDictionary:session];
-    [self sendEventWithName:EVENT_COMPLETE_CALLBACK_EVENT body:dictionary];
-  }];
-
-  [FFmpegKitConfig enableFFprobeSessionCompleteCallback:^(FFprobeSession* session){
-    NSDictionary *dictionary = [FFmpegKitReactNativeModule toSessionDictionary:session];
-    [self sendEventWithName:EVENT_COMPLETE_CALLBACK_EVENT body:dictionary];
-  }];
-
-  [FFmpegKitConfig enableMediaInformationSessionCompleteCallback:^(MediaInformationSession* session){
-    NSDictionary *dictionary = [FFmpegKitReactNativeModule toSessionDictionary:session];
-    [self sendEventWithName:EVENT_COMPLETE_CALLBACK_EVENT body:dictionary];
-  }];
-
-  [FFmpegKitConfig enableLogCallback: ^(Log* log){
-    if (self->logsEnabled) {
-      NSDictionary *dictionary = [FFmpegKitReactNativeModule toLogDictionary:log];
-      [self sendEventWithName:EVENT_LOG_CALLBACK_EVENT body:dictionary];
-    }
-  }];
-
-  [FFmpegKitConfig enableStatisticsCallback:^(Statistics* statistics){
-    if (self->statisticsEnabled) {
-      NSDictionary *dictionary = [FFmpegKitReactNativeModule toStatisticsDictionary:statistics];
-      [self sendEventWithName:EVENT_STATISTICS_CALLBACK_EVENT body:dictionary];
-    }
-  }];
 }
 
 // AbstractSession
@@ -259,7 +227,13 @@ RCT_EXPORT_METHOD(getArch:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseReje
 // FFmpegSession
 
 RCT_EXPORT_METHOD(ffmpegSession:(NSArray*)arguments resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
-    FFmpegSession* session = [FFmpegSession create:arguments withCompleteCallback:nil withLogCallback:nil withStatisticsCallback:nil withLogRedirectionStrategy:LogRedirectionStrategyNeverPrintLogs];
+    FFmpegSession* session = [FFmpegSession create:arguments withCompleteCallback:^(FFmpegSession* completedSession){
+        [self emitSession:completedSession];
+    } withLogCallback:^(Log* log){
+        [self emitLog:log];
+    } withStatisticsCallback:^(Statistics* statistics){
+        [self emitStatistics:statistics];
+    } withLogRedirectionStrategy:LogRedirectionStrategyNeverPrintLogs];
     resolve([FFmpegKitReactNativeModule toSessionDictionary:session]);
 }
 
@@ -300,14 +274,22 @@ RCT_EXPORT_METHOD(ffmpegSessionGetStatistics:(double)sessionId resolve:(RCTPromi
 // FFprobeSession
 
 RCT_EXPORT_METHOD(ffprobeSession:(NSArray*)arguments resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
-    FFprobeSession* session = [FFprobeSession create:arguments withCompleteCallback:nil withLogCallback:nil withLogRedirectionStrategy:LogRedirectionStrategyNeverPrintLogs];
+    FFprobeSession* session = [FFprobeSession create:arguments withCompleteCallback:^(FFprobeSession* completedSession){
+        [self emitSession:completedSession];
+    } withLogCallback:^(Log* log){
+        [self emitLog:log];
+    } withLogRedirectionStrategy:LogRedirectionStrategyNeverPrintLogs];
     resolve([FFmpegKitReactNativeModule toSessionDictionary:session]);
 }
 
 // MediaInformationSession
 
 RCT_EXPORT_METHOD(mediaInformationSession:(NSArray*)arguments resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
-    MediaInformationSession* session = [MediaInformationSession create:arguments withCompleteCallback:nil withLogCallback:nil];
+    MediaInformationSession* session = [MediaInformationSession create:arguments withCompleteCallback:^(MediaInformationSession* completedSession){
+        [self emitSession:completedSession];
+    } withLogCallback:^(Log* log){
+        [self emitLog:log];
+    }];
     resolve([FFmpegKitReactNativeModule toSessionDictionary:session]);
 }
 
@@ -530,6 +512,15 @@ RCT_EXPORT_METHOD(asyncMediaInformationSessionExecute:(double)sessionId waitTime
 
 RCT_EXPORT_METHOD(getLogLevel:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
     resolve([NSNumber numberWithInt:[FFmpegKitConfig getLogLevel]]);
+}
+
+RCT_EXPORT_METHOD(printLoadConfirmation:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
+    static dispatch_once_t loadedLoggedToken;
+    dispatch_once(&loadedLoggedToken, ^{
+        NSLog(@"Loaded ffmpeg-kit-next-react-native-%@-%@-%@.", PLATFORM_NAME, [ArchDetect getArch], LIBRARY_VERSION);
+    });
+
+    resolve(nil);
 }
 
 RCT_EXPORT_METHOD(setLogLevel:(double)level resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
@@ -927,6 +918,35 @@ RCT_EXPORT_METHOD(uninit:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejec
 
 - (void)disableStatistics {
     statisticsEnabled = false;
+}
+
+- (void)emitLog:(Log*)log {
+    if (!self->logsEnabled) {
+        return;
+    }
+
+    NSDictionary *dictionary = [FFmpegKitReactNativeModule toLogDictionary:log];
+    dispatch_async(dispatch_get_main_queue(), ^() {
+        [self sendEventWithName:EVENT_LOG_CALLBACK_EVENT body:dictionary];
+    });
+}
+
+- (void)emitStatistics:(Statistics*)statistics {
+    if (!self->statisticsEnabled) {
+        return;
+    }
+
+    NSDictionary *dictionary = [FFmpegKitReactNativeModule toStatisticsDictionary:statistics];
+    dispatch_async(dispatch_get_main_queue(), ^() {
+        [self sendEventWithName:EVENT_STATISTICS_CALLBACK_EVENT body:dictionary];
+    });
+}
+
+- (void)emitSession:(id<Session>)session {
+    NSDictionary *dictionary = [FFmpegKitReactNativeModule toSessionDictionary:session];
+    dispatch_async(dispatch_get_main_queue(), ^() {
+        [self sendEventWithName:EVENT_COMPLETE_CALLBACK_EVENT body:dictionary];
+    });
 }
 
 + (BOOL)requiresMainQueueSetup {
