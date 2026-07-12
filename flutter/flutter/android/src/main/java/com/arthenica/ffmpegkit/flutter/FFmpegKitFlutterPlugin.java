@@ -60,6 +60,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -125,6 +128,7 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
     public static final String EVENT_LOG_CALLBACK_EVENT = "FFmpegKitLogCallbackEvent";
     public static final String EVENT_STATISTICS_CALLBACK_EVENT = "FFmpegKitStatisticsCallbackEvent";
     public static final String EVENT_COMPLETE_CALLBACK_EVENT = "FFmpegKitCompleteCallbackEvent";
+    public static final String EVENT_SESSION_DELETED_CALLBACK_EVENT = "FFmpegKitSessionDeletedCallbackEvent";
 
     // REQUEST CODES
     public static final int READABLE_REQUEST_CODE = 10000;
@@ -143,6 +147,8 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
     private final AtomicBoolean logsEnabled;
     private final AtomicBoolean statisticsEnabled;
     private final ExecutorService asyncExecutorService;
+    @Nullable
+    private Object sessionDeleteListener;
 
     private MethodChannel methodChannel;
     private EventChannel eventChannel;
@@ -536,6 +542,13 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
             case "clearSessions":
                 clearSessions(result);
                 break;
+            case "deleteSession":
+                if (sessionId != null) {
+                    deleteSession(sessionId, result);
+                } else {
+                    resultHandler.errorAsync(result, "INVALID_SESSION", "Invalid session id.");
+                }
+                break;
             case "getSessionsByState":
                 final Integer state = call.argument("state");
                 if (state != null) {
@@ -788,11 +801,13 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
         }
 
         this.context = context;
+        this.sessionDeleteListener = registerSessionDeleteListener();
 
         Log.d(LIBRARY_NAME, String.format("FFmpegKitFlutterPlugin %s initialised with context %s.", this, context));
     }
 
     protected void uninit() {
+        unregisterSessionDeleteListener();
         uninitMethodChannel();
         uninitEventChannel();
         detachActivity();
@@ -1358,6 +1373,11 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
 
     protected void clearSessions(@NonNull final Result result) {
         FFmpegKitConfig.clearSessions();
+        resultHandler.successAsync(result, null);
+    }
+
+    protected void deleteSession(@NonNull final Number sessionId, @NonNull final Result result) {
+        FFmpegKitConfig.deleteSession(sessionId.longValue());
         resultHandler.successAsync(result, null);
     }
 
@@ -1932,6 +1952,81 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
         final HashMap<String, Object> sessionMap = new HashMap<>();
         sessionMap.put(EVENT_COMPLETE_CALLBACK_EVENT, toMap(session));
         resultHandler.successAsync(sink, sessionMap);
+    }
+
+    protected void emitSessionDeleted(final long sessionId) {
+        final EventChannel.EventSink sink = eventSink;
+        if (sink == null) {
+            return;
+        }
+
+        final HashMap<String, Object> deletedSession = new HashMap<>();
+        deletedSession.put(KEY_SESSION_ID, sessionId);
+
+        final HashMap<String, Object> deletedSessionMap = new HashMap<>();
+        deletedSessionMap.put(EVENT_SESSION_DELETED_CALLBACK_EVENT, deletedSession);
+        resultHandler.successAsync(sink, deletedSessionMap);
+    }
+
+    @Nullable
+    private Object registerSessionDeleteListener() {
+        if (sessionDeleteListener != null) {
+            return sessionDeleteListener;
+        }
+
+        try {
+            final Class<?> sessionDeleteListenerClass = Class.forName("com.arthenica.ffmpegkit.SessionDeleteListener");
+            final Object listener = Proxy.newProxyInstance(
+                    sessionDeleteListenerClass.getClassLoader(),
+                    new Class<?>[]{sessionDeleteListenerClass},
+                    new InvocationHandler() {
+                        @Override
+                        public Object invoke(final Object proxy, final Method method, final Object[] args) {
+                            if (method.getDeclaringClass() == Object.class) {
+                                switch (method.getName()) {
+                                    case "equals":
+                                        return args != null && args.length == 1 && proxy == args[0];
+                                    case "hashCode":
+                                        return System.identityHashCode(proxy);
+                                    case "toString":
+                                        return "FFmpegKitFlutterSessionDeleteListener";
+                                    default:
+                                        return null;
+                                }
+                            }
+
+                            if ("sessionDeleted".equals(method.getName()) && args != null && args.length == 1 && args[0] instanceof Number) {
+                                emitSessionDeleted(((Number) args[0]).longValue());
+                            }
+
+                            return null;
+                        }
+                    });
+
+            FFmpegKitConfig.class.getMethod("addSessionDeleteListener", sessionDeleteListenerClass).invoke(null, listener);
+            return listener;
+        } catch (final ClassNotFoundException | NoSuchMethodException ignored) {
+            return null;
+        } catch (final Exception exception) {
+            Log.w(LIBRARY_NAME, "Failed to register session delete listener.", exception);
+            return null;
+        }
+    }
+
+    private void unregisterSessionDeleteListener() {
+        if (sessionDeleteListener == null) {
+            return;
+        }
+
+        try {
+            final Class<?> sessionDeleteListenerClass = Class.forName("com.arthenica.ffmpegkit.SessionDeleteListener");
+            FFmpegKitConfig.class.getMethod("removeSessionDeleteListener", sessionDeleteListenerClass).invoke(null, sessionDeleteListener);
+            sessionDeleteListener = null;
+        } catch (final ClassNotFoundException | NoSuchMethodException ignored) {
+            // The native listener API is optional for compatibility with older native binaries.
+        } catch (final Exception exception) {
+            Log.w(LIBRARY_NAME, "Failed to unregister session delete listener.", exception);
+        }
     }
 
 }

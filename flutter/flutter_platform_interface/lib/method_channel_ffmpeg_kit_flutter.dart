@@ -248,6 +248,10 @@ class MethodChannelFFmpegKit extends FFmpegKitPlatform {
       _channel.invokeMethod<void>('clearSessions');
 
   @override
+  Future<void> deleteSession(int sessionId) async =>
+      _channel.invokeMethod<void>('deleteSession', {'sessionId': sessionId});
+
+  @override
   Future<List<dynamic>?> ffmpegKitConfigGetSessionsByState(
           int sessionState) async =>
       _channel.invokeMethod<List<dynamic>>(

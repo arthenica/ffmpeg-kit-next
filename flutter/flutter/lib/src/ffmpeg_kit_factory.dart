@@ -111,6 +111,26 @@ class FFmpegKitFactory {
     }
   }
 
+  static void deleteSession(int? sessionId) {
+    if (sessionId != null) {
+      ffmpegSessionCompleteCallbackMap.remove(sessionId);
+      ffprobeSessionCompleteCallbackMap.remove(sessionId);
+      mediaInformationSessionCompleteCallbackMap.remove(sessionId);
+      logCallbackMap.remove(sessionId);
+      statisticsCallbackMap.remove(sessionId);
+      logRedirectionStrategyMap.remove(sessionId);
+    }
+  }
+
+  static void deleteSessions() {
+    ffmpegSessionCompleteCallbackMap.clear();
+    ffprobeSessionCompleteCallbackMap.clear();
+    mediaInformationSessionCompleteCallbackMap.clear();
+    logCallbackMap.clear();
+    statisticsCallbackMap.clear();
+    logRedirectionStrategyMap.clear();
+  }
+
   static LogCallback? getLogCallback(int? sessionId) =>
       logCallbackMap[sessionId];
 

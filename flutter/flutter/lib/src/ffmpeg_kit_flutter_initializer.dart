@@ -96,6 +96,8 @@ class FFmpegKitInitializer {
           eventMap['FFmpegKitStatisticsCallbackEvent'];
       final Map<dynamic, dynamic>? completeEvent =
           eventMap['FFmpegKitCompleteCallbackEvent'];
+      final Map<dynamic, dynamic>? sessionDeletedEvent =
+          eventMap['FFmpegKitSessionDeletedCallbackEvent'];
 
       if (logEvent != null) {
         _processLogCallbackEvent(logEvent);
@@ -107,6 +109,10 @@ class FFmpegKitInitializer {
 
       if (completeEvent != null) {
         _processCompleteCallbackEvent(completeEvent);
+      }
+
+      if (sessionDeletedEvent != null) {
+        _processSessionDeletedCallbackEvent(sessionDeletedEvent);
       }
     }
   }
@@ -325,6 +331,10 @@ class FFmpegKitInitializer {
         }
       }
     });
+  }
+
+  void _processSessionDeletedCallbackEvent(Map<dynamic, dynamic> event) {
+    FFmpegKitFactory.deleteSession(event["sessionId"]);
   }
 
   Future<int?> _getLogLevel() async {

@@ -63,6 +63,7 @@ static int const SESSION_TYPE_MEDIA_INFORMATION = 3;
 static NSString *const EVENT_LOG_CALLBACK_EVENT = @"FFmpegKitLogCallbackEvent";
 static NSString *const EVENT_STATISTICS_CALLBACK_EVENT = @"FFmpegKitStatisticsCallbackEvent";
 static NSString *const EVENT_COMPLETE_CALLBACK_EVENT = @"FFmpegKitCompleteCallbackEvent";
+static NSString *const EVENT_SESSION_DELETED_CALLBACK_EVENT = @"FFmpegKitSessionDeletedCallbackEvent";
 
 // ARGUMENT NAMES
 static NSString *const ARGUMENT_SESSION_ID = @"sessionId";
@@ -99,10 +100,16 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
     streamInputRegistry = [[NSMutableDictionary alloc] init];
     streamOutputRegistry = [[NSMutableDictionary alloc] init];
 
+    [self registerSessionDeleteListener];
+
     NSLog(@"FFmpegKitFlutterPlugin %p created.\n", self);
   }
 
   return self;
+}
+
+- (void)dealloc {
+  [self unregisterSessionDeleteListener];
 }
 
 - (FlutterError *)onListenWithArguments:(id)arguments eventSink:(FlutterEventSink)eventSink {
@@ -160,6 +167,36 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
       sink([FFmpegKitFlutterPlugin toStringDictionary:EVENT_STATISTICS_CALLBACK_EVENT withDictionary:dictionary]);
     }
   });
+}
+
+- (void)emitSessionDeleted:(long)sessionId {
+  NSDictionary *dictionary = @{KEY_SESSION_ID: [NSNumber numberWithLong:sessionId]};
+  dispatch_async(dispatch_get_main_queue(), ^() {
+    FlutterEventSink sink = self->_eventSink;
+    if (sink != nil) {
+      sink([FFmpegKitFlutterPlugin toStringDictionary:EVENT_SESSION_DELETED_CALLBACK_EVENT withDictionary:dictionary]);
+    }
+  });
+}
+
+- (void)sessionDeleted:(long)sessionId {
+  [self emitSessionDeleted:sessionId];
+}
+
+- (void)registerSessionDeleteListener {
+  SEL selector = NSSelectorFromString(@"addSessionDeleteListener:");
+  if ([FFmpegKitConfig respondsToSelector:selector]) {
+    void (*registerListener)(id, SEL, id) = (void (*)(id, SEL, id))[FFmpegKitConfig methodForSelector:selector];
+    registerListener(FFmpegKitConfig, selector, self);
+  }
+}
+
+- (void)unregisterSessionDeleteListener {
+  SEL selector = NSSelectorFromString(@"removeSessionDeleteListener:");
+  if ([FFmpegKitConfig respondsToSelector:selector]) {
+    void (*unregisterListener)(id, SEL, id) = (void (*)(id, SEL, id))[FFmpegKitConfig methodForSelector:selector];
+    unregisterListener(FFmpegKitConfig, selector, self);
+  }
 }
 
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
@@ -409,6 +446,12 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
     [self getSessions:result];
   } else if ([@"clearSessions" isEqualToString:call.method]) {
     [self clearSessions:result];
+  } else if ([@"deleteSession" isEqualToString:call.method]) {
+    if (sessionId != nil) {
+      [self deleteSession:sessionId result:result];
+    } else {
+      result([FlutterError errorWithCode:@"INVALID_SESSION" message:@"Invalid session id." details:nil]);
+    }
   } else if ([@"getSessionsByState" isEqualToString:call.method]) {
     NSNumber* stateIndex = call.arguments[@"state"];
     if (stateIndex != nil) {
@@ -1040,6 +1083,11 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
 
 - (void)clearSessions:(FlutterResult)result {
   [FFmpegKitConfig clearSessions];
+  result(nil);
+}
+
+- (void)deleteSession:(NSNumber*)sessionId result:(FlutterResult)result {
+  [FFmpegKitConfig deleteSession:[sessionId longValue]];
   result(nil);
 }
 
