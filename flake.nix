@@ -185,11 +185,14 @@
       ];
 
       xcodeMinCheck = minMajor: ''
-        # Prefer the Xcode currently selected via xcode-select, so this works regardless of
-        # where Xcode is installed or what it's named (versioned installs, /Applications/Xcode.app
-        # not existing or being a stale/dangling symlink, etc). Fall back to the previous
-        # hardcoded default if xcode-select has nothing configured.
-        DEVELOPER_DIR="$(/usr/bin/xcode-select -p 2>/dev/null || true)"
+        # Respect Apple's normal precedence: an explicitly-set DEVELOPER_DIR wins, then the
+        # Xcode currently selected via xcode-select (works regardless of where Xcode is
+        # installed or what it's named — versioned installs, /Applications/Xcode.app not
+        # existing or being a stale/dangling symlink, etc), then the previous hardcoded
+        # default as a last resort.
+        if [ -z "$DEVELOPER_DIR" ]; then
+          DEVELOPER_DIR="$(/usr/bin/xcode-select -p 2>/dev/null || true)"
+        fi
         if [ -z "$DEVELOPER_DIR" ]; then
           DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"
         fi
