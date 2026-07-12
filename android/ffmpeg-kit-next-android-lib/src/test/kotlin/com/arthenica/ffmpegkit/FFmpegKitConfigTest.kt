@@ -182,6 +182,49 @@ class FFmpegKitConfigTest {
     }
 
     @Test
+    fun sessionDeleteListenersAreNotifiedForSingleBulkAndEvictedSessions() {
+        val originalSize = FFmpegKitConfig.getSessionHistorySize()
+        val deletedSessionIds = mutableListOf<Long>()
+        val listener = object : SessionDeleteListener {
+            override fun sessionDeleted(sessionId: Long) {
+                deletedSessionIds.add(sessionId)
+            }
+        }
+
+        try {
+            FFmpegKitConfig.clearSessions()
+            FFmpegKitConfig.setSessionHistorySize(10)
+            FFmpegKitConfig.addSessionDeleteListener(listener)
+
+            val singleSession = FFmpegSession.create(FFmpegSessionTest.TEST_ARGUMENTS)
+            FFmpegKitConfig.deleteSession(singleSession.getSessionId())
+            Assert.assertEquals(listOf(singleSession.getSessionId()), deletedSessionIds)
+            Assert.assertNull(FFmpegKitConfig.getSession(singleSession.getSessionId()))
+
+            deletedSessionIds.clear()
+            val firstBulkSession = FFmpegSession.create(FFmpegSessionTest.TEST_ARGUMENTS)
+            val secondBulkSession = FFmpegSession.create(FFmpegSessionTest.TEST_ARGUMENTS)
+            FFmpegKitConfig.clearSessions()
+            Assert.assertEquals(
+                listOf(firstBulkSession.getSessionId(), secondBulkSession.getSessionId()),
+                deletedSessionIds
+            )
+
+            deletedSessionIds.clear()
+            FFmpegKitConfig.setSessionHistorySize(1)
+            val evictedSession = FFmpegSession.create(FFmpegSessionTest.TEST_ARGUMENTS)
+            val retainedSession = FFmpegSession.create(FFmpegSessionTest.TEST_ARGUMENTS)
+            Assert.assertEquals(listOf(evictedSession.getSessionId()), deletedSessionIds)
+            Assert.assertNull(FFmpegKitConfig.getSession(evictedSession.getSessionId()))
+            Assert.assertSame(retainedSession, FFmpegKitConfig.getSession(retainedSession.getSessionId()))
+        } finally {
+            FFmpegKitConfig.removeSessionDeleteListener(listener)
+            FFmpegKitConfig.clearSessions()
+            FFmpegKitConfig.setSessionHistorySize(originalSize)
+        }
+    }
+
+    @Test
     fun globalCompleteCallbacksCanBeSetAndCleared() {
         val ffmpegCallback = FFmpegSessionCompleteCallback { }
         val ffprobeCallback = FFprobeSessionCompleteCallback { }

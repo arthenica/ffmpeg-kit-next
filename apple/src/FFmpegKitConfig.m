@@ -61,6 +61,8 @@ static int sessionHistorySize;
 static volatile NSMutableDictionary *sessionHistoryMap;
 static NSMutableArray *sessionHistoryList;
 static NSRecursiveLock *sessionHistoryLock;
+static NSHashTable *sessionDeleteListeners;
+static NSRecursiveLock *sessionDeleteListenerLock;
 
 /** Session control variables */
 #define SESSION_MAP_SIZE 1000
@@ -213,21 +215,51 @@ int ffprobe_execute(int argc, char **argv);
 
 typedef NS_ENUM(NSUInteger, CallbackType) { LogType, StatisticsType };
 
-void deleteExpiredSessions() {
+NSArray *deleteExpiredSessionsLocked() {
+    NSMutableArray *deletedSessionIds = [[NSMutableArray alloc] init];
+
     while ([sessionHistoryList count] > sessionHistorySize) {
         id<Session> first = [sessionHistoryList firstObject];
         if (first != nil) {
+            long sessionId = [first getSessionId];
             [sessionHistoryList removeObjectAtIndex:0];
             [sessionHistoryMap
                 removeObjectForKey:[NSNumber
-                                       numberWithLong:[first getSessionId]]];
+                                       numberWithLong:sessionId]];
+            [deletedSessionIds addObject:[NSNumber numberWithLong:sessionId]];
         }
+    }
+
+    return deletedSessionIds;
+}
+
+void notifySessionDeleted(long sessionId) {
+    [sessionDeleteListenerLock lock];
+    NSArray *listeners = [sessionDeleteListeners allObjects];
+    [sessionDeleteListenerLock unlock];
+
+    for (int i = 0; i < [listeners count]; i++) {
+        id<SessionDeleteListener> listener = [listeners objectAtIndex:i];
+        @try {
+            [listener sessionDeleted:sessionId];
+        } @catch (NSException *exception) {
+            NSLog(@"Exception thrown inside session delete listener. %@",
+                  [exception callStackSymbols]);
+        }
+    }
+}
+
+void notifySessionsDeleted(NSArray *sessionIds) {
+    for (int i = 0; i < [sessionIds count]; i++) {
+        NSNumber *sessionId = [sessionIds objectAtIndex:i];
+        notifySessionDeleted([sessionId longValue]);
     }
 }
 
 void addSessionToSessionHistory(id<Session> session) {
     NSNumber *sessionIdNumber =
         [NSNumber numberWithLong:[session getSessionId]];
+    NSArray *deletedSessionIds = @[];
 
     [sessionHistoryLock lock];
 
@@ -238,10 +270,12 @@ void addSessionToSessionHistory(id<Session> session) {
     if ([sessionHistoryMap objectForKey:sessionIdNumber] == nil) {
         [sessionHistoryMap setObject:session forKey:sessionIdNumber];
         [sessionHistoryList addObject:session];
-        deleteExpiredSessions();
+        deletedSessionIds = deleteExpiredSessionsLocked();
     }
 
     [sessionHistoryLock unlock];
+
+    notifySessionsDeleted(deletedSessionIds);
 }
 
 /**
@@ -1496,6 +1530,8 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
     sessionHistoryMap = [[NSMutableDictionary alloc] init];
     sessionHistoryList = [[NSMutableArray alloc] init];
     sessionHistoryLock = [[NSRecursiveLock alloc] init];
+    sessionDeleteListeners = [NSHashTable weakObjectsHashTable];
+    sessionDeleteListenerLock = [[NSRecursiveLock alloc] init];
 
     for (int i = 0; i < SESSION_MAP_SIZE; i++) {
         atomic_init(&sessionMap[i], 0);
@@ -2404,8 +2440,14 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
                                               @"exceed the hard limit!"
                                      userInfo:nil]);
     } else if (pSessionHistorySize > 0) {
+        NSArray *deletedSessionIds;
+
+        [sessionHistoryLock lock];
         sessionHistorySize = pSessionHistorySize;
-        deleteExpiredSessions();
+        deletedSessionIds = deleteExpiredSessionsLocked();
+        [sessionHistoryLock unlock];
+
+        notifySessionsDeleted(deletedSessionIds);
     }
 }
 
@@ -2421,15 +2463,42 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
 }
 
 + (void)deleteSession:(long)sessionId {
+    NSNumber *deletedSessionId = nil;
+
     [sessionHistoryLock lock];
 
     id<Session> session = [sessionHistoryMap objectForKey:[NSNumber numberWithLong:sessionId]];
     if (session != nil) {
         [sessionHistoryMap removeObjectForKey:[NSNumber numberWithLong:sessionId]];
         [sessionHistoryList removeObject:session];
+        deletedSessionId = [NSNumber numberWithLong:[session getSessionId]];
     }
 
     [sessionHistoryLock unlock];
+
+    if (deletedSessionId != nil) {
+        notifySessionDeleted([deletedSessionId longValue]);
+    }
+}
+
++ (void)addSessionDeleteListener:(id<SessionDeleteListener>)listener {
+    if (listener == nil) {
+        return;
+    }
+
+    [sessionDeleteListenerLock lock];
+    [sessionDeleteListeners addObject:listener];
+    [sessionDeleteListenerLock unlock];
+}
+
++ (void)removeSessionDeleteListener:(id<SessionDeleteListener>)listener {
+    if (listener == nil) {
+        return;
+    }
+
+    [sessionDeleteListenerLock lock];
+    [sessionDeleteListeners removeObject:listener];
+    [sessionDeleteListenerLock unlock];
 }
 
 + (id<Session>)getLastSession {
@@ -2471,12 +2540,21 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
 }
 
 + (void)clearSessions {
+    NSMutableArray *deletedSessionIds = [[NSMutableArray alloc] init];
+
     [sessionHistoryLock lock];
+
+    for (int i = 0; i < [sessionHistoryList count]; i++) {
+        id<Session> session = [sessionHistoryList objectAtIndex:i];
+        [deletedSessionIds addObject:[NSNumber numberWithLong:[session getSessionId]]];
+    }
 
     [sessionHistoryList removeAllObjects];
     [sessionHistoryMap removeAllObjects];
 
     [sessionHistoryLock unlock];
+
+    notifySessionsDeleted(deletedSessionIds);
 }
 
 + (NSArray *)getFFmpegSessions {
