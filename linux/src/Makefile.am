@@ -86,6 +86,7 @@ include_HEADERS = \
     Packages.h \
     ReturnCode.h \
     Session.h \
+    SessionDeleteListener.h \
     SessionState.h \
     Statistics.h \
     StatisticsCallback.h \

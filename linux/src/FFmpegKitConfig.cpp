@@ -69,6 +69,9 @@ static int sessionHistorySize;
 static std::map<long, std::shared_ptr<ffmpegkit::Session>> sessionHistoryMap;
 static std::list<std::shared_ptr<ffmpegkit::Session>> sessionHistoryList;
 static std::recursive_mutex sessionMutex;
+static std::list<std::weak_ptr<ffmpegkit::SessionDeleteListener>>
+    sessionDeleteListeners;
+static std::recursive_mutex sessionDeleteListenerMutex;
 
 /** Session control variables */
 #define SESSION_MAP_SIZE 1000
@@ -278,19 +281,65 @@ static bool fs_create_dir(const std::string &s) {
     return true;
 }
 
-void deleteExpiredSessions() {
+std::list<long> deleteExpiredSessionsLocked() {
+    std::list<long> deletedSessionIds;
+
     while (sessionHistoryList.size() > sessionHistorySize) {
         auto first = sessionHistoryList.front();
         if (first != nullptr) {
+            const long sessionId = first->getSessionId();
             sessionHistoryList.pop_front();
-            sessionHistoryMap.erase(first->getSessionId());
+            sessionHistoryMap.erase(sessionId);
+            deletedSessionIds.push_back(sessionId);
         }
+    }
+
+    return deletedSessionIds;
+}
+
+void notifySessionDeleted(const long sessionId) {
+    std::list<std::shared_ptr<ffmpegkit::SessionDeleteListener>> listeners;
+
+    std::unique_lock<std::recursive_mutex> listenerLock(
+        sessionDeleteListenerMutex, std::defer_lock);
+    listenerLock.lock();
+
+    for (auto it = sessionDeleteListeners.begin();
+         it != sessionDeleteListeners.end();) {
+        auto listener = it->lock();
+        if (listener == nullptr) {
+            it = sessionDeleteListeners.erase(it);
+        } else {
+            listeners.push_back(listener);
+            ++it;
+        }
+    }
+
+    listenerLock.unlock();
+
+    for (auto it = listeners.begin(); it != listeners.end(); ++it) {
+        try {
+            (*it)->sessionDeleted(sessionId);
+        } catch (const std::exception &exception) {
+            std::cout << "Exception thrown inside session delete listener. "
+                      << exception.what() << std::endl;
+        } catch (...) {
+            std::cout << "Exception thrown inside session delete listener."
+                      << std::endl;
+        }
+    }
+}
+
+void notifySessionsDeleted(const std::list<long> &sessionIds) {
+    for (auto it = sessionIds.begin(); it != sessionIds.end(); ++it) {
+        notifySessionDeleted(*it);
     }
 }
 
 void addSessionToSessionHistory(
     const std::shared_ptr<ffmpegkit::Session> session) {
     std::unique_lock<std::recursive_mutex> lock(sessionMutex, std::defer_lock);
+    std::list<long> deletedSessionIds;
 
     const long sessionId = session->getSessionId();
 
@@ -303,10 +352,12 @@ void addSessionToSessionHistory(
     if (sessionHistoryMap.count(sessionId) == 0) {
         sessionHistoryMap.insert({sessionId, session});
         sessionHistoryList.push_back(session);
-        deleteExpiredSessions();
+        deletedSessionIds = deleteExpiredSessionsLocked();
     }
 
     lock.unlock();
+
+    notifySessionsDeleted(deletedSessionIds);
 }
 
 /**
@@ -2425,8 +2476,17 @@ void ffmpegkit::FFmpegKitConfig::setSessionHistorySize(
         throw std::runtime_error(
             "Session history size must not exceed the hard limit!");
     } else if (newSessionHistorySize > 0) {
+        std::list<long> deletedSessionIds;
+        std::unique_lock<std::recursive_mutex> lock(sessionMutex,
+                                                    std::defer_lock);
+        lock.lock();
+
         sessionHistorySize = newSessionHistorySize;
-        deleteExpiredSessions();
+        deletedSessionIds = deleteExpiredSessionsLocked();
+
+        lock.unlock();
+
+        notifySessionsDeleted(deletedSessionIds);
     }
 }
 
@@ -2445,14 +2505,73 @@ ffmpegkit::FFmpegKitConfig::getSession(const long sessionId) {
 
 void ffmpegkit::FFmpegKitConfig::deleteSession(const long sessionId) {
     std::unique_lock<std::recursive_mutex> lock(sessionMutex, std::defer_lock);
+    bool deleted = false;
+
     lock.lock();
 
-    sessionHistoryMap.erase(sessionId);
-    auto it = std::remove_if(sessionHistoryList.begin(), sessionHistoryList.end(),
-                             [sessionId](std::shared_ptr<ffmpegkit::Session> session) {
-                                 return session->getSessionId() == sessionId;
-                             });
-    sessionHistoryList.erase(it, sessionHistoryList.end());
+    deleted = sessionHistoryMap.erase(sessionId) > 0;
+    if (deleted) {
+        auto it = std::remove_if(
+            sessionHistoryList.begin(), sessionHistoryList.end(),
+            [sessionId](std::shared_ptr<ffmpegkit::Session> session) {
+                return session->getSessionId() == sessionId;
+            });
+        sessionHistoryList.erase(it, sessionHistoryList.end());
+    }
+
+    lock.unlock();
+
+    if (deleted) {
+        notifySessionDeleted(sessionId);
+    }
+}
+
+void ffmpegkit::FFmpegKitConfig::addSessionDeleteListener(
+    const std::shared_ptr<ffmpegkit::SessionDeleteListener> listener) {
+    if (listener == nullptr) {
+        return;
+    }
+
+    std::unique_lock<std::recursive_mutex> listenerLock(
+        sessionDeleteListenerMutex, std::defer_lock);
+    listenerLock.lock();
+
+    for (auto it = sessionDeleteListeners.begin();
+         it != sessionDeleteListeners.end();) {
+        auto existingListener = it->lock();
+        if (existingListener == nullptr || existingListener == listener) {
+            it = sessionDeleteListeners.erase(it);
+        } else {
+            ++it;
+        }
+    }
+
+    sessionDeleteListeners.push_back(listener);
+
+    listenerLock.unlock();
+}
+
+void ffmpegkit::FFmpegKitConfig::removeSessionDeleteListener(
+    const std::shared_ptr<ffmpegkit::SessionDeleteListener> listener) {
+    if (listener == nullptr) {
+        return;
+    }
+
+    std::unique_lock<std::recursive_mutex> listenerLock(
+        sessionDeleteListenerMutex, std::defer_lock);
+    listenerLock.lock();
+
+    for (auto it = sessionDeleteListeners.begin();
+         it != sessionDeleteListeners.end();) {
+        auto existingListener = it->lock();
+        if (existingListener == nullptr || existingListener == listener) {
+            it = sessionDeleteListeners.erase(it);
+        } else {
+            ++it;
+        }
+    }
+
+    listenerLock.unlock();
 }
 
 std::shared_ptr<ffmpegkit::Session>
@@ -2496,12 +2615,24 @@ ffmpegkit::FFmpegKitConfig::getSessions() {
 
 void ffmpegkit::FFmpegKitConfig::clearSessions() {
     std::unique_lock<std::recursive_mutex> lock(sessionMutex, std::defer_lock);
+    std::list<long> deletedSessionIds;
+
     lock.lock();
+
+    for (auto it = sessionHistoryList.begin(); it != sessionHistoryList.end();
+         ++it) {
+        auto session = *it;
+        if (session != nullptr) {
+            deletedSessionIds.push_back(session->getSessionId());
+        }
+    }
 
     sessionHistoryList.clear();
     sessionHistoryMap.clear();
 
     lock.unlock();
+
+    notifySessionsDeleted(deletedSessionIds);
 }
 
 std::shared_ptr<std::list<std::shared_ptr<ffmpegkit::FFmpegSession>>>

@@ -33,6 +33,7 @@ import com.arthenica.smartexception.java.Exceptions
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.lang.ref.WeakReference
 import java.net.URI
 import java.net.URISyntaxException
 import java.nio.ByteBuffer
@@ -43,6 +44,7 @@ import java.util.Collections
 import java.util.LinkedHashMap
 import java.util.LinkedList
 import java.util.StringTokenizer
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
@@ -91,6 +93,7 @@ open class FFmpegKitConfig private constructor() {
         private val sessionHistoryMap: MutableMap<Long, Session>
         private val sessionHistoryList: ArrayList<Session>
         private val sessionHistoryLock: Any
+        private val sessionDeleteListeners: CopyOnWriteArrayList<WeakReference<SessionDeleteListener>>
 
         private var asyncConcurrencyLimit: Int
         private var asyncExecutorService: ExecutorService
@@ -132,13 +135,10 @@ open class FFmpegKitConfig private constructor() {
             asyncExecutorServiceLock = Any()
 
             sessionHistorySize = 10
-            sessionHistoryMap = object : LinkedHashMap<Long, Session>() {
-                override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, Session>): Boolean {
-                    return this.size > sessionHistorySize
-                }
-            }
+            sessionHistoryMap = LinkedHashMap()
             sessionHistoryList = ArrayList()
             sessionHistoryLock = Any()
+            sessionDeleteListeners = CopyOnWriteArrayList()
 
             globalLogCallback = null
             globalStatisticsCallback = null
@@ -1559,23 +1559,29 @@ open class FFmpegKitConfig private constructor() {
                  */
                 throw IllegalArgumentException("Session history size must not exceed the hard limit!")
             } else if (sessionHistorySize > 0) {
-                this.sessionHistorySize = sessionHistorySize
-                deleteExpiredSessions()
+                val deletedSessionIds = synchronized(sessionHistoryLock) {
+                    this.sessionHistorySize = sessionHistorySize
+                    deleteExpiredSessionsLocked()
+                }
+                notifySessionsDeleted(deletedSessionIds)
             }
         }
 
         /**
          * Deletes expired sessions.
          */
-        @JvmStatic
-        private fun deleteExpiredSessions() {
+        private fun deleteExpiredSessionsLocked(): List<Long> {
+            val deletedSessionIds = ArrayList<Long>()
             while (sessionHistoryList.size > sessionHistorySize) {
                 try {
                     val expiredSession: Session = sessionHistoryList.removeAt(0)
                     sessionHistoryMap.remove(expiredSession.getSessionId())
+                    deletedSessionIds.add(expiredSession.getSessionId())
                 } catch (_: IndexOutOfBoundsException) {
                 }
             }
+
+            return deletedSessionIds
         }
 
         /**
@@ -1585,7 +1591,7 @@ open class FFmpegKitConfig private constructor() {
          */
         @JvmStatic
         internal fun addSession(session: Session) {
-            synchronized(sessionHistoryLock) {
+            val deletedSessionIds = synchronized(sessionHistoryLock) {
 
                 /*
                  * ASYNC SESSIONS CALL THIS METHOD TWICE
@@ -1595,9 +1601,12 @@ open class FFmpegKitConfig private constructor() {
                 if (!sessionAlreadyAdded) {
                     sessionHistoryMap[session.getSessionId()] = session
                     sessionHistoryList.add(session)
-                    deleteExpiredSessions()
+                    deleteExpiredSessionsLocked()
+                } else {
+                    emptyList()
                 }
             }
+            notifySessionsDeleted(deletedSessionIds)
         }
 
         /**
@@ -1621,11 +1630,16 @@ open class FFmpegKitConfig private constructor() {
          */
         @JvmStatic
         fun deleteSession(sessionId: Long) {
-            synchronized(sessionHistoryLock) {
+            val deletedSessionId = synchronized(sessionHistoryLock) {
                 val removedSession = sessionHistoryMap.remove(sessionId)
                 if (removedSession != null) {
                     sessionHistoryList.remove(removedSession)
                 }
+                removedSession?.getSessionId()
+            }
+
+            if (deletedSessionId != null) {
+                notifySessionDeleted(deletedSessionId)
             }
         }
 
@@ -1686,9 +1700,62 @@ open class FFmpegKitConfig private constructor() {
          */
         @JvmStatic
         fun clearSessions() {
-            synchronized(sessionHistoryLock) {
+            val deletedSessionIds = synchronized(sessionHistoryLock) {
+                val sessionIds = sessionHistoryList.map { it.getSessionId() }
                 sessionHistoryList.clear()
                 sessionHistoryMap.clear()
+                sessionIds
+            }
+            notifySessionsDeleted(deletedSessionIds)
+        }
+
+        /**
+         * Adds a listener that is notified when sessions are deleted from session history.
+         */
+        @JvmStatic
+        fun addSessionDeleteListener(@NonNull listener: SessionDeleteListener) {
+            removeSessionDeleteListener(listener)
+            sessionDeleteListeners.add(WeakReference(listener))
+        }
+
+        /**
+         * Removes a session delete listener.
+         */
+        @JvmStatic
+        fun removeSessionDeleteListener(@NonNull listener: SessionDeleteListener) {
+            for (listenerReference in sessionDeleteListeners) {
+                val existingListener = listenerReference.get()
+                if (existingListener == null || existingListener === listener) {
+                    sessionDeleteListeners.remove(listenerReference)
+                }
+            }
+        }
+
+        private fun notifySessionsDeleted(sessionIds: List<Long>) {
+            for (sessionId in sessionIds) {
+                notifySessionDeleted(sessionId)
+            }
+        }
+
+        private fun notifySessionDeleted(sessionId: Long) {
+            for (listenerReference in sessionDeleteListeners) {
+                val listener = listenerReference.get()
+                if (listener == null) {
+                    sessionDeleteListeners.remove(listenerReference)
+                    continue
+                }
+
+                try {
+                    listener.sessionDeleted(sessionId)
+                } catch (e: Exception) {
+                    android.util.Log.e(
+                        TAG,
+                        String.format(
+                            "Exception thrown inside session delete listener.%s",
+                            Exceptions.getStackTraceString(e)
+                        )
+                    )
+                }
             }
         }
 
