@@ -226,6 +226,8 @@ declare module 'ffmpeg-kit-react-native' {
 
     static clearSessions(): Promise<void>;
 
+    static deleteSession(sessionId: number): Promise<void>;
+
     static getFFmpegSessions(): Promise<FFmpegSession[]>;
 
     static getFFprobeSessions(): Promise<FFprobeSession[]>;

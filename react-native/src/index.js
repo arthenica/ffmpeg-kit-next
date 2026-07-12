@@ -12,6 +12,7 @@ const logRedirectionStrategyMap = new Map()
 const eventLogCallbackEvent = "FFmpegKitLogCallbackEvent";
 const eventStatisticsCallbackEvent = "FFmpegKitStatisticsCallbackEvent";
 const eventCompleteCallbackEvent = "FFmpegKitCompleteCallbackEvent";
+const eventSessionDeletedCallbackEvent = "FFmpegKitSessionDeletedCallbackEvent";
 
 export const LogRedirectionStrategy = {
   ALWAYS_PRINT_LOGS: 0,
@@ -1580,7 +1581,23 @@ export class FFmpegKitConfig {
   static async clearSessions() {
     await FFmpegKitConfig.init();
 
-    return FFmpegKitReactNativeModule.clearSessions();
+    await FFmpegKitReactNativeModule.clearSessions();
+    FFmpegKitFactory.deleteSessions();
+  }
+
+  /**
+   * <p>Deletes the session specified with <code>sessionId</code> from the session history.
+   * <p>Note that callbacks cannot be triggered for deleted sessions.
+   *
+   * @param sessionId id of the session that will be deleted
+   */
+  static async deleteSession(sessionId) {
+    await FFmpegKitConfig.init();
+
+    if (sessionId !== undefined) {
+      await FFmpegKitReactNativeModule.deleteSession(sessionId);
+      FFmpegKitFactory.deleteSession(sessionId);
+    }
   }
 
   /**
@@ -1917,6 +1934,24 @@ class FFmpegKitFactory {
     logRedirectionStrategyMap.set(sessionId, logRedirectionStrategy);
   }
 
+  static deleteSession(sessionId) {
+    ffmpegSessionCompleteCallbackMap.delete(sessionId);
+    ffprobeSessionCompleteCallbackMap.delete(sessionId);
+    mediaInformationSessionCompleteCallbackMap.delete(sessionId);
+    logCallbackMap.delete(sessionId);
+    statisticsCallbackMap.delete(sessionId);
+    logRedirectionStrategyMap.delete(sessionId);
+  }
+
+  static deleteSessions() {
+    ffmpegSessionCompleteCallbackMap.clear();
+    ffprobeSessionCompleteCallbackMap.clear();
+    mediaInformationSessionCompleteCallbackMap.clear();
+    logCallbackMap.clear();
+    statisticsCallbackMap.clear();
+    logRedirectionStrategyMap.clear();
+  }
+
   static getLogCallback(sessionId) {
     return logCallbackMap.get(sessionId);
   }
@@ -2174,8 +2209,8 @@ class FFmpegKitInitializer {
 
           if (session.isFFmpeg()) {
             let globalFFmpegSessionCompleteCallback = FFmpegKitFactory.getGlobalFFmpegSessionCompleteCallback();
-            if (globalFFmpegSessionCompleteCallback !== undefined) {
-              try {
+            if (typeof globalFFmpegSessionCompleteCallback === 'function') {
+                try {
                 // NOTIFY GLOBAL CALLBACK DEFINED
                 globalFFmpegSessionCompleteCallback(session);
               } catch (err) {
@@ -2184,7 +2219,7 @@ class FFmpegKitInitializer {
             }
           } else if (session.isFFprobe()) {
             let globalFFprobeSessionCompleteCallback = FFmpegKitFactory.getGlobalFFprobeSessionCompleteCallback();
-            if (globalFFprobeSessionCompleteCallback !== undefined) {
+            if (typeof globalFFprobeSessionCompleteCallback === 'function') {
               try {
                 // NOTIFY GLOBAL CALLBACK DEFINED
                 globalFFprobeSessionCompleteCallback(session);
@@ -2194,7 +2229,7 @@ class FFmpegKitInitializer {
             }
           } else if (session.isMediaInformation()) {
             let globalMediaInformationSessionCompleteCallback = FFmpegKitFactory.getGlobalMediaInformationSessionCompleteCallback();
-            if (globalMediaInformationSessionCompleteCallback !== undefined) {
+            if (typeof globalMediaInformationSessionCompleteCallback === 'function') {
               try {
                 // NOTIFY GLOBAL CALLBACK DEFINED
                 globalMediaInformationSessionCompleteCallback(session);
@@ -2205,6 +2240,12 @@ class FFmpegKitInitializer {
           }
         }
       });
+    }
+  }
+
+  static processSessionDeletedCallbackEvent(event) {
+    if (event !== undefined) {
+      FFmpegKitFactory.deleteSession(event.sessionId);
     }
   }
 
@@ -2238,6 +2279,7 @@ class FFmpegKitInitializer {
     this.#eventEmitter.addListener(eventLogCallbackEvent, FFmpegKitInitializer.processLogCallbackEvent);
     this.#eventEmitter.addListener(eventStatisticsCallbackEvent, FFmpegKitInitializer.processStatisticsCallbackEvent);
     this.#eventEmitter.addListener(eventCompleteCallbackEvent, FFmpegKitInitializer.processCompleteCallbackEvent);
+    this.#eventEmitter.addListener(eventSessionDeletedCallbackEvent, FFmpegKitInitializer.processSessionDeletedCallbackEvent);
 
     await FFmpegKitReactNativeModule.enableRedirection();
   }

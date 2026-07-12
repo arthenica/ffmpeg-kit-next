@@ -77,6 +77,7 @@ export interface Spec extends TurboModule {
   getLastCompletedSession(): Promise<Object>;
   getSessions(): Promise<Object[]>;
   clearSessions(): Promise<void>;
+  deleteSession(sessionId: number): Promise<void>;
   getSessionsByState(sessionState: number): Promise<Object[]>;
   getLogRedirectionStrategy(): Promise<number>;
   setLogRedirectionStrategy(logRedirectionStrategy: number): Promise<void>;

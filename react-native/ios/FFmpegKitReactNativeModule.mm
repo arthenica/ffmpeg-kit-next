@@ -67,6 +67,7 @@ static int const SESSION_TYPE_MEDIA_INFORMATION = 3;
 static NSString *const EVENT_LOG_CALLBACK_EVENT = @"FFmpegKitLogCallbackEvent";
 static NSString *const EVENT_STATISTICS_CALLBACK_EVENT = @"FFmpegKitStatisticsCallbackEvent";
 static NSString *const EVENT_COMPLETE_CALLBACK_EVENT = @"FFmpegKitCompleteCallbackEvent";
+static NSString *const EVENT_SESSION_DELETED_CALLBACK_EVENT = @"FFmpegKitSessionDeletedCallbackEvent";
 
 extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
 
@@ -95,9 +96,15 @@ RCT_EXPORT_MODULE(FFmpegKitReactNativeModule);
         outputBufferRegistry = [[NSMutableDictionary alloc] init];
         streamInputRegistry = [[NSMutableDictionary alloc] init];
         streamOutputRegistry = [[NSMutableDictionary alloc] init];
+
+        [self registerSessionDeleteListener];
     }
 
     return self;
+}
+
+- (void)dealloc {
+    [self unregisterSessionDeleteListener];
 }
 
 - (NSArray<NSString*>*)supportedEvents {
@@ -106,6 +113,7 @@ RCT_EXPORT_MODULE(FFmpegKitReactNativeModule);
     [array addObject:EVENT_LOG_CALLBACK_EVENT];
     [array addObject:EVENT_STATISTICS_CALLBACK_EVENT];
     [array addObject:EVENT_COMPLETE_CALLBACK_EVENT];
+    [array addObject:EVENT_SESSION_DELETED_CALLBACK_EVENT];
 
     return array;
 }
@@ -563,6 +571,11 @@ RCT_EXPORT_METHOD(clearSessions:(RCTPromiseResolveBlock)resolve reject:(RCTPromi
     resolve(nil);
 }
 
+RCT_EXPORT_METHOD(deleteSession:(double)sessionId resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
+    [FFmpegKitConfig deleteSession:(long)sessionId];
+    resolve(nil);
+}
+
 RCT_EXPORT_METHOD(getSessionsByState:(double)sessionState resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
     resolve([FFmpegKitReactNativeModule toSessionArray:[FFmpegKitConfig getSessionsByState:(SessionState)sessionState]]);
 }
@@ -947,6 +960,33 @@ RCT_EXPORT_METHOD(uninit:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejec
     dispatch_async(dispatch_get_main_queue(), ^() {
         [self sendEventWithName:EVENT_COMPLETE_CALLBACK_EVENT body:dictionary];
     });
+}
+
+- (void)emitSessionDeleted:(long)sessionId {
+    NSDictionary *dictionary = @{KEY_SESSION_ID: [NSNumber numberWithLong:sessionId]};
+    dispatch_async(dispatch_get_main_queue(), ^() {
+        [self sendEventWithName:EVENT_SESSION_DELETED_CALLBACK_EVENT body:dictionary];
+    });
+}
+
+- (void)sessionDeleted:(long)sessionId {
+    [self emitSessionDeleted:sessionId];
+}
+
+- (void)registerSessionDeleteListener {
+    SEL selector = NSSelectorFromString(@"addSessionDeleteListener:");
+    if ([FFmpegKitConfig respondsToSelector:selector]) {
+        void (*registerListener)(id, SEL, id) = (void (*)(id, SEL, id))[FFmpegKitConfig methodForSelector:selector];
+        registerListener(FFmpegKitConfig, selector, self);
+    }
+}
+
+- (void)unregisterSessionDeleteListener {
+    SEL selector = NSSelectorFromString(@"removeSessionDeleteListener:");
+    if ([FFmpegKitConfig respondsToSelector:selector]) {
+        void (*unregisterListener)(id, SEL, id) = (void (*)(id, SEL, id))[FFmpegKitConfig methodForSelector:selector];
+        unregisterListener(FFmpegKitConfig, selector, self);
+    }
 }
 
 + (BOOL)requiresMainQueueSetup {
