@@ -25,6 +25,7 @@
 #include "Level.h"
 #include "LogCallback.h"
 #include "MediaInformationSession.h"
+#include "SessionDeleteListener.h"
 #include "StatisticsCallback.h"
 #include <cstddef>
 #include <cstdint>
@@ -423,6 +424,23 @@ class FFmpegKitConfig {
      * @param sessionId session identifier
      */
     static void deleteSession(const long sessionId);
+
+    /**
+     * Adds a listener that is notified when sessions are deleted from session
+     * history. Listeners are held weakly.
+     *
+     * @param listener listener to add
+     */
+    static void addSessionDeleteListener(
+        const std::shared_ptr<ffmpegkit::SessionDeleteListener> listener);
+
+    /**
+     * Removes a session delete listener.
+     *
+     * @param listener listener to remove
+     */
+    static void removeSessionDeleteListener(
+        const std::shared_ptr<ffmpegkit::SessionDeleteListener> listener);
 
     /**
      * Returns the last session created from the session history.

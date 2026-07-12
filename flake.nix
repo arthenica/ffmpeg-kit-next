@@ -185,7 +185,18 @@
       ];
 
       xcodeMinCheck = minMajor: ''
-        export DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"
+        # Respect Apple's normal precedence: an explicitly-set DEVELOPER_DIR wins, then the
+        # Xcode currently selected via xcode-select (works regardless of where Xcode is
+        # installed or what it's named — versioned installs, /Applications/Xcode.app not
+        # existing or being a stale/dangling symlink, etc), then the previous hardcoded
+        # default as a last resort.
+        if [ -z "$DEVELOPER_DIR" ] || [ ! -x "$DEVELOPER_DIR/usr/bin/xcodebuild" ]; then
+          DEVELOPER_DIR="$(/usr/bin/xcode-select -p 2>/dev/null || true)"
+        fi
+        if [ -z "$DEVELOPER_DIR" ] || [ ! -x "$DEVELOPER_DIR/usr/bin/xcodebuild" ]; then
+          DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"
+        fi
+        export DEVELOPER_DIR
 
         if [ ! -x "$DEVELOPER_DIR/usr/bin/xcodebuild" ]; then
           echo "Error: Xcode is required at $DEVELOPER_DIR"

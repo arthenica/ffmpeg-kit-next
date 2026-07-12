@@ -27,8 +27,6 @@
 @implementation FFmpegKit
 
 + (void)initialize {
-    NSLog(@"Loading ffmpeg-kit-next.\n");
-
     [FFmpegKitConfig class];
 
     #if TARGET_OS_MACCATALYST
