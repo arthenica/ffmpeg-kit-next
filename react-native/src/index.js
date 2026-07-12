@@ -12,6 +12,7 @@ const logRedirectionStrategyMap = new Map()
 const eventLogCallbackEvent = "FFmpegKitLogCallbackEvent";
 const eventStatisticsCallbackEvent = "FFmpegKitStatisticsCallbackEvent";
 const eventCompleteCallbackEvent = "FFmpegKitCompleteCallbackEvent";
+const eventSessionDeletedCallbackEvent = "FFmpegKitSessionDeletedCallbackEvent";
 
 export const LogRedirectionStrategy = {
   ALWAYS_PRINT_LOGS: 0,
@@ -1057,9 +1058,12 @@ export class FFmpegKitConfig {
 
   /**
    * Initializes the library asynchronously.
+   *
+   * Set printLoadConfirmation to false before the first initialization to
+   * suppress the native "Loaded ffmpeg-kit-next-react-native" confirmation.
    */
-  static async init() {
-    await FFmpegKitInitializer.initialize();
+  static async init(printLoadConfirmation = true) {
+    await FFmpegKitInitializer.initialize(printLoadConfirmation);
   }
 
   /**
@@ -1418,12 +1422,14 @@ export class FFmpegKitConfig {
    * API Level &ge; 19. On older API levels it returns an empty url.
    *
    * @param uriString SAF uri (<code>"content:…"</code>)
+   * @param reusable when provided, defines whether the generated url can be used more than once;
+   * when omitted the native library's global reuse setting is used, captured at creation time
    * @return input url that can be passed to FFmpegKit or FFprobeKit
    */
-  static async getSafParameterForRead(uriString) {
+  static async getSafParameterForRead(uriString, reusable) {
     await FFmpegKitConfig.init();
 
-    return FFmpegKitReactNativeModule.getSafParameter(uriString, "r");
+    return FFmpegKitReactNativeModule.getSafParameter(uriString, "r", reusable);
   }
 
   /**
@@ -1434,12 +1440,14 @@ export class FFmpegKitConfig {
    * API Level &ge; 19. On older API levels it returns an empty url.
    *
    * @param uriString SAF uri (<code>"content:…"</code>)
+   * @param reusable when provided, defines whether the generated url can be used more than once;
+   * when omitted the native library's global reuse setting is used, captured at creation time
    * @return output url that can be passed to FFmpegKit or FFprobeKit
    */
-  static async getSafParameterForWrite(uriString) {
+  static async getSafParameterForWrite(uriString, reusable) {
     await FFmpegKitConfig.init();
 
-    return FFmpegKitReactNativeModule.getSafParameter(uriString, "w");
+    return FFmpegKitReactNativeModule.getSafParameter(uriString, "w", reusable);
   }
 
   /**
@@ -1450,12 +1458,44 @@ export class FFmpegKitConfig {
    *
    * @param uriString SAF uri (<code>"content:…"</code>)
    * @param openMode file mode to use as defined in Android Structured Access Framework documentation
+   * @param reusable when provided, defines whether the generated url can be used more than once;
+   * when omitted the native library's global reuse setting is used, captured at creation time
    * @return saf protocol url that can be passed to FFmpegKit or FFprobeKit
    */
-  static async getSafParameter(uriString, openMode) {
+  static async getSafParameter(uriString, openMode, reusable) {
     await FFmpegKitConfig.init();
 
-    return FFmpegKitReactNativeModule.getSafParameter(uriString, openMode);
+    return FFmpegKitReactNativeModule.getSafParameter(uriString, openMode, reusable);
+  }
+
+  /**
+   * <p>Unregisters a previously created SAF protocol url and releases the resources associated with it.
+   *
+   * <p>Use this to release a url that was created with the reusable flag enabled. Urls that are not
+   * reusable are unregistered automatically when the file associated with them is closed.
+   *
+   * <p>Note that this method is Android only. It will fail if called on other platforms.
+   *
+   * @param safUrl SAF protocol url previously returned by getSafParameter
+   */
+  static async unregisterSafProtocolUrl(safUrl) {
+    await FFmpegKitConfig.init();
+
+    return FFmpegKitReactNativeModule.unregisterSafProtocolUrl(safUrl);
+  }
+
+  /**
+   * <p>Returns the list of camera ids supported. These devices can be used in FFmpeg commands.
+   *
+   * <p>Note that this method is Android only. It will fail if called on other platforms. It also
+   * requires API Level &ge; 24. On older API levels it returns an empty list.
+   *
+   * @return list of camera ids supported or an empty list if no supported cameras are found
+   */
+  static async getSupportedCameraIds() {
+    await FFmpegKitConfig.init();
+
+    return FFmpegKitReactNativeModule.getSupportedCameraIds();
   }
 
   /**
@@ -1541,7 +1581,23 @@ export class FFmpegKitConfig {
   static async clearSessions() {
     await FFmpegKitConfig.init();
 
-    return FFmpegKitReactNativeModule.clearSessions();
+    await FFmpegKitReactNativeModule.clearSessions();
+    FFmpegKitFactory.deleteSessions();
+  }
+
+  /**
+   * <p>Deletes the session specified with <code>sessionId</code> from the session history.
+   * <p>Note that callbacks cannot be triggered for deleted sessions.
+   *
+   * @param sessionId id of the session that will be deleted
+   */
+  static async deleteSession(sessionId) {
+    await FFmpegKitConfig.init();
+
+    if (sessionId !== undefined) {
+      await FFmpegKitReactNativeModule.deleteSession(sessionId);
+      FFmpegKitFactory.deleteSession(sessionId);
+    }
   }
 
   /**
@@ -1878,6 +1934,24 @@ class FFmpegKitFactory {
     logRedirectionStrategyMap.set(sessionId, logRedirectionStrategy);
   }
 
+  static deleteSession(sessionId) {
+    ffmpegSessionCompleteCallbackMap.delete(sessionId);
+    ffprobeSessionCompleteCallbackMap.delete(sessionId);
+    mediaInformationSessionCompleteCallbackMap.delete(sessionId);
+    logCallbackMap.delete(sessionId);
+    statisticsCallbackMap.delete(sessionId);
+    logRedirectionStrategyMap.delete(sessionId);
+  }
+
+  static deleteSessions() {
+    ffmpegSessionCompleteCallbackMap.clear();
+    ffprobeSessionCompleteCallbackMap.clear();
+    mediaInformationSessionCompleteCallbackMap.clear();
+    logCallbackMap.clear();
+    statisticsCallbackMap.clear();
+    logRedirectionStrategyMap.clear();
+  }
+
   static getLogCallback(sessionId) {
     return logCallbackMap.get(sessionId);
   }
@@ -2007,6 +2081,7 @@ class FFmpegKitFactory {
 
 class FFmpegKitInitializer {
   static #initialized = false;
+  static #initializationPromise;
   static #eventEmitter = new FFmpegKitReactNativeEventEmitter();
 
   static processLogCallbackEvent(event) {
@@ -2134,8 +2209,8 @@ class FFmpegKitInitializer {
 
           if (session.isFFmpeg()) {
             let globalFFmpegSessionCompleteCallback = FFmpegKitFactory.getGlobalFFmpegSessionCompleteCallback();
-            if (globalFFmpegSessionCompleteCallback !== undefined) {
-              try {
+            if (typeof globalFFmpegSessionCompleteCallback === 'function') {
+                try {
                 // NOTIFY GLOBAL CALLBACK DEFINED
                 globalFFmpegSessionCompleteCallback(session);
               } catch (err) {
@@ -2144,7 +2219,7 @@ class FFmpegKitInitializer {
             }
           } else if (session.isFFprobe()) {
             let globalFFprobeSessionCompleteCallback = FFmpegKitFactory.getGlobalFFprobeSessionCompleteCallback();
-            if (globalFFprobeSessionCompleteCallback !== undefined) {
+            if (typeof globalFFprobeSessionCompleteCallback === 'function') {
               try {
                 // NOTIFY GLOBAL CALLBACK DEFINED
                 globalFFprobeSessionCompleteCallback(session);
@@ -2154,7 +2229,7 @@ class FFmpegKitInitializer {
             }
           } else if (session.isMediaInformation()) {
             let globalMediaInformationSessionCompleteCallback = FFmpegKitFactory.getGlobalMediaInformationSessionCompleteCallback();
-            if (globalMediaInformationSessionCompleteCallback !== undefined) {
+            if (typeof globalMediaInformationSessionCompleteCallback === 'function') {
               try {
                 // NOTIFY GLOBAL CALLBACK DEFINED
                 globalMediaInformationSessionCompleteCallback(session);
@@ -2168,26 +2243,56 @@ class FFmpegKitInitializer {
     }
   }
 
-  static async initialize() {
+  static processSessionDeletedCallbackEvent(event) {
+    if (event !== undefined) {
+      FFmpegKitFactory.deleteSession(event.sessionId);
+    }
+  }
+
+  static async initialize(printLoadConfirmation = true) {
     if (this.#initialized) {
       return;
-    } else {
-      this.#initialized = true;
     }
 
-    console.log("Loading ffmpeg-kit-next-react-native.");
+    const existingInitialization = this.#initializationPromise;
+    if (existingInitialization !== undefined) {
+      return existingInitialization;
+    }
 
+    const initialization = this._initialize().then(async () => {
+      this.#initialized = true;
+      await this._applyInitialLogLevel();
+      if (printLoadConfirmation) {
+        await FFmpegKitReactNativeModule.printLoadConfirmation();
+      }
+    }).catch(error => {
+      this.#initialized = false;
+      this.#initializationPromise = undefined;
+      return Promise.reject(error);
+    });
+
+    this.#initializationPromise = initialization;
+    return initialization;
+  }
+
+  static async _initialize() {
     this.#eventEmitter.addListener(eventLogCallbackEvent, FFmpegKitInitializer.processLogCallbackEvent);
     this.#eventEmitter.addListener(eventStatisticsCallbackEvent, FFmpegKitInitializer.processStatisticsCallbackEvent);
     this.#eventEmitter.addListener(eventCompleteCallbackEvent, FFmpegKitInitializer.processCompleteCallbackEvent);
+    this.#eventEmitter.addListener(eventSessionDeletedCallbackEvent, FFmpegKitInitializer.processSessionDeletedCallbackEvent);
 
-    FFmpegKitFactory.setLogLevel(await FFmpegKitReactNativeModule.getLogLevel());
-    const version = FFmpegKitFactory.getVersion();
-    const platform = await FFmpegKitConfig.getPlatform();
-    const arch = await ArchDetect.getArch();
-    await FFmpegKitConfig.enableRedirection();
+    await FFmpegKitReactNativeModule.enableRedirection();
+  }
 
-    console.log(`Loaded ffmpeg-kit-next-react-native-${platform}-${arch}-${version}.`);
+  static async _applyInitialLogLevel() {
+    try {
+      const logLevel = await FFmpegKitReactNativeModule.getLogLevel();
+      if (logLevel !== undefined && logLevel !== null) {
+        await FFmpegKitConfig.setLogLevel(logLevel);
+      }
+    } catch (err) {
+      console.log("Applying initial log level failed.", err.stack ?? err);
+    }
   }
 
 }

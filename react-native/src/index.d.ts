@@ -140,7 +140,7 @@ declare module 'ffmpeg-kit-react-native' {
 
   export class FFmpegKitConfig {
 
-    static init(): Promise<void>;
+    static init(printLoadConfirmation?: boolean): Promise<void>;
 
     static uninit(): Promise<void>;
 
@@ -202,11 +202,15 @@ declare module 'ffmpeg-kit-react-native' {
 
     static setLogLevel(level: Level): Promise<void>;
 
-    static getSafParameterForRead(uriString: String): Promise<string>;
+    static getSafParameterForRead(uriString: String, reusable?: boolean): Promise<string>;
 
-    static getSafParameterForWrite(uriString: String): Promise<string>;
+    static getSafParameterForWrite(uriString: String, reusable?: boolean): Promise<string>;
 
-    static getSafParameter(uriString: String, openMode: String): Promise<string>;
+    static getSafParameter(uriString: String, openMode: String, reusable?: boolean): Promise<string>;
+
+    static unregisterSafProtocolUrl(safUrl: String): Promise<void>;
+
+    static getSupportedCameraIds(): Promise<string[]>;
 
     static getSessionHistorySize(): Promise<number>;
 
@@ -221,6 +225,8 @@ declare module 'ffmpeg-kit-react-native' {
     static getSessions(): Promise<Session[]>;
 
     static clearSessions(): Promise<void>;
+
+    static deleteSession(sessionId: number): Promise<void>;
 
     static getFFmpegSessions(): Promise<FFmpegSession[]>;
 

@@ -66,6 +66,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -81,6 +84,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class FFmpegKitReactNativeModule extends NativeFFmpegKitReactNativeModuleSpec {
 
   public static final String LIBRARY_NAME = "ffmpeg-kit-react-native";
+  public static final String LIBRARY_VERSION = "8.1.0";
   public static final String PLATFORM_NAME = "android";
 
   // LOG CLASS
@@ -115,16 +119,20 @@ public class FFmpegKitReactNativeModule extends NativeFFmpegKitReactNativeModule
   public static final String EVENT_LOG_CALLBACK_EVENT = "FFmpegKitLogCallbackEvent";
   public static final String EVENT_STATISTICS_CALLBACK_EVENT = "FFmpegKitStatisticsCallbackEvent";
   public static final String EVENT_COMPLETE_CALLBACK_EVENT = "FFmpegKitCompleteCallbackEvent";
+  public static final String EVENT_SESSION_DELETED_CALLBACK_EVENT = "FFmpegKitSessionDeletedCallbackEvent";
 
   // REQUEST CODES
   public static final int READABLE_REQUEST_CODE = 10000;
   public static final int WRITABLE_REQUEST_CODE = 20000;
 
   private static final int asyncWriteToPipeConcurrencyLimit = 10;
+  private static final AtomicBoolean loadedLogged = new AtomicBoolean(false);
 
   private final AtomicBoolean logsEnabled;
   private final AtomicBoolean statisticsEnabled;
   private final ExecutorService asyncExecutorService;
+  @Nullable
+  private final Object sessionDeleteListener;
 
   // FFKIT PROTOCOL REGISTRIES (keyed by generated protocol url)
   private final Map<String, FFmpegKitInputBuffer> inputBufferRegistry = new ConcurrentHashMap<>();
@@ -138,10 +146,13 @@ public class FFmpegKitReactNativeModule extends NativeFFmpegKitReactNativeModule
     this.logsEnabled = new AtomicBoolean(false);
     this.statisticsEnabled = new AtomicBoolean(false);
     this.asyncExecutorService = Executors.newFixedThreadPool(asyncWriteToPipeConcurrencyLimit);
+    this.sessionDeleteListener = registerSessionDeleteListener();
+  }
 
-    if (reactContext != null) {
-      registerGlobalCallbacks(reactContext);
-    }
+  @Override
+  public void invalidate() {
+    unregisterSessionDeleteListener();
+    super.invalidate();
   }
 
   @ReactMethod
@@ -151,37 +162,6 @@ public class FFmpegKitReactNativeModule extends NativeFFmpegKitReactNativeModule
 
   @ReactMethod
   public void removeListeners(double count) {
-  }
-
-  protected void registerGlobalCallbacks(final ReactApplicationContext reactContext) {
-    FFmpegKitConfig.enableFFmpegSessionCompleteCallback(session -> {
-      final DeviceEventManagerModule.RCTDeviceEventEmitter jsModule = reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class);
-      jsModule.emit(EVENT_COMPLETE_CALLBACK_EVENT, toMap(session));
-    });
-
-    FFmpegKitConfig.enableFFprobeSessionCompleteCallback(session -> {
-      final DeviceEventManagerModule.RCTDeviceEventEmitter jsModule = reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class);
-      jsModule.emit(EVENT_COMPLETE_CALLBACK_EVENT, toMap(session));
-    });
-
-    FFmpegKitConfig.enableMediaInformationSessionCompleteCallback(session -> {
-      final DeviceEventManagerModule.RCTDeviceEventEmitter jsModule = reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class);
-      jsModule.emit(EVENT_COMPLETE_CALLBACK_EVENT, toMap(session));
-    });
-
-    FFmpegKitConfig.enableLogCallback(log -> {
-      if (logsEnabled.get()) {
-        final DeviceEventManagerModule.RCTDeviceEventEmitter jsModule = reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class);
-        jsModule.emit(EVENT_LOG_CALLBACK_EVENT, toMap(log));
-      }
-    });
-
-    FFmpegKitConfig.enableStatisticsCallback(statistics -> {
-      if (statisticsEnabled.get()) {
-        final DeviceEventManagerModule.RCTDeviceEventEmitter jsModule = reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class);
-        jsModule.emit(EVENT_STATISTICS_CALLBACK_EVENT, toMap(statistics));
-      }
-    });
   }
 
   // AbstractSession
@@ -312,7 +292,7 @@ public class FFmpegKitReactNativeModule extends NativeFFmpegKitReactNativeModule
 
   @ReactMethod
   public void ffmpegSession(final ReadableArray readableArray, final Promise promise) {
-    promise.resolve(toMap(FFmpegSession.create(toArgumentsArray(readableArray), null, null, null, LogRedirectionStrategy.NEVER_PRINT_LOGS)));
+    promise.resolve(toMap(FFmpegSession.create(toArgumentsArray(readableArray), this::emitSession, this::emitLogIfEnabled, this::emitStatisticsIfEnabled, LogRedirectionStrategy.NEVER_PRINT_LOGS)));
   }
 
   @ReactMethod
@@ -355,14 +335,14 @@ public class FFmpegKitReactNativeModule extends NativeFFmpegKitReactNativeModule
 
   @ReactMethod
   public void ffprobeSession(final ReadableArray readableArray, final Promise promise) {
-    promise.resolve(toMap(FFprobeSession.create(toArgumentsArray(readableArray), null, null, LogRedirectionStrategy.NEVER_PRINT_LOGS)));
+    promise.resolve(toMap(FFprobeSession.create(toArgumentsArray(readableArray), this::emitSession, this::emitLogIfEnabled, LogRedirectionStrategy.NEVER_PRINT_LOGS)));
   }
 
   // MediaInformationSession
 
   @ReactMethod
   public void mediaInformationSession(final ReadableArray readableArray, final Promise promise) {
-    promise.resolve(toMap(MediaInformationSession.create(toArgumentsArray(readableArray), null, null)));
+    promise.resolve(toMap(MediaInformationSession.create(toArgumentsArray(readableArray), this::emitSession, this::emitLogIfEnabled)));
   }
 
   // MediaInformationJsonParser
@@ -636,6 +616,15 @@ public class FFmpegKitReactNativeModule extends NativeFFmpegKitReactNativeModule
   }
 
   @ReactMethod
+  public void printLoadConfirmation(final Promise promise) {
+    if (loadedLogged.compareAndSet(false, true)) {
+      Log.d(LIBRARY_NAME, String.format("Loaded ffmpeg-kit-next-react-native-%s-%s-%s.", PLATFORM_NAME, AbiDetect.getAbi(), LIBRARY_VERSION));
+    }
+
+    promise.resolve(null);
+  }
+
+  @ReactMethod
   public void setLogLevel(final double level, final Promise promise) {
     FFmpegKitConfig.setLogLevel(Level.from((int) level));
     promise.resolve(null);
@@ -682,6 +671,12 @@ public class FFmpegKitReactNativeModule extends NativeFFmpegKitReactNativeModule
   @ReactMethod
   public void clearSessions(final Promise promise) {
     FFmpegKitConfig.clearSessions();
+    promise.resolve(null);
+  }
+
+  @ReactMethod
+  public void deleteSession(final double sessionId, final Promise promise) {
+    FFmpegKitConfig.deleteSession((long) sessionId);
     promise.resolve(null);
   }
 
@@ -791,7 +786,7 @@ public class FFmpegKitReactNativeModule extends NativeFFmpegKitReactNativeModule
   }
 
   @ReactMethod
-  public void getSafParameter(final String uriString, final String openMode, final Promise promise) {
+  public void getSafParameter(final String uriString, final String openMode, final Boolean reusable, final Promise promise) {
     final ReactApplicationContext reactContext = getReactApplicationContext();
 
     final Uri uri = Uri.parse(uriString);
@@ -800,11 +795,36 @@ public class FFmpegKitReactNativeModule extends NativeFFmpegKitReactNativeModule
       promise.reject("GET_SAF_PARAMETER_FAILED", "Uri string cannot be parsed.");
     } else {
       final String safParameter;
-      safParameter = FFmpegKitConfig.getSafParameter(reactContext, uri, openMode);
+      if (reusable != null) {
+        safParameter = FFmpegKitConfig.getSafParameter(reactContext, uri, openMode, reusable);
+      } else {
+        safParameter = FFmpegKitConfig.getSafParameter(reactContext, uri, openMode);
+      }
 
-      Log.d(LIBRARY_NAME, String.format("getSafParameter using parameters uriString: %s, openMode: %s completed with saf parameter: %s.", uriString, openMode, safParameter));
+      Log.d(LIBRARY_NAME, String.format("getSafParameter using parameters uriString: %s, openMode: %s, reusable: %s completed with saf parameter: %s.", uriString, openMode, reusable, safParameter));
 
       promise.resolve(safParameter);
+    }
+  }
+
+  @ReactMethod
+  public void unregisterSafProtocolUrl(final String safUrl, final Promise promise) {
+    FFmpegKitConfig.unregisterSafProtocolUrl(safUrl);
+
+    Log.d(LIBRARY_NAME, String.format("unregisterSafProtocolUrl using parameter safUrl: %s completed.", safUrl));
+
+    promise.resolve(null);
+  }
+
+  @ReactMethod
+  public void getSupportedCameraIds(final Promise promise) {
+    final ReactApplicationContext reactContext = getReactApplicationContext();
+
+    if (reactContext != null) {
+      promise.resolve(toStringArray(FFmpegKitConfig.getSupportedCameraIds(reactContext)));
+    } else {
+      Log.w(LIBRARY_NAME, "Cannot getSupportedCameraIds. React context is null.");
+      promise.reject("INVALID_CONTEXT", "React context is null.");
     }
   }
 
@@ -1355,6 +1375,96 @@ public class FFmpegKitReactNativeModule extends NativeFFmpegKitReactNativeModule
 
   protected static boolean isValidPositiveNumber(final Double value) {
     return (value != null) && (value.intValue() >= 0);
+  }
+
+  protected void emitLogIfEnabled(final com.arthenica.ffmpegkit.Log log) {
+    if (logsEnabled.get()) {
+      emitLog(log);
+    }
+  }
+
+  protected void emitStatisticsIfEnabled(final Statistics statistics) {
+    if (statisticsEnabled.get()) {
+      emitStatistics(statistics);
+    }
+  }
+
+  protected void emitLog(final com.arthenica.ffmpegkit.Log log) {
+    final DeviceEventManagerModule.RCTDeviceEventEmitter jsModule = getReactApplicationContext().getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class);
+    jsModule.emit(EVENT_LOG_CALLBACK_EVENT, toMap(log));
+  }
+
+  protected void emitStatistics(final Statistics statistics) {
+    final DeviceEventManagerModule.RCTDeviceEventEmitter jsModule = getReactApplicationContext().getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class);
+    jsModule.emit(EVENT_STATISTICS_CALLBACK_EVENT, toMap(statistics));
+  }
+
+  protected void emitSession(final Session session) {
+    final DeviceEventManagerModule.RCTDeviceEventEmitter jsModule = getReactApplicationContext().getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class);
+    jsModule.emit(EVENT_COMPLETE_CALLBACK_EVENT, toMap(session));
+  }
+
+  protected void emitSessionDeleted(final long sessionId) {
+    final DeviceEventManagerModule.RCTDeviceEventEmitter jsModule = getReactApplicationContext().getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class);
+    final WritableMap sessionDeletedEvent = Arguments.createMap();
+    sessionDeletedEvent.putDouble(KEY_SESSION_ID, (double) sessionId);
+    jsModule.emit(EVENT_SESSION_DELETED_CALLBACK_EVENT, sessionDeletedEvent);
+  }
+
+  @Nullable
+  private Object registerSessionDeleteListener() {
+    try {
+      final Class<?> sessionDeleteListenerClass = Class.forName("com.arthenica.ffmpegkit.SessionDeleteListener");
+      final Object listener = Proxy.newProxyInstance(
+          sessionDeleteListenerClass.getClassLoader(),
+          new Class<?>[]{sessionDeleteListenerClass},
+          new InvocationHandler() {
+            @Override
+            public Object invoke(final Object proxy, final Method method, final Object[] args) {
+              if (method.getDeclaringClass() == Object.class) {
+                switch (method.getName()) {
+                  case "equals":
+                    return proxy == args[0];
+                  case "hashCode":
+                    return System.identityHashCode(proxy);
+                  case "toString":
+                    return "FFmpegKitReactNativeSessionDeleteListener";
+                  default:
+                    return null;
+                }
+              }
+
+              if ("sessionDeleted".equals(method.getName()) && args != null && args.length == 1 && args[0] instanceof Number) {
+                emitSessionDeleted(((Number) args[0]).longValue());
+              }
+
+              return null;
+            }
+          });
+
+      FFmpegKitConfig.class.getMethod("addSessionDeleteListener", sessionDeleteListenerClass).invoke(null, listener);
+      return listener;
+    } catch (final ClassNotFoundException | NoSuchMethodException ignored) {
+      return null;
+    } catch (final Exception exception) {
+      Log.w(LIBRARY_NAME, "Failed to register session delete listener.", exception);
+      return null;
+    }
+  }
+
+  private void unregisterSessionDeleteListener() {
+    if (sessionDeleteListener == null) {
+      return;
+    }
+
+    try {
+      final Class<?> sessionDeleteListenerClass = Class.forName("com.arthenica.ffmpegkit.SessionDeleteListener");
+      FFmpegKitConfig.class.getMethod("removeSessionDeleteListener", sessionDeleteListenerClass).invoke(null, sessionDeleteListener);
+    } catch (final ClassNotFoundException | NoSuchMethodException ignored) {
+      // The native listener API is optional for compatibility with older native binaries.
+    } catch (final Exception exception) {
+      Log.w(LIBRARY_NAME, "Failed to unregister session delete listener.", exception);
+    }
   }
 
 }
