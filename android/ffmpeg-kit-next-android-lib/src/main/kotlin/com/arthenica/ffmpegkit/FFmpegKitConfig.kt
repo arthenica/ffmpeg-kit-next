@@ -114,8 +114,6 @@ open class FFmpegKitConfig private constructor() {
 
             Exceptions.registerRootPackage("com.arthenica")
 
-            android.util.Log.i(TAG, "Loading ffmpeg-kit-next.")
-
             val nativeFFmpegTriedAndFailed = NativeLoader.loadFFmpeg()
 
             /* ALL FFMPEG-KIT LIBRARIES LOADED AT STARTUP */

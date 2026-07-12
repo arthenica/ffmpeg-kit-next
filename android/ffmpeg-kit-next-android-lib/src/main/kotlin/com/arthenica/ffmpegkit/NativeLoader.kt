@@ -26,7 +26,7 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Responsible of loading native libraries.
+ * Responsible for loading native libraries.
  */
 open class NativeLoader {
 

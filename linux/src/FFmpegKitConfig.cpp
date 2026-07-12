@@ -1551,8 +1551,6 @@ int executeFFprobe(const long sessionId,
 
 void *ffmpegKitInitialize() {
     std::call_once(ffmpegKitInitializerFlag, []() {
-        std::cout << "Loading ffmpeg-kit-next." << std::endl;
-
         sessionHistorySize = 10;
 
         for (int i = 0; i < SESSION_MAP_SIZE; i++) {
