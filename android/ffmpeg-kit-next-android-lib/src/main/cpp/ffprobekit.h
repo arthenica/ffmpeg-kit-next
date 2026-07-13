@@ -32,4 +32,17 @@ Java_com_arthenica_ffmpegkit_FFmpegKitConfig_nativeFFprobeExecute(JNIEnv *,
                                                                   jclass, jlong,
                                                                   jobjectArray);
 
+/*
+ * Class:     com_arthenica_ffmpegkit_FFmpegKitConfig
+ * Method:    nativeFFprobeGetMediaInformation
+ * Signature: (J[Ljava/lang/String;)[B
+ *
+ * Runs ffprobe with its formatted output captured into an in-memory buffer and
+ * returns the raw UTF-8 bytes (decoded as UTF-8 on the Kotlin side). Used by
+ * getMediaInformation so the JSON never routes through the av_log path.
+ */
+JNIEXPORT jbyteArray JNICALL
+Java_com_arthenica_ffmpegkit_FFmpegKitConfig_nativeFFprobeGetMediaInformation(
+    JNIEnv *, jclass, jlong, jobjectArray);
+
 #endif /* FFPROBE_KIT_H */

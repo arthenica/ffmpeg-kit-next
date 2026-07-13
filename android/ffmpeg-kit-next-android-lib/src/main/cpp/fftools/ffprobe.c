@@ -3393,6 +3393,22 @@ static void ffprobe_var_cleanup(void)
     }
 }
 
+/*
+ * FFmpegKitNext: optional in-memory capture of ffprobe's formatted output.
+ *
+ * When this is set (via ffprobe_set_media_information_buffer), the text writer
+ * below is created against this caller-owned AVBPrint instead of the
+ * stdout/av_log path, so getMediaInformation() can read the JSON straight from
+ * the buffer. It is thread-local so parallel sessions stay isolated, and the
+ * caller must clear it (NULL) right after each run so a reused thread never
+ * sees a stale (already finalized) buffer on a later ffprobe execution.
+ */
+static __thread AVBPrint *ffmpegkit_media_information_buffer = NULL;
+
+void ffprobe_set_media_information_buffer(AVBPrint *buffer) {
+    ffmpegkit_media_information_buffer = buffer;
+}
+
 int ffprobe_execute(int argc, char **argv)
 {
     static char ffprobe_program_name[] = "ffprobe";
@@ -3504,6 +3520,8 @@ int ffprobe_execute(int argc, char **argv)
 
     if (output_filename) {
         ret = avtextwriter_create_file(&wctx, output_filename);
+    } else if (ffmpegkit_media_information_buffer) {
+        ret = avtextwriter_create_buffer(&wctx, ffmpegkit_media_information_buffer);
     } else
         ret = avtextwriter_create_stdout(&wctx);
 
