@@ -58,8 +58,16 @@ open class AbiDetect private constructor() {
          * <p>Returns the ABI name of the cpu running.
          *
          * @return ABI name of the cpu running
+         * @deprecated Use <code>android.os.Build#SUPPORTED_ABIS</code> to
+         * query the ABIs supported by the device or the
+         * {@link AbiDetect#getAbi()} method to obtain the ABI loaded
          */
         @JvmStatic
+        @Suppress("DEPRECATION")
+        @Deprecated(
+            "Use android.os.Build#SUPPORTED_ABIS to query the ABIs supported by the device or the AbiDetect#getAbi() method to obtain the ABI loaded",
+            ReplaceWith("getAbi()")
+        )
         fun getCpuAbi(): String = getNativeCpuAbi()
 
         /**
@@ -74,8 +82,15 @@ open class AbiDetect private constructor() {
          * <p>Returns the ABI name of the cpu running natively.
          *
          * @return ABI name of the cpu running
+         * @deprecated Use <code>android.os.Build#SUPPORTED_ABIS</code> to
+         * query the ABIs supported by the device or the
+         * {@link AbiDetect#getNativeAbi()} method to obtain the ABI loaded
          */
         @JvmStatic
+        @Deprecated(
+            "Use android.os.Build#SUPPORTED_ABIS to query the ABIs supported by the device or the AbiDetect#getNativeAbi() method to obtain the ABI loaded",
+            ReplaceWith("getNativeAbi()")
+        )
         external fun getNativeCpuAbi(): String
 
         /**
