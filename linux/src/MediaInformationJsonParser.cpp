@@ -37,30 +37,63 @@
 static const char *MediaInformationJsonParserKeyStreams = "streams";
 static const char *MediaInformationJsonParserKeyChapters = "chapters";
 
-namespace ffmpegkit {
+namespace {
 
 /**
- * Deep copies source into a value that owns its own storage.
+ * Converts a parsed rapidjson value into its ffmpegkit::json::Value equivalent.
  *
- * rapidjson::Value assignment moves its source and leaves it null, and a Value
- * holds no reference to the allocator that owns its storage. Copying into a
- * Document and upcasting keeps that allocator alive for as long as the returned
- * pointer lives, so the result stays valid after source is destroyed.
+ * This is the only place rapidjson types are read. Every accessor is guarded by
+ * the matching type check, so rapidjson preconditions are never violated and the
+ * result owns all of its data.
  *
- * Declared by each translation unit that needs it rather than published in a
- * header, to keep it out of the installed API.
- *
- * @param source value to copy; left unmodified
- * @return a self-contained copy of source
+ * @param source parsed value
+ * @return an equivalent value, null when source has no representable type
  */
-std::shared_ptr<rapidjson::Value>
-cloneJsonValue(const rapidjson::Value &source) {
-    auto document = std::make_shared<rapidjson::Document>();
-    document->CopyFrom(source, document->GetAllocator());
-    return std::static_pointer_cast<rapidjson::Value>(document);
+ffmpegkit::json::Value toJsonValue(const rapidjson::Value &source) {
+    switch (source.GetType()) {
+    case rapidjson::kFalseType:
+        return ffmpegkit::json::Value(false);
+    case rapidjson::kTrueType:
+        return ffmpegkit::json::Value(true);
+    case rapidjson::kStringType:
+        return ffmpegkit::json::Value(
+            std::string(source.GetString(), source.GetStringLength()));
+    case rapidjson::kNumberType:
+        if (source.IsInt64()) {
+            return ffmpegkit::json::Value(source.GetInt64());
+        } else if (source.IsUint64() &&
+                   source.GetUint64() <=
+                       static_cast<uint64_t>(INT64_MAX)) {
+            return ffmpegkit::json::Value(
+                static_cast<int64_t>(source.GetUint64()));
+        } else {
+            return ffmpegkit::json::Value(source.GetDouble());
+        }
+    case rapidjson::kObjectType: {
+        auto object = ffmpegkit::json::Value::makeObject();
+        for (auto member = source.MemberBegin(); member != source.MemberEnd();
+             ++member) {
+            object.set(std::string(member->name.GetString(),
+                                   member->name.GetStringLength()),
+                       toJsonValue(member->value));
+        }
+        return object;
+    }
+    case rapidjson::kArrayType: {
+        auto array = ffmpegkit::json::Value::makeArray();
+        for (auto element = source.Begin(); element != source.End();
+             ++element) {
+            array.append(toJsonValue(*element));
+        }
+        return array;
+    }
+    case rapidjson::kNullType:
+    default:
+        return ffmpegkit::json::Value();
+    }
 }
 
-} // namespace ffmpegkit
+} // namespace
 
 std::shared_ptr<ffmpegkit::MediaInformation>
 ffmpegkit::MediaInformationJsonParser::from(
@@ -100,7 +133,8 @@ ffmpegkit::MediaInformationJsonParser::fromWithError(
                 for (rapidjson::SizeType i = 0; i < streamArray.Size(); i++) {
                     streams->push_back(
                         std::make_shared<ffmpegkit::StreamInformation>(
-                            ffmpegkit::cloneJsonValue(streamArray[i])));
+                            std::make_shared<ffmpegkit::json::Value>(
+                                toJsonValue(streamArray[i]))));
                 }
             }
         }
@@ -111,13 +145,14 @@ ffmpegkit::MediaInformationJsonParser::fromWithError(
             if (chapterArray.IsArray()) {
                 for (rapidjson::SizeType i = 0; i < chapterArray.Size(); i++) {
                     chapters->push_back(std::make_shared<ffmpegkit::Chapter>(
-                        ffmpegkit::cloneJsonValue(chapterArray[i])));
+                        std::make_shared<ffmpegkit::json::Value>(
+                            toJsonValue(chapterArray[i]))));
                 }
             }
         }
 
         return std::make_shared<ffmpegkit::MediaInformation>(
-            std::static_pointer_cast<rapidjson::Value>(document), streams,
-            chapters);
+            std::make_shared<ffmpegkit::json::Value>(toJsonValue(*document)),
+            streams, chapters);
     }
 }

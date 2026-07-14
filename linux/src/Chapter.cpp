@@ -19,12 +19,7 @@
 
 #include "Chapter.h"
 
-namespace ffmpegkit {
-// Defined in MediaInformationJsonParser.cpp.
-std::shared_ptr<rapidjson::Value> cloneJsonValue(const rapidjson::Value &source);
-} // namespace ffmpegkit
-
-ffmpegkit::Chapter::Chapter(std::shared_ptr<rapidjson::Value> chapterValue)
+ffmpegkit::Chapter::Chapter(std::shared_ptr<ffmpegkit::json::Value> chapterValue)
     : _chapterValue{chapterValue} {}
 
 std::shared_ptr<int64_t> ffmpegkit::Chapter::getId() {
@@ -51,41 +46,49 @@ std::shared_ptr<std::string> ffmpegkit::Chapter::getEndTime() {
     return getStringProperty(KeyEndTime);
 }
 
-std::shared_ptr<rapidjson::Value> ffmpegkit::Chapter::getTags() {
+std::shared_ptr<ffmpegkit::json::Value> ffmpegkit::Chapter::getTags() {
     return getProperty(KeyTags);
 }
 
 std::shared_ptr<std::string>
 ffmpegkit::Chapter::getStringProperty(const char *key) {
-    if (_chapterValue->HasMember(key)) {
-        return std::make_shared<std::string>((*_chapterValue)[key].GetString());
-    } else {
+    if (_chapterValue == nullptr) {
         return nullptr;
     }
+    const ffmpegkit::json::Value *property = _chapterValue->find(key);
+    if (property == nullptr) {
+        return nullptr;
+    }
+    return property->getString();
 }
 
 std::shared_ptr<int64_t>
 ffmpegkit::Chapter::getNumberProperty(const char *key) {
-    if (_chapterValue->HasMember(key)) {
-        return std::make_shared<int64_t>((*_chapterValue)[key].GetInt64());
-    } else {
+    if (_chapterValue == nullptr) {
         return nullptr;
     }
+    const ffmpegkit::json::Value *property = _chapterValue->find(key);
+    if (property == nullptr) {
+        return nullptr;
+    }
+    return property->getInt();
 }
 
-std::shared_ptr<rapidjson::Value>
+std::shared_ptr<ffmpegkit::json::Value>
 ffmpegkit::Chapter::getProperty(const char *key) {
-    if (_chapterValue->HasMember(key)) {
-        return ffmpegkit::cloneJsonValue((*_chapterValue)[key]);
-    } else {
+    if (_chapterValue == nullptr) {
         return nullptr;
     }
+    const ffmpegkit::json::Value *property = _chapterValue->find(key);
+    if (property == nullptr) {
+        return nullptr;
+    }
+    return std::make_shared<ffmpegkit::json::Value>(*property);
 }
 
-std::shared_ptr<rapidjson::Value> ffmpegkit::Chapter::getAllProperties() {
-    if (_chapterValue != nullptr) {
-        return ffmpegkit::cloneJsonValue(*_chapterValue);
-    } else {
+std::shared_ptr<ffmpegkit::json::Value> ffmpegkit::Chapter::getAllProperties() {
+    if (_chapterValue == nullptr) {
         return nullptr;
     }
+    return std::make_shared<ffmpegkit::json::Value>(*_chapterValue);
 }

@@ -19,13 +19,9 @@
 
 #include "StreamInformation.h"
 
-namespace ffmpegkit {
-// Defined in MediaInformationJsonParser.cpp.
-std::shared_ptr<rapidjson::Value> cloneJsonValue(const rapidjson::Value &source);
-} // namespace ffmpegkit
 
 ffmpegkit::StreamInformation::StreamInformation(
-    std::shared_ptr<rapidjson::Value> streamInformationValue)
+    std::shared_ptr<ffmpegkit::json::Value> streamInformationValue)
     : _streamInformationValue{streamInformationValue} {}
 
 std::shared_ptr<int64_t> ffmpegkit::StreamInformation::getIndex() {
@@ -99,44 +95,50 @@ std::shared_ptr<std::string> ffmpegkit::StreamInformation::getCodecTimeBase() {
     return getStringProperty(KeyCodecTimeBase);
 }
 
-std::shared_ptr<rapidjson::Value> ffmpegkit::StreamInformation::getTags() {
+std::shared_ptr<ffmpegkit::json::Value> ffmpegkit::StreamInformation::getTags() {
     return getProperty(KeyTags);
 }
 
 std::shared_ptr<std::string>
 ffmpegkit::StreamInformation::getStringProperty(const char *key) {
-    if (_streamInformationValue->HasMember(key)) {
-        return std::make_shared<std::string>(
-            (*_streamInformationValue)[key].GetString());
-    } else {
+    if (_streamInformationValue == nullptr) {
         return nullptr;
     }
+    const ffmpegkit::json::Value *property = _streamInformationValue->find(key);
+    if (property == nullptr) {
+        return nullptr;
+    }
+    return property->getString();
 }
 
 std::shared_ptr<int64_t>
 ffmpegkit::StreamInformation::getNumberProperty(const char *key) {
-    if (_streamInformationValue->HasMember(key)) {
-        return std::make_shared<int64_t>(
-            (*_streamInformationValue)[key].GetInt64());
-    } else {
+    if (_streamInformationValue == nullptr) {
         return nullptr;
     }
+    const ffmpegkit::json::Value *property = _streamInformationValue->find(key);
+    if (property == nullptr) {
+        return nullptr;
+    }
+    return property->getInt();
 }
 
-std::shared_ptr<rapidjson::Value>
+std::shared_ptr<ffmpegkit::json::Value>
 ffmpegkit::StreamInformation::getProperty(const char *key) {
-    if (_streamInformationValue->HasMember(key)) {
-        return ffmpegkit::cloneJsonValue((*_streamInformationValue)[key]);
-    } else {
+    if (_streamInformationValue == nullptr) {
         return nullptr;
     }
+    const ffmpegkit::json::Value *property = _streamInformationValue->find(key);
+    if (property == nullptr) {
+        return nullptr;
+    }
+    return std::make_shared<ffmpegkit::json::Value>(*property);
 }
 
-std::shared_ptr<rapidjson::Value>
+std::shared_ptr<ffmpegkit::json::Value>
 ffmpegkit::StreamInformation::getAllProperties() {
-    if (_streamInformationValue != nullptr) {
-        return ffmpegkit::cloneJsonValue(*_streamInformationValue);
-    } else {
+    if (_streamInformationValue == nullptr) {
         return nullptr;
     }
+    return std::make_shared<ffmpegkit::json::Value>(*_streamInformationValue);
 }

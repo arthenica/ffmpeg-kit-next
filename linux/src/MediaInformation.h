@@ -43,7 +43,7 @@ class MediaInformation {
     static constexpr const char *KeyTags = "tags";
 
     MediaInformation(
-        std::shared_ptr<rapidjson::Value> mediaInformationValue,
+        std::shared_ptr<ffmpegkit::json::Value> mediaInformationValue,
         std::shared_ptr<
             std::vector<std::shared_ptr<ffmpegkit::StreamInformation>>>
             streams,
@@ -104,7 +104,7 @@ class MediaInformation {
      *
      * @return tags Value
      */
-    std::shared_ptr<rapidjson::Value> getTags();
+    std::shared_ptr<ffmpegkit::json::Value> getTags();
 
     /**
      * Returns all streams.
@@ -141,7 +141,7 @@ class MediaInformation {
      *
      * @return property in a Value or nullptr if the key is not found
      */
-    std::shared_ptr<rapidjson::Value> getProperty(const char *key);
+    std::shared_ptr<ffmpegkit::json::Value> getProperty(const char *key);
 
     /**
      * Returns the format property associated with the key.
@@ -162,7 +162,7 @@ class MediaInformation {
      *
      * @return format property in a Value or nullptr if the key is not found
      */
-    std::shared_ptr<rapidjson::Value> getFormatProperty(const char *key);
+    std::shared_ptr<ffmpegkit::json::Value> getFormatProperty(const char *key);
 
     /**
      * Returns all format properties defined.
@@ -170,17 +170,17 @@ class MediaInformation {
      * @return all format properties in a Value or nullptr if no format
      * properties are defined
      */
-    std::shared_ptr<rapidjson::Value> getFormatProperties();
+    std::shared_ptr<ffmpegkit::json::Value> getFormatProperties();
 
     /**
      * Returns all properties defined.
      *
      * @return all properties in a Value or nullptr if no properties are defined
      */
-    std::shared_ptr<rapidjson::Value> getAllProperties();
+    std::shared_ptr<ffmpegkit::json::Value> getAllProperties();
 
   private:
-    std::shared_ptr<rapidjson::Value> _mediaInformationValue;
+    std::shared_ptr<ffmpegkit::json::Value> _mediaInformationValue;
     std::shared_ptr<std::vector<std::shared_ptr<ffmpegkit::StreamInformation>>>
         _streams;
     std::shared_ptr<std::vector<std::shared_ptr<ffmpegkit::Chapter>>> _chapters;

@@ -29,7 +29,7 @@ FFMPEG_LIBS="-lavcodec -lavfilter -lavformat -lavutil -lswscale -lswresample"
 AC_SUBST(FFMPEG_LIBS)
 
 # CURRENT INTERFACE:REVISION:AGE
-VERSION_INFO="11:0:6"
+VERSION_INFO="12:0:0"
 AC_SUBST(VERSION_INFO)
 
 LT_INIT

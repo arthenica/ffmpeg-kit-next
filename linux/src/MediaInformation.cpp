@@ -19,25 +19,22 @@
 
 #include "MediaInformation.h"
 
-namespace ffmpegkit {
-// Defined in MediaInformationJsonParser.cpp.
-std::shared_ptr<rapidjson::Value> cloneJsonValue(const rapidjson::Value &source);
-} // namespace ffmpegkit
 
 namespace {
 
-const rapidjson::Value *findMember(const rapidjson::Value *value,
-                                   const char *key) {
-    if (value == nullptr || !value->IsObject() || !value->HasMember(key)) {
+const ffmpegkit::json::Value *findMember(const ffmpegkit::json::Value *value,
+                                        const char *key) {
+    if (value == nullptr) {
         return nullptr;
     }
-    return &(*value)[key];
+    return value->find(key);
 }
 
-const rapidjson::Value *findFormatObject(const rapidjson::Value *value) {
-    const rapidjson::Value *format =
+const ffmpegkit::json::Value *
+findFormatObject(const ffmpegkit::json::Value *value) {
+    const ffmpegkit::json::Value *format =
         findMember(value, ffmpegkit::MediaInformation::KeyFormatProperties);
-    if (format == nullptr || !format->IsObject()) {
+    if (format == nullptr || !format->isObject()) {
         return nullptr;
     }
     return format;
@@ -46,7 +43,7 @@ const rapidjson::Value *findFormatObject(const rapidjson::Value *value) {
 } // namespace
 
 ffmpegkit::MediaInformation::MediaInformation(
-    std::shared_ptr<rapidjson::Value> mediaInformationValue,
+    std::shared_ptr<ffmpegkit::json::Value> mediaInformationValue,
     std::shared_ptr<std::vector<std::shared_ptr<ffmpegkit::StreamInformation>>>
         streams,
     std::shared_ptr<std::vector<std::shared_ptr<ffmpegkit::Chapter>>> chapters)
@@ -81,11 +78,11 @@ std::shared_ptr<std::string> ffmpegkit::MediaInformation::getBitrate() {
     return getStringFormatProperty(KeyBitRate);
 }
 
-std::shared_ptr<rapidjson::Value> ffmpegkit::MediaInformation::getTags() {
-    const rapidjson::Value *tags =
+std::shared_ptr<ffmpegkit::json::Value> ffmpegkit::MediaInformation::getTags() {
+    const ffmpegkit::json::Value *tags =
         findMember(findFormatObject(_mediaInformationValue.get()), KeyTags);
     if (tags != nullptr) {
-        return ffmpegkit::cloneJsonValue(*tags);
+        return std::make_shared<ffmpegkit::json::Value>(*tags);
     } else {
         return nullptr;
     }
@@ -103,10 +100,10 @@ ffmpegkit::MediaInformation::getChapters() {
 
 std::shared_ptr<std::string>
 ffmpegkit::MediaInformation::getStringProperty(const char *key) {
-    const rapidjson::Value *property =
+    const ffmpegkit::json::Value *property =
         findMember(_mediaInformationValue.get(), key);
     if (property != nullptr) {
-        return std::make_shared<std::string>(property->GetString());
+        return property->getString();
     } else {
         return nullptr;
     }
@@ -114,21 +111,21 @@ ffmpegkit::MediaInformation::getStringProperty(const char *key) {
 
 std::shared_ptr<int64_t>
 ffmpegkit::MediaInformation::getNumberProperty(const char *key) {
-    const rapidjson::Value *property =
+    const ffmpegkit::json::Value *property =
         findMember(_mediaInformationValue.get(), key);
     if (property != nullptr) {
-        return std::make_shared<int64_t>(property->GetInt64());
+        return property->getInt();
     } else {
         return nullptr;
     }
 }
 
-std::shared_ptr<rapidjson::Value>
+std::shared_ptr<ffmpegkit::json::Value>
 ffmpegkit::MediaInformation::getProperty(const char *key) {
-    const rapidjson::Value *property =
+    const ffmpegkit::json::Value *property =
         findMember(_mediaInformationValue.get(), key);
     if (property != nullptr) {
-        return ffmpegkit::cloneJsonValue(*property);
+        return std::make_shared<ffmpegkit::json::Value>(*property);
     } else {
         return nullptr;
     }
@@ -136,10 +133,10 @@ ffmpegkit::MediaInformation::getProperty(const char *key) {
 
 std::shared_ptr<std::string>
 ffmpegkit::MediaInformation::getStringFormatProperty(const char *key) {
-    const rapidjson::Value *property =
+    const ffmpegkit::json::Value *property =
         findMember(findFormatObject(_mediaInformationValue.get()), key);
     if (property != nullptr) {
-        return std::make_shared<std::string>(property->GetString());
+        return property->getString();
     } else {
         return nullptr;
     }
@@ -147,42 +144,41 @@ ffmpegkit::MediaInformation::getStringFormatProperty(const char *key) {
 
 std::shared_ptr<int64_t>
 ffmpegkit::MediaInformation::getNumberFormatProperty(const char *key) {
-    const rapidjson::Value *property =
+    const ffmpegkit::json::Value *property =
         findMember(findFormatObject(_mediaInformationValue.get()), key);
     if (property != nullptr) {
-        return std::make_shared<int64_t>(property->GetInt64());
+        return property->getInt();
     } else {
         return nullptr;
     }
 }
 
-std::shared_ptr<rapidjson::Value>
+std::shared_ptr<ffmpegkit::json::Value>
 ffmpegkit::MediaInformation::getFormatProperty(const char *key) {
-    const rapidjson::Value *property =
+    const ffmpegkit::json::Value *property =
         findMember(findFormatObject(_mediaInformationValue.get()), key);
     if (property != nullptr) {
-        return ffmpegkit::cloneJsonValue(*property);
+        return std::make_shared<ffmpegkit::json::Value>(*property);
     } else {
         return nullptr;
     }
 }
 
-std::shared_ptr<rapidjson::Value>
+std::shared_ptr<ffmpegkit::json::Value>
 ffmpegkit::MediaInformation::getFormatProperties() {
-    const rapidjson::Value *format =
+    const ffmpegkit::json::Value *format =
         findFormatObject(_mediaInformationValue.get());
     if (format != nullptr) {
-        return ffmpegkit::cloneJsonValue(*format);
+        return std::make_shared<ffmpegkit::json::Value>(*format);
     } else {
         return nullptr;
     }
 }
 
-std::shared_ptr<rapidjson::Value>
+std::shared_ptr<ffmpegkit::json::Value>
 ffmpegkit::MediaInformation::getAllProperties() {
-    if (_mediaInformationValue != nullptr) {
-        return ffmpegkit::cloneJsonValue(*_mediaInformationValue);
-    } else {
+    if (_mediaInformationValue == nullptr) {
         return nullptr;
     }
+    return std::make_shared<ffmpegkit::json::Value>(*_mediaInformationValue);
 }

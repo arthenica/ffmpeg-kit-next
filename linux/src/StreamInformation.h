@@ -20,18 +20,7 @@
 #ifndef FFMPEG_KIT_STREAM_INFORMATION_H
 #define FFMPEG_KIT_STREAM_INFORMATION_H
 
-// OVERRIDING THE MACRO TO PREVENT APPLICATION TERMINATION. RAPIDJSON PRECONDITIONS
-// ARE ASSERTIONS THAT abort() BY DEFAULT; THROWING INSTEAD KEEPS THEM CATCHABLE.
-// RAPIDJSON_ASSERT_THROWS KEEPS THE noexcept CALL SITES ON assert(), WHERE THROWING
-// WOULD CALL std::terminate. BOTH MUST BE DEFINED BEFORE rapidjson/document.h.
-#include <stdexcept>
-#define RAPIDJSON_ASSERT(x)                                                    \
-    do {                                                                       \
-        if (!(x))                                                              \
-            throw std::logic_error("rapidjson: " #x);                          \
-    } while (0)
-#define RAPIDJSON_ASSERT_THROWS
-#include "rapidjson/document.h"
+#include "json/Value.h"
 #include <memory>
 #include <string>
 
@@ -61,7 +50,7 @@ class StreamInformation {
     static constexpr const char *KeyCodecTimeBase = "codec_time_base";
     static constexpr const char *KeyTags = "tags";
 
-    StreamInformation(std::shared_ptr<rapidjson::Value> streamInformationValue);
+    StreamInformation(std::shared_ptr<ffmpegkit::json::Value> streamInformationValue);
 
     /**
      * Returns stream index.
@@ -187,7 +176,7 @@ class StreamInformation {
      *
      * @return tags Value
      */
-    std::shared_ptr<rapidjson::Value> getTags();
+    std::shared_ptr<ffmpegkit::json::Value> getTags();
 
     /**
      * Returns the stream property associated with the key.
@@ -208,7 +197,7 @@ class StreamInformation {
      *
      * @return stream property in a Value or nullptr if the key is not found
      */
-    std::shared_ptr<rapidjson::Value> getProperty(const char *key);
+    std::shared_ptr<ffmpegkit::json::Value> getProperty(const char *key);
 
     /**
      * Returns all stream properties defined.
@@ -216,10 +205,10 @@ class StreamInformation {
      * @return all stream properties in a Value or nullptr if no properties are
      * defined
      */
-    std::shared_ptr<rapidjson::Value> getAllProperties();
+    std::shared_ptr<ffmpegkit::json::Value> getAllProperties();
 
   private:
-    std::shared_ptr<rapidjson::Value> _streamInformationValue;
+    std::shared_ptr<ffmpegkit::json::Value> _streamInformationValue;
 };
 
 } // namespace ffmpegkit
