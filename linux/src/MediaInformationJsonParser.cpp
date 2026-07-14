@@ -18,8 +18,17 @@
  */
 
 #include "MediaInformationJsonParser.h"
-// OVERRIDING THE MACRO TO PREVENT APPLICATION TERMINATION
-#define RAPIDJSON_ASSERT(x)
+// OVERRIDING THE MACRO TO PREVENT APPLICATION TERMINATION. RAPIDJSON PRECONDITIONS
+// ARE ASSERTIONS THAT abort() BY DEFAULT; THROWING INSTEAD KEEPS THEM CATCHABLE.
+// RAPIDJSON_ASSERT_THROWS KEEPS THE noexcept CALL SITES ON assert(), WHERE THROWING
+// WOULD CALL std::terminate. BOTH MUST BE DEFINED BEFORE rapidjson/document.h.
+#include <stdexcept>
+#define RAPIDJSON_ASSERT(x)                                                    \
+    do {                                                                       \
+        if (!(x))                                                              \
+            throw std::logic_error("rapidjson: " #x);                          \
+    } while (0)
+#define RAPIDJSON_ASSERT_THROWS
 #include "rapidjson/document.h"
 #include "rapidjson/error/en.h"
 #include "rapidjson/reader.h"
@@ -27,6 +36,31 @@
 
 static const char *MediaInformationJsonParserKeyStreams = "streams";
 static const char *MediaInformationJsonParserKeyChapters = "chapters";
+
+namespace ffmpegkit {
+
+/**
+ * Deep copies source into a value that owns its own storage.
+ *
+ * rapidjson::Value assignment moves its source and leaves it null, and a Value
+ * holds no reference to the allocator that owns its storage. Copying into a
+ * Document and upcasting keeps that allocator alive for as long as the returned
+ * pointer lives, so the result stays valid after source is destroyed.
+ *
+ * Declared by each translation unit that needs it rather than published in a
+ * header, to keep it out of the installed API.
+ *
+ * @param source value to copy; left unmodified
+ * @return a self-contained copy of source
+ */
+std::shared_ptr<rapidjson::Value>
+cloneJsonValue(const rapidjson::Value &source) {
+    auto document = std::make_shared<rapidjson::Document>();
+    document->CopyFrom(source, document->GetAllocator());
+    return std::static_pointer_cast<rapidjson::Value>(document);
+}
+
+} // namespace ffmpegkit
 
 std::shared_ptr<ffmpegkit::MediaInformation>
 ffmpegkit::MediaInformationJsonParser::from(
@@ -60,27 +94,24 @@ ffmpegkit::MediaInformationJsonParser::fromWithError(
                 std::vector<std::shared_ptr<ffmpegkit::Chapter>>>();
 
         if (document->HasMember(MediaInformationJsonParserKeyStreams)) {
-            rapidjson::Value &streamArray =
+            const rapidjson::Value &streamArray =
                 (*document.get())[MediaInformationJsonParserKeyStreams];
             if (streamArray.IsArray()) {
                 for (rapidjson::SizeType i = 0; i < streamArray.Size(); i++) {
-                    auto stream = std::make_shared<rapidjson::Value>();
-                    *stream = streamArray[i];
                     streams->push_back(
-                        std::make_shared<ffmpegkit::StreamInformation>(stream));
+                        std::make_shared<ffmpegkit::StreamInformation>(
+                            ffmpegkit::cloneJsonValue(streamArray[i])));
                 }
             }
         }
 
         if (document->HasMember(MediaInformationJsonParserKeyChapters)) {
-            rapidjson::Value &chapterArray =
+            const rapidjson::Value &chapterArray =
                 (*document.get())[MediaInformationJsonParserKeyChapters];
             if (chapterArray.IsArray()) {
                 for (rapidjson::SizeType i = 0; i < chapterArray.Size(); i++) {
-                    auto chapter = std::make_shared<rapidjson::Value>();
-                    *chapter = chapterArray[i];
-                    chapters->push_back(
-                        std::make_shared<ffmpegkit::Chapter>(chapter));
+                    chapters->push_back(std::make_shared<ffmpegkit::Chapter>(
+                        ffmpegkit::cloneJsonValue(chapterArray[i])));
                 }
             }
         }

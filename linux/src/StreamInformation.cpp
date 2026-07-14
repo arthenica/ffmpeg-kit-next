@@ -19,6 +19,11 @@
 
 #include "StreamInformation.h"
 
+namespace ffmpegkit {
+// Defined in MediaInformationJsonParser.cpp.
+std::shared_ptr<rapidjson::Value> cloneJsonValue(const rapidjson::Value &source);
+} // namespace ffmpegkit
+
 ffmpegkit::StreamInformation::StreamInformation(
     std::shared_ptr<rapidjson::Value> streamInformationValue)
     : _streamInformationValue{streamInformationValue} {}
@@ -121,9 +126,7 @@ ffmpegkit::StreamInformation::getNumberProperty(const char *key) {
 std::shared_ptr<rapidjson::Value>
 ffmpegkit::StreamInformation::getProperty(const char *key) {
     if (_streamInformationValue->HasMember(key)) {
-        auto value = std::make_shared<rapidjson::Value>();
-        *value = (*_streamInformationValue)[key];
-        return value;
+        return ffmpegkit::cloneJsonValue((*_streamInformationValue)[key]);
     } else {
         return nullptr;
     }
@@ -132,9 +135,7 @@ ffmpegkit::StreamInformation::getProperty(const char *key) {
 std::shared_ptr<rapidjson::Value>
 ffmpegkit::StreamInformation::getAllProperties() {
     if (_streamInformationValue != nullptr) {
-        auto all = std::make_shared<rapidjson::Value>();
-        *all = (*_streamInformationValue);
-        return all;
+        return ffmpegkit::cloneJsonValue(*_streamInformationValue);
     } else {
         return nullptr;
     }

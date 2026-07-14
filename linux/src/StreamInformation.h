@@ -20,8 +20,17 @@
 #ifndef FFMPEG_KIT_STREAM_INFORMATION_H
 #define FFMPEG_KIT_STREAM_INFORMATION_H
 
-// OVERRIDING THE MACRO TO PREVENT APPLICATION TERMINATION
-#define RAPIDJSON_ASSERT(x)
+// OVERRIDING THE MACRO TO PREVENT APPLICATION TERMINATION. RAPIDJSON PRECONDITIONS
+// ARE ASSERTIONS THAT abort() BY DEFAULT; THROWING INSTEAD KEEPS THEM CATCHABLE.
+// RAPIDJSON_ASSERT_THROWS KEEPS THE noexcept CALL SITES ON assert(), WHERE THROWING
+// WOULD CALL std::terminate. BOTH MUST BE DEFINED BEFORE rapidjson/document.h.
+#include <stdexcept>
+#define RAPIDJSON_ASSERT(x)                                                    \
+    do {                                                                       \
+        if (!(x))                                                              \
+            throw std::logic_error("rapidjson: " #x);                          \
+    } while (0)
+#define RAPIDJSON_ASSERT_THROWS
 #include "rapidjson/document.h"
 #include <memory>
 #include <string>

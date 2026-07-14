@@ -19,6 +19,11 @@
 
 #include "Chapter.h"
 
+namespace ffmpegkit {
+// Defined in MediaInformationJsonParser.cpp.
+std::shared_ptr<rapidjson::Value> cloneJsonValue(const rapidjson::Value &source);
+} // namespace ffmpegkit
+
 ffmpegkit::Chapter::Chapter(std::shared_ptr<rapidjson::Value> chapterValue)
     : _chapterValue{chapterValue} {}
 
@@ -71,9 +76,7 @@ ffmpegkit::Chapter::getNumberProperty(const char *key) {
 std::shared_ptr<rapidjson::Value>
 ffmpegkit::Chapter::getProperty(const char *key) {
     if (_chapterValue->HasMember(key)) {
-        auto value = std::make_shared<rapidjson::Value>();
-        *value = (*_chapterValue)[key];
-        return value;
+        return ffmpegkit::cloneJsonValue((*_chapterValue)[key]);
     } else {
         return nullptr;
     }
@@ -81,9 +84,7 @@ ffmpegkit::Chapter::getProperty(const char *key) {
 
 std::shared_ptr<rapidjson::Value> ffmpegkit::Chapter::getAllProperties() {
     if (_chapterValue != nullptr) {
-        auto all = std::make_shared<rapidjson::Value>();
-        *all = (*_chapterValue);
-        return all;
+        return ffmpegkit::cloneJsonValue(*_chapterValue);
     } else {
         return nullptr;
     }

@@ -2311,6 +2311,45 @@ download_gnu_config() {
   fi
 }
 
+download_rapidjson() {
+  local SOURCE_REPO_URL=""
+  local LIB_NAME="rapidjson"
+  local LIB_LOCAL_PATH="${FFMPEG_KIT_TMPDIR}/source/${LIB_NAME}"
+  local SOURCE_ID=""
+  local DOWNLOAD_RC=""
+  local SOURCE_TYPE=""
+  REDOWNLOAD_VARIABLE=$(echo "REDOWNLOAD_$LIB_NAME")
+
+  echo -e "DEBUG: Downloading rapidjson source.\n" 1>>"${BASEDIR}"/build.log 2>&1
+
+  SOURCE_REPO_URL=$(get_library_source "${LIB_NAME}" 1)
+  SOURCE_ID=$(get_library_source "${LIB_NAME}" 2)
+  SOURCE_TYPE=$(get_library_source "${LIB_NAME}" 3)
+
+  if [[ -d "${LIB_LOCAL_PATH}" ]]; then
+    if [[ ${REDOWNLOAD_VARIABLE} -eq 1 ]]; then
+      echo -e "INFO: rapidjson already downloaded but re-download requested\n" 1>>"${BASEDIR}"/build.log 2>&1
+      rm -rf "${LIB_LOCAL_PATH}" 1>>"${BASEDIR}"/build.log 2>&1
+    else
+      echo -e "INFO: rapidjson already downloaded. Source folder found at ${LIB_LOCAL_PATH}\n" 1>>"${BASEDIR}"/build.log 2>&1
+      return
+    fi
+  fi
+
+  if [[ "${SOURCE_TYPE}" == "TAG" ]]; then
+    DOWNLOAD_RC=$(clone_git_repository_with_tag "${SOURCE_REPO_URL}" "${SOURCE_ID}" "${LIB_LOCAL_PATH}")
+  else
+    DOWNLOAD_RC=$(clone_git_repository_with_commit_id "${SOURCE_REPO_URL}" "${LIB_LOCAL_PATH}" "${SOURCE_ID}")
+  fi
+
+  if [[ ${DOWNLOAD_RC} -ne 0 ]]; then
+    echo -e "ERROR: Downloading rapidjson failed. Can not get source from ${SOURCE_REPO_URL}\n" 1>>"${BASEDIR}"/build.log 2>&1
+    exit 1
+  else
+    echo -e "\nINFO: rapidjson downloaded successfully\n" 1>>"${BASEDIR}"/build.log 2>&1
+  fi
+}
+
 is_gnu_config_files_up_to_date() {
   echo $(grep aarch64-apple-darwin config.guess | wc -l 2>>"${BASEDIR}"/build.log)
 }

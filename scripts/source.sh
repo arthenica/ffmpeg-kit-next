@@ -206,6 +206,11 @@ get_library_source() {
     SOURCE_ID="v1.5.2"
     SOURCE_TYPE="TAG"
     ;;
+  rapidjson)
+    SOURCE_REPO_URL="https://github.com/arthenica/rapidjson"
+    SOURCE_ID="24b5e7a8b27f42fa16b96fc70aade9106cf7102f"
+    SOURCE_TYPE="COMMIT"
+    ;;
   rubberband)
     SOURCE_REPO_URL="https://github.com/arthenica/rubberband"
     SOURCE_ID="v4.0.0"

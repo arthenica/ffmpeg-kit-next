@@ -29,15 +29,14 @@ The current Linux profile is `linux-full`.
 
 This command cross-compiles the native `FFmpeg` and `ffmpeg-kit` shared libraries together with the `C++` API.
 
-The build downloads `FFmpeg` and enabled external libraries when they are not already available locally. Nix provides
-the compiler toolchain (`clang`/`llvm`), `pkg-config` inputs and the build tools.
+The build downloads `FFmpeg`, `RapidJSON` and enabled external libraries when they are not already available locally.
+Nix provides the compiler toolchain (`clang`/`llvm`), `pkg-config` inputs and the build tools.
 
 #### 2.1 Prerequisites
 
 Linux builds require the following tools.
 
 - **Nix** — the `linux-full` profile supplies the `clang`/`llvm` toolchain, `pkg-config` and the build packages.
-- **rapidjson-dev** — provides the RapidJSON headers required by the library.
 
 #### 2.2 Options
 

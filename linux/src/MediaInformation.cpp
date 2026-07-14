@@ -19,6 +19,32 @@
 
 #include "MediaInformation.h"
 
+namespace ffmpegkit {
+// Defined in MediaInformationJsonParser.cpp.
+std::shared_ptr<rapidjson::Value> cloneJsonValue(const rapidjson::Value &source);
+} // namespace ffmpegkit
+
+namespace {
+
+const rapidjson::Value *findMember(const rapidjson::Value *value,
+                                   const char *key) {
+    if (value == nullptr || !value->IsObject() || !value->HasMember(key)) {
+        return nullptr;
+    }
+    return &(*value)[key];
+}
+
+const rapidjson::Value *findFormatObject(const rapidjson::Value *value) {
+    const rapidjson::Value *format =
+        findMember(value, ffmpegkit::MediaInformation::KeyFormatProperties);
+    if (format == nullptr || !format->IsObject()) {
+        return nullptr;
+    }
+    return format;
+}
+
+} // namespace
+
 ffmpegkit::MediaInformation::MediaInformation(
     std::shared_ptr<rapidjson::Value> mediaInformationValue,
     std::shared_ptr<std::vector<std::shared_ptr<ffmpegkit::StreamInformation>>>
@@ -56,11 +82,10 @@ std::shared_ptr<std::string> ffmpegkit::MediaInformation::getBitrate() {
 }
 
 std::shared_ptr<rapidjson::Value> ffmpegkit::MediaInformation::getTags() {
-    auto formatProperties = getFormatProperties();
-    if (formatProperties->HasMember(KeyTags)) {
-        auto tags = std::make_shared<rapidjson::Value>();
-        *tags = (*formatProperties)[KeyTags];
-        return tags;
+    const rapidjson::Value *tags =
+        findMember(findFormatObject(_mediaInformationValue.get()), KeyTags);
+    if (tags != nullptr) {
+        return ffmpegkit::cloneJsonValue(*tags);
     } else {
         return nullptr;
     }
@@ -78,9 +103,10 @@ ffmpegkit::MediaInformation::getChapters() {
 
 std::shared_ptr<std::string>
 ffmpegkit::MediaInformation::getStringProperty(const char *key) {
-    auto allProperties = getAllProperties();
-    if (allProperties->HasMember(key)) {
-        return std::make_shared<std::string>((*allProperties)[key].GetString());
+    const rapidjson::Value *property =
+        findMember(_mediaInformationValue.get(), key);
+    if (property != nullptr) {
+        return std::make_shared<std::string>(property->GetString());
     } else {
         return nullptr;
     }
@@ -88,9 +114,10 @@ ffmpegkit::MediaInformation::getStringProperty(const char *key) {
 
 std::shared_ptr<int64_t>
 ffmpegkit::MediaInformation::getNumberProperty(const char *key) {
-    auto allProperties = getAllProperties();
-    if (allProperties->HasMember(key)) {
-        return std::make_shared<int64_t>((*allProperties)[key].GetInt64());
+    const rapidjson::Value *property =
+        findMember(_mediaInformationValue.get(), key);
+    if (property != nullptr) {
+        return std::make_shared<int64_t>(property->GetInt64());
     } else {
         return nullptr;
     }
@@ -98,11 +125,10 @@ ffmpegkit::MediaInformation::getNumberProperty(const char *key) {
 
 std::shared_ptr<rapidjson::Value>
 ffmpegkit::MediaInformation::getProperty(const char *key) {
-    auto allProperties = getAllProperties();
-    if (allProperties->HasMember(key)) {
-        auto value = std::make_shared<rapidjson::Value>();
-        *value = (*allProperties)[key];
-        return value;
+    const rapidjson::Value *property =
+        findMember(_mediaInformationValue.get(), key);
+    if (property != nullptr) {
+        return ffmpegkit::cloneJsonValue(*property);
     } else {
         return nullptr;
     }
@@ -110,10 +136,10 @@ ffmpegkit::MediaInformation::getProperty(const char *key) {
 
 std::shared_ptr<std::string>
 ffmpegkit::MediaInformation::getStringFormatProperty(const char *key) {
-    auto formatProperties = getFormatProperties();
-    if (formatProperties->HasMember(key)) {
-        return std::make_shared<std::string>(
-            (*formatProperties)[key].GetString());
+    const rapidjson::Value *property =
+        findMember(findFormatObject(_mediaInformationValue.get()), key);
+    if (property != nullptr) {
+        return std::make_shared<std::string>(property->GetString());
     } else {
         return nullptr;
     }
@@ -121,9 +147,10 @@ ffmpegkit::MediaInformation::getStringFormatProperty(const char *key) {
 
 std::shared_ptr<int64_t>
 ffmpegkit::MediaInformation::getNumberFormatProperty(const char *key) {
-    auto formatProperties = getFormatProperties();
-    if (formatProperties->HasMember(key)) {
-        return std::make_shared<int64_t>((*formatProperties)[key].GetInt64());
+    const rapidjson::Value *property =
+        findMember(findFormatObject(_mediaInformationValue.get()), key);
+    if (property != nullptr) {
+        return std::make_shared<int64_t>(property->GetInt64());
     } else {
         return nullptr;
     }
@@ -131,11 +158,10 @@ ffmpegkit::MediaInformation::getNumberFormatProperty(const char *key) {
 
 std::shared_ptr<rapidjson::Value>
 ffmpegkit::MediaInformation::getFormatProperty(const char *key) {
-    auto formatProperties = getFormatProperties();
-    if (formatProperties->HasMember(key)) {
-        auto value = std::make_shared<rapidjson::Value>();
-        *value = (*formatProperties)[key];
-        return value;
+    const rapidjson::Value *property =
+        findMember(findFormatObject(_mediaInformationValue.get()), key);
+    if (property != nullptr) {
+        return ffmpegkit::cloneJsonValue(*property);
     } else {
         return nullptr;
     }
@@ -143,10 +169,10 @@ ffmpegkit::MediaInformation::getFormatProperty(const char *key) {
 
 std::shared_ptr<rapidjson::Value>
 ffmpegkit::MediaInformation::getFormatProperties() {
-    if (_mediaInformationValue->HasMember(KeyFormatProperties)) {
-        auto mediaProperties = std::make_shared<rapidjson::Value>();
-        *mediaProperties = (*_mediaInformationValue)[KeyFormatProperties];
-        return mediaProperties;
+    const rapidjson::Value *format =
+        findFormatObject(_mediaInformationValue.get());
+    if (format != nullptr) {
+        return ffmpegkit::cloneJsonValue(*format);
     } else {
         return nullptr;
     }
@@ -155,9 +181,7 @@ ffmpegkit::MediaInformation::getFormatProperties() {
 std::shared_ptr<rapidjson::Value>
 ffmpegkit::MediaInformation::getAllProperties() {
     if (_mediaInformationValue != nullptr) {
-        auto all = std::make_shared<rapidjson::Value>();
-        *all = (*_mediaInformationValue);
-        return all;
+        return ffmpegkit::cloneJsonValue(*_mediaInformationValue);
     } else {
         return nullptr;
     }
