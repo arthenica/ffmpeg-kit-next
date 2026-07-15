@@ -106,10 +106,10 @@ the same `FFmpeg` release branch.
 
 |    Platforms     |                                 FFmpegKit Version                                 | FFmpeg Version | Release Date |
 |:----------------:|:---------------------------------------------------------------------------------:|:--------------:|:------------:|
-|  Android<br>Flutter<br>iOS / iPadOS<br>Linux<br>macOS<br>React Native<br>tvOS      |   [6.1.0](https://github.com/arthenica/ffmpeg-kit-next/releases/tag/v6.1.0)    |      6.1.2       | Jun 26, 2026 |
-|  Android<br>Flutter<br>iOS / iPadOS<br>Linux<br>macOS<br>React Native<br>tvOS      |   [6.1.1](https://github.com/arthenica/ffmpeg-kit-next/releases/tag/v6.1.1)    |      6.1.6       | Jun 27, 2026 |
-|  Android<br>Flutter<br>iOS / iPadOS<br>Linux<br>macOS<br>React Native<br>tvOS      |   [7.1.0](https://github.com/arthenica/ffmpeg-kit-next/releases/tag/v7.1.0)    |      7.1.5       | Jul 01, 2026 |
 |  Android<br>Flutter<br>iOS / iPadOS<br>Linux<br>macOS<br>React Native<br>tvOS      |   [8.1.0](https://github.com/arthenica/ffmpeg-kit-next/releases/tag/v8.1.0)    |      8.1.2       | Jul 02, 2026 |
+|  Android<br>Flutter<br>iOS / iPadOS<br>Linux<br>macOS<br>React Native<br>tvOS      |   [7.1.0](https://github.com/arthenica/ffmpeg-kit-next/releases/tag/v7.1.0)    |      7.1.5       | Jul 01, 2026 |
+|  Android<br>Flutter<br>iOS / iPadOS<br>Linux<br>macOS<br>React Native<br>tvOS      |   [6.1.1](https://github.com/arthenica/ffmpeg-kit-next/releases/tag/v6.1.1)    |      6.1.6       | Jun 27, 2026 |
+|  Android<br>Flutter<br>iOS / iPadOS<br>Linux<br>macOS<br>React Native<br>tvOS      |   [6.1.0](https://github.com/arthenica/ffmpeg-kit-next/releases/tag/v6.1.0)    |      6.1.2       | Jun 26, 2026 |
 
 
 ### 11. Documentation
@@ -138,7 +138,7 @@ libraries. Thus, `FFmpeg` libraries created by `FFmpegKitNext` are licensed unde
 `--enable-gpl` is provided they become subject to `GPL v3.0`.
 
 Refer to [Licenses](https://github.com/arthenica/ffmpeg-kit-next/wiki/Licenses) to see the licenses of all libraries.
-[Trademark](https://github.com/arthenica/ffmpeg-kit-next/wiki/Trademark) lists the trademarks used in the
+[Trademarks](https://github.com/arthenica/ffmpeg-kit-next/wiki/Trademarks) lists the trademarks used in the
 `FFmpegKitNext` documentation.
 
 ### 14. Patents
