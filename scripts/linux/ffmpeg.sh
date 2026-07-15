@@ -53,6 +53,11 @@ TARGET_CPU=""
 TARGET_ARCH=""
 ASM_OPTIONS=""
 case ${ARCH} in
+arm64)
+  TARGET_CPU="armv8-a"
+  TARGET_ARCH="aarch64"
+  ASM_OPTIONS=" --enable-neon --enable-asm --enable-inline-asm"
+  ;;
 x86-64)
   TARGET_CPU="x86-64"
   TARGET_ARCH="x86_64"
