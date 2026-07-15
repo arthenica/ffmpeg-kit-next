@@ -137,9 +137,9 @@ under the `GPL v3.0` in those bundles. And that makes the whole bundle effective
 libraries. Thus, `FFmpeg` libraries created by `FFmpegKitNext` are licensed under the `LGPL v3.0` by default. Only when
 `--enable-gpl` is provided they become subject to `GPL v3.0`.
 
-Refer to [Licenses](https://github.com/arthenica/ffmpeg-kit-next/wiki/Licenses) to see the licenses of all libraries.
-[Trademarks](https://github.com/arthenica/ffmpeg-kit-next/wiki/Trademarks) lists the trademarks used in the
-`FFmpegKitNext` documentation.
+Refer to [Licenses and Notices](https://github.com/arthenica/ffmpeg-kit-next/wiki/Licenses-and-Notices) to see the
+licenses of all libraries. [Trademarks](https://github.com/arthenica/ffmpeg-kit-next/wiki/Trademarks) lists the
+trademarks used in the `FFmpegKitNext` documentation.
 
 ### 14. Patents
 
