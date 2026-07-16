@@ -6,6 +6,9 @@ git clean -dfx 2>/dev/null 1>/dev/null
 # OVERRIDE SYSTEM PROCESSOR
 SYSTEM_PROCESSOR=""
 case ${ARCH} in
+arm64)
+  SYSTEM_PROCESSOR="aarch64"
+  ;;
 x86-64)
   SYSTEM_PROCESSOR="x86_64"
   ;;

@@ -900,26 +900,24 @@ open class FFmpegKitConfig private constructor() {
             mediaInformationSession.startRunning()
 
             try {
-                val returnCodeValue = nativeFFprobeExecute(
+                // ffprobe writes its JSON straight into a native buffer (not the
+                // logs) and returns the raw UTF-8 bytes, or null when it fails.
+                val output = nativeFFprobeGetMediaInformation(
                     mediaInformationSession.getSessionId(),
                     mediaInformationSession.getArguments()
                 )
-                val returnCode = ReturnCode(returnCodeValue)
+                val returnCode = ReturnCode(if (output != null) ReturnCode.SUCCESS else 1)
                 mediaInformationSession.complete(returnCode)
-                if (returnCode.isValueSuccess()) {
-                    val allLogs = mediaInformationSession.getAllLogs(waitTimeout)
-                    val ffprobeJsonOutput = StringBuilder()
-                    var i = 0
-                    val allLogsSize = allLogs.size
-                    while (i < allLogsSize) {
-                        val log = allLogs[i]
-                        if (log.level == Level.AV_LOG_STDERR) {
-                            ffprobeJsonOutput.append(log.message)
-                        }
-                        i++
-                    }
+
+                // NOTE: waitTimeout is retained for API compatibility but is no
+                // longer used here. ffprobe writes the JSON synchronously into
+                // the buffer above, so it is already complete and does not
+                // depend on async log delivery. Callers that read the session
+                // logs afterwards still get the wait, because getAllLogs applies
+                // the timeout itself.
+                if (returnCode.isValueSuccess() && output != null) {
                     val mediaInformation =
-                        MediaInformationJsonParser.fromWithError(ffprobeJsonOutput.toString())
+                        MediaInformationJsonParser.fromWithError(String(output, Charsets.UTF_8))
                     mediaInformationSession.setMediaInformation(mediaInformation)
                 }
             } catch (e: Exception) {
@@ -2065,6 +2063,18 @@ open class FFmpegKitConfig private constructor() {
          */
         @JvmStatic
         external fun nativeFFprobeExecute(sessionId: Long, arguments: Array<String>): Int
+
+        /**
+         * Runs ffprobe capturing its formatted output into a native buffer and
+         * returns the raw UTF-8 bytes, or null when ffprobe returns a non-zero
+         * code. Used by getMediaInformation so the JSON never routes through the
+         * av_log path (which would truncate large values).
+         */
+        @JvmStatic
+        private external fun nativeFFprobeGetMediaInformation(
+            sessionId: Long,
+            arguments: Array<String>
+        ): ByteArray?
 
         /**
          * <p>Cancels an ongoing FFmpeg operation natively. This method does not wait for termination

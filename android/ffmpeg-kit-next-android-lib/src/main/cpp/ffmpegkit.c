@@ -248,6 +248,9 @@ JNINativeMethod configMethods[] = {
      (void *)Java_com_arthenica_ffmpegkit_FFmpegKitConfig_nativeFFmpegCancel},
     {"nativeFFprobeExecute", "(J[Ljava/lang/String;)I",
      (void *)Java_com_arthenica_ffmpegkit_FFmpegKitConfig_nativeFFprobeExecute},
+    {"nativeFFprobeGetMediaInformation", "(J[Ljava/lang/String;)[B",
+     (void *)
+         Java_com_arthenica_ffmpegkit_FFmpegKitConfig_nativeFFprobeGetMediaInformation},
     {"registerNewNativeFFmpegPipe", "(Ljava/lang/String;)I",
      (void *)
          Java_com_arthenica_ffmpegkit_FFmpegKitConfig_registerNewNativeFFmpegPipe},

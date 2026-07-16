@@ -211,7 +211,7 @@ abstract class AbstractSession protected constructor(
     override fun getLogRedirectionStrategy(): LogRedirectionStrategy = logRedirectionStrategy
 
     override fun thereAreAsynchronousMessagesInTransmit(): Boolean =
-        FFmpegKitConfig.messagesInTransmit(sessionId) != 0
+        FFmpegKitConfig.messagesInTransmit(sessionId) > 0
 
     override fun addLog(log: Log) {
         synchronized(logsLock) {

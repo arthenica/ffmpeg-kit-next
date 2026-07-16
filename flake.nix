@@ -9,6 +9,7 @@
     let
       systems = [
         "aarch64-darwin"
+        "aarch64-linux"
         "x86_64-darwin"
         "x86_64-linux"
       ];
@@ -59,14 +60,22 @@
 
       pkgConfigLibdir = pkgs: pkgConfigLibdirFor pkgs (pkgConfigPackages pkgs);
 
+      # THE ARCHITECTURE NAME USED IN FFMPEG-KIT BUILD SCRIPTS AND DOCUMENTATION
+      linuxArchName = pkgs:
+        if pkgs.stdenv.hostPlatform.isAarch64 then "arm64" else "x86_64";
+
+      # THE DEBIAN MULTIARCH TUPLE, E.G. aarch64-linux-gnu OR x86_64-linux-gnu
+      linuxMultiarchTuple = pkgs:
+        "${pkgs.stdenv.hostPlatform.parsed.cpu.name}-linux-gnu";
+
       linuxSystemPkgConfigLibdir = pkgs:
         pkgs.lib.concatStringsSep ":" [
           "/usr/local/lib/pkgconfig"
-          "/usr/local/lib/x86_64-linux-gnu/pkgconfig"
+          "/usr/local/lib/${linuxMultiarchTuple pkgs}/pkgconfig"
           "/usr/local/share/pkgconfig"
           "/usr/lib/pkgconfig"
           "/usr/lib64/pkgconfig"
-          "/usr/lib/x86_64-linux-gnu/pkgconfig"
+          "/usr/lib/${linuxMultiarchTuple pkgs}/pkgconfig"
           "/usr/lib/${pkgs.stdenv.hostPlatform.config}/pkgconfig"
           "/usr/share/pkgconfig"
         ];
@@ -313,7 +322,7 @@
             export FFMPEG_KIT_NIX_GLIBC_VERSION="${pkgs.glibc.version}"
             ${linuxPkgConfigShellHook pkgs}
 
-            echo "FFmpegKit Linux x86_64 glibc ${pkgs.glibc.version} toolchain environment loaded for ${system}"
+            echo "FFmpegKit Linux ${linuxArchName pkgs} glibc ${pkgs.glibc.version} toolchain environment loaded for ${system}"
           '';
         };
     in
@@ -324,7 +333,7 @@
           linuxToolchainDevShell = linuxToolchainShell system pkgs;
           linuxGlibcProfileName =
             if pkgs.stdenv.hostPlatform.isLinux
-            then "linux-x86_64-glibc-${pkgs.lib.replaceStrings [ "." ] [ "_" ] (builtins.head (pkgs.lib.splitString "-" pkgs.glibc.version))}"
+            then "linux-${linuxArchName pkgs}-glibc-${pkgs.lib.replaceStrings [ "." ] [ "_" ] (builtins.head (pkgs.lib.splitString "-" pkgs.glibc.version))}"
             else null;
           xcode26Shell = pkgs.mkShellNoCC {
             packages = commonPackages pkgs;

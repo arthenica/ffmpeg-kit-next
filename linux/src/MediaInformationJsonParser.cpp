@@ -18,8 +18,17 @@
  */
 
 #include "MediaInformationJsonParser.h"
-// OVERRIDING THE MACRO TO PREVENT APPLICATION TERMINATION
-#define RAPIDJSON_ASSERT(x)
+// OVERRIDING THE MACRO TO PREVENT APPLICATION TERMINATION. RAPIDJSON PRECONDITIONS
+// ARE ASSERTIONS THAT abort() BY DEFAULT; THROWING INSTEAD KEEPS THEM CATCHABLE.
+// RAPIDJSON_ASSERT_THROWS KEEPS THE noexcept CALL SITES ON assert(), WHERE THROWING
+// WOULD CALL std::terminate. BOTH MUST BE DEFINED BEFORE rapidjson/document.h.
+#include <stdexcept>
+#define RAPIDJSON_ASSERT(x)                                                    \
+    do {                                                                       \
+        if (!(x))                                                              \
+            throw std::logic_error("rapidjson: " #x);                          \
+    } while (0)
+#define RAPIDJSON_ASSERT_THROWS
 #include "rapidjson/document.h"
 #include "rapidjson/error/en.h"
 #include "rapidjson/reader.h"
@@ -27,6 +36,64 @@
 
 static const char *MediaInformationJsonParserKeyStreams = "streams";
 static const char *MediaInformationJsonParserKeyChapters = "chapters";
+
+namespace {
+
+/**
+ * Converts a parsed rapidjson value into its ffmpegkit::json::Value equivalent.
+ *
+ * This is the only place rapidjson types are read. Every accessor is guarded by
+ * the matching type check, so rapidjson preconditions are never violated and the
+ * result owns all of its data.
+ *
+ * @param source parsed value
+ * @return an equivalent value, null when source has no representable type
+ */
+ffmpegkit::json::Value toJsonValue(const rapidjson::Value &source) {
+    switch (source.GetType()) {
+    case rapidjson::kFalseType:
+        return ffmpegkit::json::Value(false);
+    case rapidjson::kTrueType:
+        return ffmpegkit::json::Value(true);
+    case rapidjson::kStringType:
+        return ffmpegkit::json::Value(
+            std::string(source.GetString(), source.GetStringLength()));
+    case rapidjson::kNumberType:
+        if (source.IsInt64()) {
+            return ffmpegkit::json::Value(source.GetInt64());
+        } else if (source.IsUint64() &&
+                   source.GetUint64() <=
+                       static_cast<uint64_t>(INT64_MAX)) {
+            return ffmpegkit::json::Value(
+                static_cast<int64_t>(source.GetUint64()));
+        } else {
+            return ffmpegkit::json::Value(source.GetDouble());
+        }
+    case rapidjson::kObjectType: {
+        auto object = ffmpegkit::json::Value::makeObject();
+        for (auto member = source.MemberBegin(); member != source.MemberEnd();
+             ++member) {
+            object.set(std::string(member->name.GetString(),
+                                   member->name.GetStringLength()),
+                       toJsonValue(member->value));
+        }
+        return object;
+    }
+    case rapidjson::kArrayType: {
+        auto array = ffmpegkit::json::Value::makeArray();
+        for (auto element = source.Begin(); element != source.End();
+             ++element) {
+            array.append(toJsonValue(*element));
+        }
+        return array;
+    }
+    case rapidjson::kNullType:
+    default:
+        return ffmpegkit::json::Value();
+    }
+}
+
+} // namespace
 
 std::shared_ptr<ffmpegkit::MediaInformation>
 ffmpegkit::MediaInformationJsonParser::from(
@@ -60,33 +127,32 @@ ffmpegkit::MediaInformationJsonParser::fromWithError(
                 std::vector<std::shared_ptr<ffmpegkit::Chapter>>>();
 
         if (document->HasMember(MediaInformationJsonParserKeyStreams)) {
-            rapidjson::Value &streamArray =
+            const rapidjson::Value &streamArray =
                 (*document.get())[MediaInformationJsonParserKeyStreams];
             if (streamArray.IsArray()) {
                 for (rapidjson::SizeType i = 0; i < streamArray.Size(); i++) {
-                    auto stream = std::make_shared<rapidjson::Value>();
-                    *stream = streamArray[i];
                     streams->push_back(
-                        std::make_shared<ffmpegkit::StreamInformation>(stream));
+                        std::make_shared<ffmpegkit::StreamInformation>(
+                            std::make_shared<ffmpegkit::json::Value>(
+                                toJsonValue(streamArray[i]))));
                 }
             }
         }
 
         if (document->HasMember(MediaInformationJsonParserKeyChapters)) {
-            rapidjson::Value &chapterArray =
+            const rapidjson::Value &chapterArray =
                 (*document.get())[MediaInformationJsonParserKeyChapters];
             if (chapterArray.IsArray()) {
                 for (rapidjson::SizeType i = 0; i < chapterArray.Size(); i++) {
-                    auto chapter = std::make_shared<rapidjson::Value>();
-                    *chapter = chapterArray[i];
-                    chapters->push_back(
-                        std::make_shared<ffmpegkit::Chapter>(chapter));
+                    chapters->push_back(std::make_shared<ffmpegkit::Chapter>(
+                        std::make_shared<ffmpegkit::json::Value>(
+                            toJsonValue(chapterArray[i]))));
                 }
             }
         }
 
         return std::make_shared<ffmpegkit::MediaInformation>(
-            std::static_pointer_cast<rapidjson::Value>(document), streams,
-            chapters);
+            std::make_shared<ffmpegkit::json::Value>(toJsonValue(*document)),
+            streams, chapters);
     }
 }

@@ -28,7 +28,6 @@ android {
 
     defaultConfig {
         minSdkVersion 24
-        targetSdkVersion 34
         versionCode 810
         versionName "8.1.0"
     }

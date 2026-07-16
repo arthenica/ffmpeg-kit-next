@@ -204,7 +204,7 @@ extern void addSessionToSessionHistory(id<Session> session);
 }
 
 - (BOOL)thereAreAsynchronousMessagesInTransmit {
-    return ([FFmpegKitConfig messagesInTransmit:_sessionId] != 0);
+    return ([FFmpegKitConfig messagesInTransmit:_sessionId] > 0);
 }
 
 - (void)addLog:(Log *)log {

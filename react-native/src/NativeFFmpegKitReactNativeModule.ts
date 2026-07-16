@@ -66,6 +66,7 @@ export interface Spec extends TurboModule {
 
   // Log level / history size
   getLogLevel(): Promise<number>;
+  printLoadConfirmation(): Promise<void>;
   setLogLevel(level: number): Promise<void>;
   getSessionHistorySize(): Promise<number>;
   setSessionHistorySize(sessionHistorySize: number): Promise<void>;
@@ -76,6 +77,7 @@ export interface Spec extends TurboModule {
   getLastCompletedSession(): Promise<Object>;
   getSessions(): Promise<Object[]>;
   clearSessions(): Promise<void>;
+  deleteSession(sessionId: number): Promise<void>;
   getSessionsByState(sessionState: number): Promise<Object[]>;
   getLogRedirectionStrategy(): Promise<number>;
   setLogRedirectionStrategy(logRedirectionStrategy: number): Promise<void>;
@@ -85,7 +87,11 @@ export interface Spec extends TurboModule {
 
   // Storage Access Framework (Android)
   selectDocument(writable: boolean, title?: string, type?: string, extraTypes?: string[]): Promise<string>;
-  getSafParameter(uriString: string, openMode: string): Promise<string>;
+  getSafParameter(uriString: string, openMode: string, reusable?: boolean): Promise<string>;
+  unregisterSafProtocolUrl(safUrl: string): Promise<void>;
+
+  // Camera (Android)
+  getSupportedCameraIds(): Promise<string[]>;
 
   // Cancel
   cancel(): Promise<void>;

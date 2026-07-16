@@ -2,7 +2,7 @@
 
 source "${BASEDIR}/scripts/function-apple.sh"
 
-prepare_inline_sed
+prepare_inline_sed || exit 1
 
 enable_default_macos_architectures() {
   ENABLED_ARCHITECTURES[ARCH_ARM64]=1

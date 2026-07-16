@@ -266,14 +266,19 @@ update_flutter() {
   replace_in_file "${BASEDIR}/flutter/flutter/pubspec.yaml" "Flutter pubspec version" 'BEGIN { $count = 0 } $count += s/^(version:[ \t]*)[^\r\n]+/${1}$ENV{NEW_VERSION}/mg; END { exit($count ? 0 : 3) }'
   replace_in_file "${BASEDIR}/flutter/flutter/lib/src/ffmpeg_kit_factory.dart" "Flutter Dart version" 'BEGIN { $count = 0 } $count += s/(static String getVersion\(\) => ")[^"]+(";)/${1}$ENV{NEW_VERSION}${2}/g; END { exit($count ? 0 : 3) }'
   replace_in_file "${BASEDIR}/flutter/flutter/android/build.gradle" "Flutter Android version" 'BEGIN { $count = 0 } $count += s/(versionCode[ \t]+)[0-9]+/${1}$ENV{PACKAGE_VERSION_CODE}/g; $count += s/(versionName[ \t]+")[^"]+(")/${1}$ENV{NEW_VERSION}${2}/g; $count += s/(implementation '\''com\.arthenica:ffmpeg-kit-next:)[^'\'']+('\''\s*)/${1}$ENV{NEW_VERSION}${2}/g; END { exit($count >= 3 ? 0 : 3) }'
+  replace_in_file "${BASEDIR}/flutter/flutter/android/src/main/java/com/arthenica/ffmpegkit/flutter/FFmpegKitFlutterPlugin.java" "Flutter Android plugin library version" 'BEGIN { $count = 0 } $count += s/(public static final String LIBRARY_VERSION[ \t]*=[ \t]*")[^"]+(";)/${1}$ENV{NEW_VERSION}${2}/g; END { exit($count ? 0 : 3) }'
   replace_in_file "${BASEDIR}/flutter/flutter/ios/ffmpeg_kit_next_flutter.podspec" "Flutter iOS podspec version" 'BEGIN { $count = 0 } $count += s/(s\.version[ \t]*=[ \t]*'\''\s*)[^'\'']+('\''\s*)/${1}$ENV{NEW_VERSION}${2}/g; END { exit($count ? 0 : 3) }'
+  replace_in_file "${BASEDIR}/flutter/flutter/ios/ffmpeg_kit_next_flutter/Sources/ffmpeg_kit_next_flutter/FFmpegKitFlutterPlugin.m" "Flutter iOS plugin library version" 'BEGIN { $count = 0 } $count += s/(static NSString \*const LIBRARY_VERSION[ \t]*=[ \t]*@")[^"]+(";)/${1}$ENV{NEW_VERSION}${2}/g; END { exit($count ? 0 : 3) }'
   replace_in_file "${BASEDIR}/flutter/flutter/macos/ffmpeg_kit_next_flutter.podspec" "Flutter macOS podspec version" 'BEGIN { $count = 0 } $count += s/(s\.version[ \t]*=[ \t]*'\''\s*)[^'\'']+('\''\s*)/${1}$ENV{NEW_VERSION}${2}/g; END { exit($count ? 0 : 3) }'
+  replace_in_file "${BASEDIR}/flutter/flutter/macos/ffmpeg_kit_next_flutter/Sources/ffmpeg_kit_next_flutter/FFmpegKitFlutterPlugin.m" "Flutter macOS plugin library version" 'BEGIN { $count = 0 } $count += s/(static NSString \*const LIBRARY_VERSION[ \t]*=[ \t]*@")[^"]+(";)/${1}$ENV{NEW_VERSION}${2}/g; END { exit($count ? 0 : 3) }'
 }
 
 update_react_native() {
   replace_in_file "${BASEDIR}/react-native/package.json" "React Native package version" 'BEGIN { $count = 0 } $count += s/("version"[ \t]*:[ \t]*")[^"]+(",)/${1}$ENV{NEW_VERSION}${2}/g; END { exit($count ? 0 : 3) }'
   replace_in_file "${BASEDIR}/react-native/android/build.gradle" "React Native Android version" 'BEGIN { $count = 0 } $count += s/(versionCode[ \t]+)[0-9]+/${1}$ENV{PACKAGE_VERSION_CODE}/g; $count += s/(versionName[ \t]+")[^"]+(")/${1}$ENV{NEW_VERSION}${2}/g; $count += s/(implementation '\''com\.arthenica:ffmpeg-kit-next:)[^'\'']+('\''\s*)/${1}$ENV{NEW_VERSION}${2}/g; END { exit($count >= 3 ? 0 : 3) }'
+  replace_in_file "${BASEDIR}/react-native/android/src/main/java/com/arthenica/ffmpegkit/reactnative/FFmpegKitReactNativeModule.java" "React Native Android module library version" 'BEGIN { $count = 0 } $count += s/(public static final String LIBRARY_VERSION[ \t]*=[ \t]*")[^"]+(";)/${1}$ENV{NEW_VERSION}${2}/g; END { exit($count ? 0 : 3) }'
   replace_in_file "${BASEDIR}/react-native/src/index.js" "React Native JavaScript version" 'BEGIN { $count = 0 } $count += s/(static getVersion\(\)[ \t\r\n]*\{[ \t\r\n]*return ")[^"]+(";[ \t\r\n]*\})/${1}$ENV{NEW_VERSION}${2}/g; END { exit($count ? 0 : 3) }'
+  replace_in_file "${BASEDIR}/react-native/ios/FFmpegKitReactNativeModule.mm" "React Native iOS module library version" 'BEGIN { $count = 0 } $count += s/(static NSString \*const LIBRARY_VERSION[ \t]*=[ \t]*@")[^"]+(";)/${1}$ENV{NEW_VERSION}${2}/g; END { exit($count ? 0 : 3) }'
 }
 
 printf 'Updating version to %s\n' "$NEW_VERSION"

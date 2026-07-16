@@ -1,14 +1,13 @@
-The source code of "FFmpegKit", "FFmpeg" and external libraries enabled within
-"FFmpeg" for this release can be downloaded from
-https://github.com/arthenica/ffmpeg-kit-next/wiki/Source page.
+The source code of "FFmpegKitNext", "FFmpeg" and external source packages
+downloaded by "FFmpegKitNext" build scripts for this release is listed on
+the following page:
 
-If you want to receive the source code on physical media submit your request
-to "open-source@arthenica.com" email address.
+https://github.com/arthenica/ffmpeg-kit-next/wiki/Source
 
-Your request should include "FFmpegKit" version, "FFmpegKit" platform, your
-name, your company name, your mailing address, the phone number and the date
-you started using "FFmpegKit".
+"FFmpegKitNext" does not distribute ready-to-use binary packages. Build
+outputs are produced locally by users from the published source code and the
+source packages pinned by the build scripts.
 
-Note that we may charge you a fee to cover physical media printing and
-shipping costs. Your request must be sent within the first three years of the
-date you received "FFmpegKit" with "GPL v3.0" license.
+If you distribute binaries built from "FFmpegKitNext", you are responsible
+for complying with the licenses that apply to your distribution, including
+any corresponding source obligations.
