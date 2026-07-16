@@ -10,10 +10,10 @@ display_help() {
     PROFILE_OPTION="  -p, --profile PROFILE\t\tnix develop profile to use\n      --list-profiles\t\tlist local nix develop profiles"
   fi
 
-  echo -e "\n'$COMMAND' builds FFmpegKit for Linux platform. By default only one Linux architecture \
-(x86-64) is built without any external libraries enabled. Options can be used to \
-enable external libraries. Please note that GPL libraries (external libraries with GPL \
-license) need --enable-gpl flag to be set explicitly. When compilation ends, \
+  echo -e "\n'$COMMAND' builds FFmpegKit for Linux platform. Linux libraries are compiled natively, \
+therefore only the architecture of the host machine (arm64 or x86-64) is built, without any external \
+libraries enabled. Options can be used to enable external libraries. Please note that GPL libraries \
+(external libraries with GPL license) need --enable-gpl flag to be set explicitly. When compilation ends, \
 libraries are created under the prebuilt folder.\n"
   echo -e "Usage: ./$COMMAND ${PROFILE_USAGE}[OPTION]...\n"
   echo -e "Specify environment variables as VARIABLE=VALUE to override default build options.\n"
@@ -22,7 +22,8 @@ libraries are created under the prebuilt folder.\n"
   display_help_licensing
 
   echo -e "Architectures:"
-  echo -e "  --disable-x86-64\t\tdo not build x86-64 architecture [yes]\n"
+  echo -e "  --disable-arm64\t\tdo not build arm64 architecture [yes, on arm64 hosts]"
+  echo -e "  --disable-x86-64\t\tdo not build x86-64 architecture [yes, on x86-64 hosts]\n"
 
   echo -e "Libraries:"
   echo -e "  --full\t\t\tenables all external libraries"

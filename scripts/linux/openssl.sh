@@ -3,6 +3,9 @@
 # SET BUILD OPTIONS
 ASM_OPTIONS=""
 case ${ARCH} in
+arm64)
+  ASM_OPTIONS="linux-aarch64 enable-ec_nistp_64_gcc_128"
+  ;;
 x86-64)
   ASM_OPTIONS="linux-x86_64 enable-ec_nistp_64_gcc_128"
   ;;

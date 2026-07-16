@@ -26,6 +26,7 @@
 #import <ffmpegkit/FFmpegKitStreamOutput.h>
 
 static NSString *const PLATFORM_NAME = @"macos";
+static NSString *const LIBRARY_VERSION = @"8.1.0";
 
 static NSString *const METHOD_CHANNEL = @"flutter.arthenica.com/ffmpeg_kit";
 static NSString *const EVENT_CHANNEL = @"flutter.arthenica.com/ffmpeg_kit_event";
@@ -62,6 +63,7 @@ static int const SESSION_TYPE_MEDIA_INFORMATION = 3;
 static NSString *const EVENT_LOG_CALLBACK_EVENT = @"FFmpegKitLogCallbackEvent";
 static NSString *const EVENT_STATISTICS_CALLBACK_EVENT = @"FFmpegKitStatisticsCallbackEvent";
 static NSString *const EVENT_COMPLETE_CALLBACK_EVENT = @"FFmpegKitCompleteCallbackEvent";
+static NSString *const EVENT_SESSION_DELETED_CALLBACK_EVENT = @"FFmpegKitSessionDeletedCallbackEvent";
 
 // ARGUMENT NAMES
 static NSString *const ARGUMENT_SESSION_ID = @"sessionId";
@@ -98,16 +100,21 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
     streamInputRegistry = [[NSMutableDictionary alloc] init];
     streamOutputRegistry = [[NSMutableDictionary alloc] init];
 
+    [self registerSessionDeleteListener];
+
     NSLog(@"FFmpegKitFlutterPlugin %p created.\n", self);
   }
 
   return self;
 }
 
+- (void)dealloc {
+  [self unregisterSessionDeleteListener];
+}
+
 - (FlutterError *)onListenWithArguments:(id)arguments eventSink:(FlutterEventSink)eventSink {
   _eventSink = eventSink;
   NSLog(@"FFmpegKitFlutterPlugin %p started listening to events on %p.\n", self, eventSink);
-  [self registerGlobalCallbacks];
   return nil;
 }
 
@@ -126,45 +133,70 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
   [eventChannel setStreamHandler:instance];
 }
 
-- (void)registerGlobalCallbacks {
-  [FFmpegKitConfig enableFFmpegSessionCompleteCallback:^(FFmpegSession* session){
-    NSDictionary *dictionary = [FFmpegKitFlutterPlugin toSessionDictionary:session];
-    dispatch_async(dispatch_get_main_queue(), ^() {
-      self->_eventSink([FFmpegKitFlutterPlugin toStringDictionary:EVENT_COMPLETE_CALLBACK_EVENT withDictionary:dictionary]);
-    });
-  }];
-
-  [FFmpegKitConfig enableFFprobeSessionCompleteCallback:^(FFprobeSession* session){
-    NSDictionary *dictionary = [FFmpegKitFlutterPlugin toSessionDictionary:session];
-    dispatch_async(dispatch_get_main_queue(), ^() {
-      self->_eventSink([FFmpegKitFlutterPlugin toStringDictionary:EVENT_COMPLETE_CALLBACK_EVENT withDictionary:dictionary]);
-    });
-  }];
-
-  [FFmpegKitConfig enableMediaInformationSessionCompleteCallback:^(MediaInformationSession* session){
-    NSDictionary *dictionary = [FFmpegKitFlutterPlugin toSessionDictionary:session];
-    dispatch_async(dispatch_get_main_queue(), ^() {
-      self->_eventSink([FFmpegKitFlutterPlugin toStringDictionary:EVENT_COMPLETE_CALLBACK_EVENT withDictionary:dictionary]);
-    });
-  }];
-
-  [FFmpegKitConfig enableLogCallback: ^(Log* log){
-    if (self->logsEnabled) {
-      NSDictionary *dictionary = [FFmpegKitFlutterPlugin toLogDictionary:log];
-      dispatch_async(dispatch_get_main_queue(), ^() {
-        self->_eventSink([FFmpegKitFlutterPlugin toStringDictionary:EVENT_LOG_CALLBACK_EVENT withDictionary:dictionary]);
-      });
+- (void)emitSession:(id<Session>)session {
+  NSDictionary *dictionary = [FFmpegKitFlutterPlugin toSessionDictionary:session];
+  dispatch_async(dispatch_get_main_queue(), ^() {
+    FlutterEventSink sink = self->_eventSink;
+    if (sink != nil) {
+      sink([FFmpegKitFlutterPlugin toStringDictionary:EVENT_COMPLETE_CALLBACK_EVENT withDictionary:dictionary]);
     }
-  }];
+  });
+}
 
-  [FFmpegKitConfig enableStatisticsCallback:^(Statistics* statistics){
-    if (self->statisticsEnabled) {
-      NSDictionary *dictionary = [FFmpegKitFlutterPlugin toStatisticsDictionary:statistics];
-      dispatch_async(dispatch_get_main_queue(), ^() {
-        self->_eventSink([FFmpegKitFlutterPlugin toStringDictionary:EVENT_STATISTICS_CALLBACK_EVENT withDictionary:dictionary]);
-      });
+- (void)emitLog:(Log*)log {
+  if (!self->logsEnabled) {
+    return;
+  }
+  NSDictionary *dictionary = [FFmpegKitFlutterPlugin toLogDictionary:log];
+  dispatch_async(dispatch_get_main_queue(), ^() {
+    FlutterEventSink sink = self->_eventSink;
+    if (sink != nil) {
+      sink([FFmpegKitFlutterPlugin toStringDictionary:EVENT_LOG_CALLBACK_EVENT withDictionary:dictionary]);
     }
-  }];
+  });
+}
+
+- (void)emitStatistics:(Statistics*)statistics {
+  if (!self->statisticsEnabled) {
+    return;
+  }
+  NSDictionary *dictionary = [FFmpegKitFlutterPlugin toStatisticsDictionary:statistics];
+  dispatch_async(dispatch_get_main_queue(), ^() {
+    FlutterEventSink sink = self->_eventSink;
+    if (sink != nil) {
+      sink([FFmpegKitFlutterPlugin toStringDictionary:EVENT_STATISTICS_CALLBACK_EVENT withDictionary:dictionary]);
+    }
+  });
+}
+
+- (void)emitSessionDeleted:(long)sessionId {
+  NSDictionary *dictionary = @{KEY_SESSION_ID: [NSNumber numberWithLong:sessionId]};
+  dispatch_async(dispatch_get_main_queue(), ^() {
+    FlutterEventSink sink = self->_eventSink;
+    if (sink != nil) {
+      sink([FFmpegKitFlutterPlugin toStringDictionary:EVENT_SESSION_DELETED_CALLBACK_EVENT withDictionary:dictionary]);
+    }
+  });
+}
+
+- (void)sessionDeleted:(long)sessionId {
+  [self emitSessionDeleted:sessionId];
+}
+
+- (void)registerSessionDeleteListener {
+  SEL selector = NSSelectorFromString(@"addSessionDeleteListener:");
+  if ([FFmpegKitConfig respondsToSelector:selector]) {
+    void (*registerListener)(id, SEL, id) = (void (*)(id, SEL, id))[FFmpegKitConfig methodForSelector:selector];
+    registerListener(FFmpegKitConfig, selector, self);
+  }
+}
+
+- (void)unregisterSessionDeleteListener {
+  SEL selector = NSSelectorFromString(@"removeSessionDeleteListener:");
+  if ([FFmpegKitConfig respondsToSelector:selector]) {
+    void (*unregisterListener)(id, SEL, id) = (void (*)(id, SEL, id))[FFmpegKitConfig methodForSelector:selector];
+    unregisterListener(FFmpegKitConfig, selector, self);
+  }
 }
 
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
@@ -382,6 +414,8 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
     }
   } else if ([@"getLogLevel" isEqualToString:call.method]) {
     [self getLogLevel:result];
+  } else if ([@"printLoadConfirmation" isEqualToString:call.method]) {
+    [self printLoadConfirmation:result];
   } else if ([@"setLogLevel" isEqualToString:call.method]) {
     NSNumber* level = call.arguments[@"level"];
     if (level != nil) {
@@ -412,6 +446,12 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
     [self getSessions:result];
   } else if ([@"clearSessions" isEqualToString:call.method]) {
     [self clearSessions:result];
+  } else if ([@"deleteSession" isEqualToString:call.method]) {
+    if (sessionId != nil) {
+      [self deleteSession:sessionId result:result];
+    } else {
+      result([FlutterError errorWithCode:@"INVALID_SESSION" message:@"Invalid session id." details:nil]);
+    }
   } else if ([@"getSessionsByState" isEqualToString:call.method]) {
     NSNumber* stateIndex = call.arguments[@"state"];
     if (stateIndex != nil) {
@@ -450,6 +490,8 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
     [self selectDocument:result];
   } else if ([@"getSafParameter" isEqualToString:call.method]) {
     [self getSafParameter:result];
+  } else if ([@"unregisterSafProtocolUrl" isEqualToString:call.method]) {
+    [self unregisterSafProtocolUrl:result];
   } else if ([@"cancel" isEqualToString:call.method]) {
     [self cancel:result];
   } else if ([@"cancelSession" isEqualToString:call.method]) {
@@ -468,6 +510,8 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
     [self getPackageName:result];
   } else if ([@"getExternalLibraries" isEqualToString:call.method]) {
     [self getExternalLibraries:result];
+  } else if ([@"getSupportedCameraIds" isEqualToString:call.method]) {
+    [self getSupportedCameraIds:result];
   } else if ([@"inputBufferFromByteArray" isEqualToString:call.method]) {
     FlutterStandardTypedData* data = call.arguments[@"data"];
     NSString* extension = call.arguments[@"extension"];
@@ -678,7 +722,13 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
 // FFmpegSession
 
 - (void)ffmpegSession:(NSArray*)arguments result:(FlutterResult)result {
-  FFmpegSession* session = [FFmpegSession create:arguments withCompleteCallback:nil withLogCallback:nil withStatisticsCallback:nil withLogRedirectionStrategy:LogRedirectionStrategyNeverPrintLogs];
+  FFmpegSession* session = [FFmpegSession create:arguments withCompleteCallback:^(FFmpegSession* completedSession){
+    [self emitSession:completedSession];
+  } withLogCallback:^(Log* log){
+    [self emitLog:log];
+  } withStatisticsCallback:^(Statistics* statistics){
+    [self emitStatistics:statistics];
+  } withLogRedirectionStrategy:LogRedirectionStrategyNeverPrintLogs];
   result([FFmpegKitFlutterPlugin toSessionDictionary:session]);
 }
 
@@ -719,14 +769,22 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
 // FFprobeSession
 
 - (void)ffprobeSession:(NSArray*)arguments result:(FlutterResult)result {
-  FFprobeSession* session = [FFprobeSession create:arguments withCompleteCallback:nil withLogCallback:nil withLogRedirectionStrategy:LogRedirectionStrategyNeverPrintLogs];
+  FFprobeSession* session = [FFprobeSession create:arguments withCompleteCallback:^(FFprobeSession* completedSession){
+    [self emitSession:completedSession];
+  } withLogCallback:^(Log* log){
+    [self emitLog:log];
+  } withLogRedirectionStrategy:LogRedirectionStrategyNeverPrintLogs];
   result([FFmpegKitFlutterPlugin toSessionDictionary:session]);
 }
 
 // MediaInformationSession
 
 - (void)mediaInformationSession:(NSArray*)arguments result:(FlutterResult)result {
-  MediaInformationSession* session = [MediaInformationSession create:arguments withCompleteCallback:nil withLogCallback:nil];
+  MediaInformationSession* session = [MediaInformationSession create:arguments withCompleteCallback:^(MediaInformationSession* completedSession){
+    [self emitSession:completedSession];
+  } withLogCallback:^(Log* log){
+    [self emitLog:log];
+  }];
   result([FFmpegKitFlutterPlugin toSessionDictionary:session]);
 }
 
@@ -979,6 +1037,15 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
   result([NSNumber numberWithInt:[FFmpegKitConfig getLogLevel]]);
 }
 
+- (void)printLoadConfirmation:(FlutterResult)result {
+  static dispatch_once_t loadedLoggedToken;
+  dispatch_once(&loadedLoggedToken, ^{
+    NSLog(@"Loaded ffmpeg-kit-next-flutter-%@-%@-%@.", PLATFORM_NAME, [ArchDetect getArch], LIBRARY_VERSION);
+  });
+
+  result(nil);
+}
+
 - (void)setLogLevel:(NSNumber*)level result:(FlutterResult)result {
   [FFmpegKitConfig setLogLevel:[level intValue]];
   result(nil);
@@ -1016,6 +1083,11 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
 
 - (void)clearSessions:(FlutterResult)result {
   [FFmpegKitConfig clearSessions];
+  result(nil);
+}
+
+- (void)deleteSession:(NSNumber*)sessionId result:(FlutterResult)result {
+  [FFmpegKitConfig deleteSession:[sessionId longValue]];
   result(nil);
 }
 
@@ -1128,6 +1200,14 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
 }
 
 - (void)getSafParameter:(FlutterResult)result {
+  result([FlutterError errorWithCode:@"NOT_SUPPORTED" message:@"Not supported on macOS platform." details:nil]);
+}
+
+- (void)unregisterSafProtocolUrl:(FlutterResult)result {
+  result([FlutterError errorWithCode:@"NOT_SUPPORTED" message:@"Not supported on macOS platform." details:nil]);
+}
+
+- (void)getSupportedCameraIds:(FlutterResult)result {
   result([FlutterError errorWithCode:@"NOT_SUPPORTED" message:@"Not supported on macOS platform." details:nil]);
 }
 

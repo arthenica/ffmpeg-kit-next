@@ -2,7 +2,7 @@
 
 source "${BASEDIR}/scripts/function.sh"
 
-prepare_inline_sed
+prepare_inline_sed || exit 1
 
 enable_default_android_architectures() {
   ENABLED_ARCHITECTURES[ARCH_ARM_V7A]=1

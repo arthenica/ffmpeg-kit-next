@@ -60,6 +60,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -87,6 +90,7 @@ import io.flutter.plugin.common.PluginRegistry;
 public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCallHandler, EventChannel.StreamHandler, PluginRegistry.ActivityResultListener {
 
     public static final String LIBRARY_NAME = "ffmpeg-kit-flutter";
+    public static final String LIBRARY_VERSION = "8.1.0";
     public static final String PLATFORM_NAME = "android";
 
     private static final String METHOD_CHANNEL = "flutter.arthenica.com/ffmpeg_kit";
@@ -124,6 +128,7 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
     public static final String EVENT_LOG_CALLBACK_EVENT = "FFmpegKitLogCallbackEvent";
     public static final String EVENT_STATISTICS_CALLBACK_EVENT = "FFmpegKitStatisticsCallbackEvent";
     public static final String EVENT_COMPLETE_CALLBACK_EVENT = "FFmpegKitCompleteCallbackEvent";
+    public static final String EVENT_SESSION_DELETED_CALLBACK_EVENT = "FFmpegKitSessionDeletedCallbackEvent";
 
     // REQUEST CODES
     public static final int READABLE_REQUEST_CODE = 10000;
@@ -137,10 +142,13 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
     public static final String ARGUMENT_WRITABLE = "writable";
 
     private static final int asyncConcurrencyLimit = 10;
+    private static final AtomicBoolean loadedLogged = new AtomicBoolean(false);
 
     private final AtomicBoolean logsEnabled;
     private final AtomicBoolean statisticsEnabled;
     private final ExecutorService asyncExecutorService;
+    @Nullable
+    private Object sessionDeleteListener;
 
     private MethodChannel methodChannel;
     private EventChannel eventChannel;
@@ -152,7 +160,7 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
     private ActivityResultLauncher<Intent> documentActivityResultLauncher;
     private boolean legacyActivityResultListenerRegistered;
 
-    private EventChannel.EventSink eventSink;
+    private volatile EventChannel.EventSink eventSink;
     private final FFmpegKitFlutterMethodResultHandler resultHandler;
 
     // "ffkit" protocol object registries, keyed by the generated protocol url.
@@ -172,38 +180,22 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
         Log.d(LIBRARY_NAME, String.format("FFmpegKitFlutterPlugin created %s.", this));
     }
 
-    protected void registerGlobalCallbacks() {
-        FFmpegKitConfig.enableFFmpegSessionCompleteCallback(this::emitSession);
-        FFmpegKitConfig.enableFFprobeSessionCompleteCallback(this::emitSession);
-        FFmpegKitConfig.enableMediaInformationSessionCompleteCallback(this::emitSession);
-
-        FFmpegKitConfig.enableLogCallback(log -> {
-            if (logsEnabled.get()) {
-                emitLog(log);
-            }
-        });
-
-        FFmpegKitConfig.enableStatisticsCallback(statistics -> {
-            if (statisticsEnabled.get()) {
-                emitStatistics(statistics);
-            }
-        });
-    }
-
     @Override
     public void onAttachedToEngine(@NonNull final FlutterPluginBinding flutterPluginBinding) {
         this.flutterPluginBinding = flutterPluginBinding;
+        init(flutterPluginBinding.getBinaryMessenger(), flutterPluginBinding.getApplicationContext());
     }
 
     @Override
     public void onDetachedFromEngine(@NonNull final FlutterPluginBinding binding) {
+        uninit();
         this.flutterPluginBinding = null;
     }
 
     @Override
     public void onAttachedToActivity(@NonNull ActivityPluginBinding activityPluginBinding) {
         Log.d(LIBRARY_NAME, String.format("FFmpegKitFlutterPlugin %s attached to activity %s.", this, activityPluginBinding.getActivity()));
-        init(flutterPluginBinding.getBinaryMessenger(), flutterPluginBinding.getApplicationContext(), activityPluginBinding.getActivity(), activityPluginBinding);
+        attachActivity(activityPluginBinding.getActivity(), activityPluginBinding);
     }
 
     @Override
@@ -218,7 +210,7 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
 
     @Override
     public void onDetachedFromActivity() {
-        uninit();
+        detachActivity();
         Log.d(LIBRARY_NAME, "FFmpegKitFlutterPlugin detached from activity.");
     }
 
@@ -509,6 +501,9 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
             case "getLogLevel":
                 getLogLevel(result);
                 break;
+            case "printLoadConfirmation":
+                printLoadConfirmation(result);
+                break;
             case "setLogLevel":
                 final Integer level = call.argument("level");
                 if (level != null) {
@@ -546,6 +541,13 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
                 break;
             case "clearSessions":
                 clearSessions(result);
+                break;
+            case "deleteSession":
+                if (sessionId != null) {
+                    deleteSession(sessionId, result);
+                } else {
+                    resultHandler.errorAsync(result, "INVALID_SESSION", "Invalid session id.");
+                }
                 break;
             case "getSessionsByState":
                 final Integer state = call.argument("state");
@@ -606,12 +608,21 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
             case "getSafParameter":
                 final String uri = call.argument("uri");
                 final String openMode = call.argument("openMode");
+                final Boolean reusable = call.argument("reusable");
                 if (uri != null && openMode != null) {
-                    getSafParameter(uri, openMode, result);
+                    getSafParameter(uri, openMode, reusable, result);
                 } else if (uri != null) {
                     resultHandler.errorAsync(result, "INVALID_OPEN_MODE", "Invalid openMode value.");
                 } else {
                     resultHandler.errorAsync(result, "INVALID_URI", "Invalid uri value.");
+                }
+                break;
+            case "unregisterSafProtocolUrl":
+                final String safUrl = call.argument("safUrl");
+                if (safUrl != null) {
+                    unregisterSafProtocolUrl(safUrl, result);
+                } else {
+                    resultHandler.errorAsync(result, "INVALID_SAF_URL", "Invalid safUrl value.");
                 }
                 break;
             case "cancel":
@@ -638,6 +649,9 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
                 break;
             case "getExternalLibraries":
                 getExternalLibraries(result);
+                break;
+            case "getSupportedCameraIds":
+                getSupportedCameraIds(result);
                 break;
 
             // FFmpegKitInputBuffer
@@ -771,9 +785,7 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
         }
     }
 
-    protected void init(final BinaryMessenger messenger, final Context context, final Activity activity, final ActivityPluginBinding activityBinding) {
-        registerGlobalCallbacks();
-
+    protected void init(final BinaryMessenger messenger, final Context context) {
         if (methodChannel == null) {
             methodChannel = new MethodChannel(messenger, METHOD_CHANNEL);
             methodChannel.setMethodCallHandler(this);
@@ -789,18 +801,33 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
         }
 
         this.context = context;
+        this.sessionDeleteListener = registerSessionDeleteListener();
+
+        Log.d(LIBRARY_NAME, String.format("FFmpegKitFlutterPlugin %s initialised with context %s.", this, context));
+    }
+
+    protected void uninit() {
+        unregisterSessionDeleteListener();
+        uninitMethodChannel();
+        uninitEventChannel();
+        detachActivity();
+
+        this.eventSink = null;
+        this.context = null;
+
+        Log.d(LIBRARY_NAME, "FFmpegKitFlutterPlugin uninitialized.");
+    }
+
+    protected void attachActivity(@NonNull final Activity activity, @NonNull final ActivityPluginBinding activityBinding) {
+        detachActivity();
+
         this.activity = activity;
         this.activityPluginBinding = activityBinding;
 
         registerDocumentActivityResultLauncher(activity, activityBinding);
-
-        Log.d(LIBRARY_NAME, String.format("FFmpegKitFlutterPlugin %s initialised with context %s and activity %s.", this, context, activity));
     }
 
-    protected void uninit() {
-        uninitMethodChannel();
-        uninitEventChannel();
-
+    protected void detachActivity() {
         if (documentActivityResultLauncher != null) {
             documentActivityResultLauncher.unregister();
             documentActivityResultLauncher = null;
@@ -810,12 +837,9 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
             this.activityPluginBinding.removeActivityResultListener(this);
         }
 
-        this.context = null;
         this.activity = null;
         this.activityPluginBinding = null;
         this.legacyActivityResultListenerRegistered = false;
-
-        Log.d(LIBRARY_NAME, "FFmpegKitFlutterPlugin uninitialized.");
     }
 
     protected void uninitMethodChannel() {
@@ -989,7 +1013,7 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
     // FFmpegSession
 
     protected void ffmpegSession(@NonNull final List<String> arguments, @NonNull final Result result) {
-        final FFmpegSession session = FFmpegSession.create(arguments.toArray(new String[0]), null, null, null, LogRedirectionStrategy.NEVER_PRINT_LOGS);
+        final FFmpegSession session = FFmpegSession.create(arguments.toArray(new String[0]), this::emitSession, this::emitLogIfEnabled, this::emitStatisticsIfEnabled, LogRedirectionStrategy.NEVER_PRINT_LOGS);
         resultHandler.successAsync(result, toMap(session));
     }
 
@@ -1030,14 +1054,14 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
     // FFprobeSession
 
     protected void ffprobeSession(@NonNull final List<String> arguments, @NonNull final Result result) {
-        final FFprobeSession session = FFprobeSession.create(arguments.toArray(new String[0]), null, null, LogRedirectionStrategy.NEVER_PRINT_LOGS);
+        final FFprobeSession session = FFprobeSession.create(arguments.toArray(new String[0]), this::emitSession, this::emitLogIfEnabled, LogRedirectionStrategy.NEVER_PRINT_LOGS);
         resultHandler.successAsync(result, toMap(session));
     }
 
     // MediaInformationSession
 
     protected void mediaInformationSession(@NonNull final List<String> arguments, @NonNull final Result result) {
-        final MediaInformationSession session = MediaInformationSession.create(arguments.toArray(new String[0]), null, null);
+        final MediaInformationSession session = MediaInformationSession.create(arguments.toArray(new String[0]), this::emitSession, this::emitLogIfEnabled);
         resultHandler.successAsync(result, toMap(session));
     }
 
@@ -1302,6 +1326,14 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
         resultHandler.successAsync(result, toInt(FFmpegKitConfig.getLogLevel()));
     }
 
+    protected void printLoadConfirmation(@NonNull final Result result) {
+        if (loadedLogged.compareAndSet(false, true)) {
+            Log.d(LIBRARY_NAME, String.format("Loaded ffmpeg-kit-next-flutter-%s-%s-%s.", PLATFORM_NAME, AbiDetect.getAbi(), LIBRARY_VERSION));
+        }
+
+        resultHandler.successAsync(result, null);
+    }
+
     protected void setLogLevel(@NonNull final Integer level, @NonNull final Result result) {
         FFmpegKitConfig.setLogLevel(Level.from(level));
         resultHandler.successAsync(result, null);
@@ -1341,6 +1373,11 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
 
     protected void clearSessions(@NonNull final Result result) {
         FFmpegKitConfig.clearSessions();
+        resultHandler.successAsync(result, null);
+    }
+
+    protected void deleteSession(@NonNull final Number sessionId, @NonNull final Result result) {
+        FFmpegKitConfig.deleteSession(sessionId.longValue());
         resultHandler.successAsync(result, null);
     }
 
@@ -1571,7 +1608,7 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
         activity.startActivityForResult(intent, requestCode);
     }
 
-    protected void getSafParameter(@NonNull final String uriString, @NonNull final String openMode, @NonNull final Result result) {
+    protected void getSafParameter(@NonNull final String uriString, @NonNull final String openMode, @Nullable final Boolean reusable, @NonNull final Result result) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
             android.util.Log.i(LIBRARY_NAME, String.format(Locale.getDefault(), "getSafParameter is not supported on API Level %d", Build.VERSION.SDK_INT));
             resultHandler.errorAsync(result, "GET_SAF_PARAMETER_FAILED", String.format(Locale.getDefault(), "getSafParameter is not supported on API Level %d", Build.VERSION.SDK_INT));
@@ -1584,14 +1621,33 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
                 Log.w(LIBRARY_NAME, String.format("Cannot getSafParameter using parameters uriString: %s, openMode: %s. Uri string cannot be parsed.", uriString, openMode));
                 resultHandler.errorAsync(result, "GET_SAF_PARAMETER_FAILED", "Uri string cannot be parsed.");
             } else {
-                final String safParameter = FFmpegKitConfig.getSafParameter(context, uri, openMode);
+                final String safParameter = (reusable != null)
+                        ? FFmpegKitConfig.getSafParameter(context, uri, openMode, reusable)
+                        : FFmpegKitConfig.getSafParameter(context, uri, openMode);
 
-                Log.d(LIBRARY_NAME, String.format("getSafParameter using parameters uriString: %s, openMode: %s completed with saf parameter: %s.", uriString, openMode, safParameter));
+                Log.d(LIBRARY_NAME, String.format("getSafParameter using parameters uriString: %s, openMode: %s, reusable: %s completed with saf parameter: %s.", uriString, openMode, reusable, safParameter));
 
                 resultHandler.successAsync(result, safParameter);
             }
         } else {
             Log.w(LIBRARY_NAME, String.format("Cannot getSafParameter using parameters uriString: %s, openMode: %s. Context is null.", uriString, openMode));
+            resultHandler.errorAsync(result, "INVALID_CONTEXT", "Context is null.");
+        }
+    }
+
+    protected void unregisterSafProtocolUrl(@NonNull final String safUrl, @NonNull final Result result) {
+        FFmpegKitConfig.unregisterSafProtocolUrl(safUrl);
+
+        Log.d(LIBRARY_NAME, String.format("unregisterSafProtocolUrl using parameter safUrl: %s completed.", safUrl));
+
+        resultHandler.successAsync(result, null);
+    }
+
+    protected void getSupportedCameraIds(@NonNull final Result result) {
+        if (context != null) {
+            resultHandler.successAsync(result, FFmpegKitConfig.getSupportedCameraIds(context));
+        } else {
+            Log.w(LIBRARY_NAME, "Cannot getSupportedCameraIds. Context is null.");
             resultHandler.errorAsync(result, "INVALID_CONTEXT", "Context is null.");
         }
     }
@@ -1853,22 +1909,124 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
         return (value != null) && (value >= 0);
     }
 
+    protected void emitLogIfEnabled(final com.arthenica.ffmpegkit.Log log) {
+        if (logsEnabled.get()) {
+            emitLog(log);
+        }
+    }
+
+    protected void emitStatisticsIfEnabled(final Statistics statistics) {
+        if (statisticsEnabled.get()) {
+            emitStatistics(statistics);
+        }
+    }
+
     protected void emitLog(final com.arthenica.ffmpegkit.Log log) {
+        final EventChannel.EventSink sink = eventSink;
+        if (sink == null) {
+            return;
+        }
+
         final HashMap<String, Object> logMap = new HashMap<>();
         logMap.put(EVENT_LOG_CALLBACK_EVENT, toMap(log));
-        resultHandler.successAsync(eventSink, logMap);
+        resultHandler.successAsync(sink, logMap);
     }
 
     protected void emitStatistics(final Statistics statistics) {
+        final EventChannel.EventSink sink = eventSink;
+        if (sink == null) {
+            return;
+        }
+
         final HashMap<String, Object> statisticsMap = new HashMap<>();
         statisticsMap.put(EVENT_STATISTICS_CALLBACK_EVENT, toMap(statistics));
-        resultHandler.successAsync(eventSink, statisticsMap);
+        resultHandler.successAsync(sink, statisticsMap);
     }
 
     protected void emitSession(final Session session) {
+        final EventChannel.EventSink sink = eventSink;
+        if (sink == null) {
+            return;
+        }
+
         final HashMap<String, Object> sessionMap = new HashMap<>();
         sessionMap.put(EVENT_COMPLETE_CALLBACK_EVENT, toMap(session));
-        resultHandler.successAsync(eventSink, sessionMap);
+        resultHandler.successAsync(sink, sessionMap);
+    }
+
+    protected void emitSessionDeleted(final long sessionId) {
+        final EventChannel.EventSink sink = eventSink;
+        if (sink == null) {
+            return;
+        }
+
+        final HashMap<String, Object> deletedSession = new HashMap<>();
+        deletedSession.put(KEY_SESSION_ID, sessionId);
+
+        final HashMap<String, Object> deletedSessionMap = new HashMap<>();
+        deletedSessionMap.put(EVENT_SESSION_DELETED_CALLBACK_EVENT, deletedSession);
+        resultHandler.successAsync(sink, deletedSessionMap);
+    }
+
+    @Nullable
+    private Object registerSessionDeleteListener() {
+        if (sessionDeleteListener != null) {
+            return sessionDeleteListener;
+        }
+
+        try {
+            final Class<?> sessionDeleteListenerClass = Class.forName("com.arthenica.ffmpegkit.SessionDeleteListener");
+            final Object listener = Proxy.newProxyInstance(
+                    sessionDeleteListenerClass.getClassLoader(),
+                    new Class<?>[]{sessionDeleteListenerClass},
+                    new InvocationHandler() {
+                        @Override
+                        public Object invoke(final Object proxy, final Method method, final Object[] args) {
+                            if (method.getDeclaringClass() == Object.class) {
+                                switch (method.getName()) {
+                                    case "equals":
+                                        return args != null && args.length == 1 && proxy == args[0];
+                                    case "hashCode":
+                                        return System.identityHashCode(proxy);
+                                    case "toString":
+                                        return "FFmpegKitFlutterSessionDeleteListener";
+                                    default:
+                                        return null;
+                                }
+                            }
+
+                            if ("sessionDeleted".equals(method.getName()) && args != null && args.length == 1 && args[0] instanceof Number) {
+                                emitSessionDeleted(((Number) args[0]).longValue());
+                            }
+
+                            return null;
+                        }
+                    });
+
+            FFmpegKitConfig.class.getMethod("addSessionDeleteListener", sessionDeleteListenerClass).invoke(null, listener);
+            return listener;
+        } catch (final ClassNotFoundException | NoSuchMethodException ignored) {
+            return null;
+        } catch (final Exception exception) {
+            Log.w(LIBRARY_NAME, "Failed to register session delete listener.", exception);
+            return null;
+        }
+    }
+
+    private void unregisterSessionDeleteListener() {
+        if (sessionDeleteListener == null) {
+            return;
+        }
+
+        try {
+            final Class<?> sessionDeleteListenerClass = Class.forName("com.arthenica.ffmpegkit.SessionDeleteListener");
+            FFmpegKitConfig.class.getMethod("removeSessionDeleteListener", sessionDeleteListenerClass).invoke(null, sessionDeleteListener);
+            sessionDeleteListener = null;
+        } catch (final ClassNotFoundException | NoSuchMethodException ignored) {
+            // The native listener API is optional for compatibility with older native binaries.
+        } catch (final Exception exception) {
+            Log.w(LIBRARY_NAME, "Failed to unregister session delete listener.", exception);
+        }
     }
 
 }

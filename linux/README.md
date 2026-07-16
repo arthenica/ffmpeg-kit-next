@@ -4,7 +4,8 @@
 
 ### 1. Features
 - Provides a `C++` API built with `c++11`
-- Includes `x86_64` architecture
+- Includes `arm64` and `x86_64` architectures
+- Libraries are compiled natively, so only the architecture of the host machine is built
 - Custom `FFmpegKit` protocols: `ffkitmem:` for finite in-memory input/output and `ffkitstream:` for memory-backed streaming input/output
 - Builds shared native libraries (`.so`)
 
@@ -21,31 +22,38 @@ Use `--list-profiles` to see the local Nix profiles available on your machine.
 ./nix-linux.sh --list-profiles
 ```
 
-The current Linux profile is `linux-full`.
+The current Linux profile is `default`.
 
 ```
-./nix-linux.sh -p linux-full
+./nix-linux.sh -p default
 ```
 
-This command cross-compiles the native `FFmpeg` and `ffmpeg-kit` shared libraries together with the `C++` API.
+This command compiles the native `FFmpeg` and `ffmpeg-kit` shared libraries together with the `C++` API for the
+architecture of the host machine. Building `arm64` libraries requires an `arm64` Linux host, and building `x86_64`
+libraries requires an `x86_64` Linux host.
 
-The build downloads `FFmpeg` and enabled external libraries when they are not already available locally. Nix provides
-the compiler toolchain (`clang`/`llvm`), `pkg-config` inputs and the build tools.
+Unlike the other platforms, the Linux profile is also published under a versioned name that depends on the
+architecture and the `glibc` version of your machine, for example `linux-x86_64-glibc-2_40` on an `x86_64` host or
+`linux-arm64-glibc-2_40` on an `arm64` host. Both names select the same toolchain, so use `--list-profiles` to see the
+versioned name available locally when you need to state the `glibc` version explicitly.
+
+The build downloads `FFmpeg`, `RapidJSON` and enabled external libraries when they are not already available locally.
+Nix provides the compiler toolchain (`clang`/`llvm`), `pkg-config` inputs and the build tools.
 
 #### 2.1 Prerequisites
 
 Linux builds require the following tools.
 
-- **Nix** — the `linux-full` profile supplies the `clang`/`llvm` toolchain, `pkg-config` and the build packages.
-- **rapidjson-dev** — provides the RapidJSON headers required by the library.
+- **Nix** — the `default` profile supplies the `clang`/`llvm` toolchain, `pkg-config` and the build packages.
 
 #### 2.2 Options
 
-Use `--enable-<library name>` flag to support additional external or system libraries and `--disable-x86-64` to skip
-the architecture. Use `--enable-gpl` to allow GPL-licensed libraries.
+Use `--enable-<library name>` flag to support additional external or system libraries and
+`--disable-<architecture name>` (`--disable-arm64`, `--disable-x86-64`) to skip the architecture. Use `--enable-gpl` to
+allow GPL-licensed libraries.
 
 ```
-./nix-linux.sh -p linux-full --enable-fontconfig
+./nix-linux.sh -p default --enable-fontconfig
 ```
 
 Run `--help` to see all available build options.

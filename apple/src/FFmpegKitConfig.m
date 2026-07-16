@@ -213,6 +213,9 @@ int ffmpeg_execute(int argc, char **argv);
 /** Forward declaration for function defined in fftools/ffprobe.c */
 int ffprobe_execute(int argc, char **argv);
 
+/** Forward declaration for function defined in fftools/ffprobe.c */
+void ffprobe_set_media_information_buffer(AVBPrint *buffer);
+
 typedef NS_ENUM(NSUInteger, CallbackType) { LogType, StatisticsType };
 
 NSArray *deleteExpiredSessionsLocked() {
@@ -1473,7 +1476,7 @@ int executeFFmpeg(long sessionId, NSArray *arguments) {
     return returnCode;
 }
 
-int executeFFprobe(long sessionId, NSArray *arguments) {
+int executeFFprobeToBuffer(long sessionId, NSArray *arguments, AVBPrint *outputBuffer) {
     NSString *const LIB_NAME = @"ffprobe";
 
     // SETS DEFAULT LOG LEVEL BEFORE STARTING A NEW RUN
@@ -1503,9 +1506,17 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
 
     resetMessagesInTransmit(sessionId);
 
+    // WHEN A BUFFER IS PROVIDED, ffprobe WRITES ITS FORMATTED OUTPUT THERE
+    // INSTEAD OF THE av_log/stdout PATH. THE POINTER IS THREAD-LOCAL INSIDE
+    // ffprobe AND IS CLEARED IMMEDIATELY AFTER THE RUN SO A REUSED THREAD NEVER
+    // SEES A STALE (FINALIZED) BUFFER ON A LATER ffprobe EXECUTION.
+    ffprobe_set_media_information_buffer(outputBuffer);
+
     // RUN
     int returnCode =
         ffprobe_execute(([arguments count] + 1), commandCharPArray);
+
+    ffprobe_set_media_information_buffer(NULL);
 
     // ALWAYS REMOVE THE ID FROM THE MAP
     removeSession(sessionId);
@@ -1515,6 +1526,10 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
     av_free(commandCharPArray);
 
     return returnCode;
+}
+
+int executeFFprobe(long sessionId, NSArray *arguments) {
+    return executeFFprobeToBuffer(sessionId, arguments, NULL);
 }
 
 @implementation FFmpegKitConfig
@@ -2208,24 +2223,30 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
     [mediaInformationSession startRunning];
 
     @try {
-        int returnCodeValue =
-            executeFFprobe([mediaInformationSession getSessionId],
-                           [mediaInformationSession getArguments]);
-        ReturnCode *returnCode = [[ReturnCode alloc] init:returnCodeValue];
-        [mediaInformationSession complete:returnCode];
-        if ([returnCode isValueSuccess]) {
-            NSArray *allLogs =
-                [mediaInformationSession getAllLogsWithTimeout:waitTimeout];
-            NSMutableString *ffprobeJsonOutput = [[NSMutableString alloc] init];
-            for (int i = 0; i < [allLogs count]; i++) {
-                Log *log = [allLogs objectAtIndex:i];
-                if ([log getLevel] == LevelAVLogStdErr) {
-                    [ffprobeJsonOutput appendString:[log getMessage]];
-                }
+        AVBPrint mediaInformationBuffer;
+        av_bprint_init(&mediaInformationBuffer, 0, AV_BPRINT_SIZE_UNLIMITED);
+        @try {
+            int returnCodeValue = executeFFprobeToBuffer(
+                [mediaInformationSession getSessionId],
+                [mediaInformationSession getArguments], &mediaInformationBuffer);
+            ReturnCode *returnCode = [[ReturnCode alloc] init:returnCodeValue];
+            [mediaInformationSession complete:returnCode];
+
+            // NOTE: waitTimeout is retained for API compatibility but is no
+            // longer used here. ffprobe writes the JSON synchronously into the
+            // buffer below, so it is already complete and does not depend on
+            // async log delivery. Callers that read the session logs afterwards
+            // still get the wait, because getAllLogs applies the timeout itself.
+            if ([returnCode isValueSuccess]) {
+                NSString *ffprobeJsonOutput =
+                    [NSString stringWithCString:mediaInformationBuffer.str
+                                       encoding:NSUTF8StringEncoding];
+                MediaInformation *mediaInformation = [MediaInformationJsonParser
+                    fromWithError:ffprobeJsonOutput];
+                [mediaInformationSession setMediaInformation:mediaInformation];
             }
-            MediaInformation *mediaInformation =
-                [MediaInformationJsonParser fromWithError:ffprobeJsonOutput];
-            [mediaInformationSession setMediaInformation:mediaInformation];
+        } @finally {
+            av_bprint_finalize(&mediaInformationBuffer, NULL);
         }
     } @catch (NSException *exception) {
         [mediaInformationSession fail:exception];

@@ -183,7 +183,7 @@ ffmpegkit::AbstractSession::getLogRedirectionStrategy() const {
 
 bool ffmpegkit::AbstractSession::thereAreAsynchronousMessagesInTransmit()
     const {
-    return (FFmpegKitConfig::messagesInTransmit(_sessionId) != 0);
+    return (FFmpegKitConfig::messagesInTransmit(_sessionId) > 0);
 }
 
 void ffmpegkit::AbstractSession::addLog(

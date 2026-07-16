@@ -228,6 +228,9 @@ int ffmpeg_execute(int argc, char **argv);
 /** Forward declaration for function defined in fftools/ffprobe.c */
 int ffprobe_execute(int argc, char **argv);
 
+/** Forward declaration for function defined in fftools/ffprobe.c */
+void ffprobe_set_media_information_buffer(AVBPrint *buffer);
+
 void ffmpegkit_log_callback_function(void *ptr, int level, const char *format,
                                      va_list vargs);
 
@@ -1504,8 +1507,10 @@ executeFFmpeg(const long sessionId,
     return returnCode;
 }
 
-int executeFFprobe(const long sessionId,
-                   const std::shared_ptr<std::list<std::string>> arguments) {
+int executeFFprobeToBuffer(
+    const long sessionId,
+    const std::shared_ptr<std::list<std::string>> arguments,
+    AVBPrint *outputBuffer) {
     const char *LIB_NAME = "ffprobe";
 
     // SETS DEFAULT LOG LEVEL BEFORE STARTING A NEW RUN
@@ -1535,9 +1540,17 @@ int executeFFprobe(const long sessionId,
 
     resetMessagesInTransmit(sessionId);
 
+    // WHEN A BUFFER IS PROVIDED, ffprobe WRITES ITS FORMATTED OUTPUT THERE
+    // INSTEAD OF THE av_log/stdout PATH. THE POINTER IS THREAD-LOCAL INSIDE
+    // ffprobe AND IS CLEARED IMMEDIATELY AFTER THE RUN SO A REUSED THREAD NEVER
+    // SEES A STALE (FINALIZED) BUFFER ON A LATER ffprobe EXECUTION.
+    ffprobe_set_media_information_buffer(outputBuffer);
+
     // RUN
     int returnCode =
         ffprobe_execute((arguments->size() + 1), commandCharPArray);
+
+    ffprobe_set_media_information_buffer(NULL);
 
     // ALWAYS REMOVE THE ID FROM THE MAP
     removeSession(sessionId);
@@ -1547,6 +1560,11 @@ int executeFFprobe(const long sessionId,
     av_free(commandCharPArray);
 
     return returnCode;
+}
+
+int executeFFprobe(const long sessionId,
+                   const std::shared_ptr<std::list<std::string>> arguments) {
+    return executeFFprobeToBuffer(sessionId, arguments, nullptr);
 }
 
 void *ffmpegKitInitialize() {
@@ -2240,29 +2258,30 @@ void ffmpegkit::FFmpegKitConfig::getMediaInformationExecute(
     const int waitTimeout) {
     mediaInformationSession->startRunning();
 
+    AVBPrint mediaInformationBuffer;
+    av_bprint_init(&mediaInformationBuffer, 0, AV_BPRINT_SIZE_UNLIMITED);
     try {
-        int returnCodeValue =
-            executeFFprobe(mediaInformationSession->getSessionId(),
-                           mediaInformationSession->getArguments());
+        int returnCodeValue = executeFFprobeToBuffer(
+            mediaInformationSession->getSessionId(),
+            mediaInformationSession->getArguments(), &mediaInformationBuffer);
         auto returnCode =
             std::make_shared<ffmpegkit::ReturnCode>(returnCodeValue);
         mediaInformationSession->complete(returnCode);
+
+        // NOTE: waitTimeout is retained for API compatibility but is no longer
+        // used here. ffprobe writes the JSON synchronously into the buffer
+        // below, so it is already complete and does not depend on async log
+        // delivery. Callers that read the session logs afterwards still get the
+        // wait, because getAllLogs applies the timeout itself.
         if (returnCode->isValueSuccess()) {
-            auto allLogs =
-                mediaInformationSession->getAllLogsWithTimeout(waitTimeout);
-            std::string ffprobeJsonOutput;
-            std::for_each(allLogs->cbegin(), allLogs->cend(),
-                          [&](std::shared_ptr<ffmpegkit::Log> log) {
-                              if (log->getLevel() == LevelAVLogStdErr) {
-                                  ffprobeJsonOutput.append(log->getMessage());
-                              }
-                          });
             auto mediaInformation =
                 ffmpegkit::MediaInformationJsonParser::fromWithError(
-                    ffprobeJsonOutput.c_str());
+                    mediaInformationBuffer.str);
             mediaInformationSession->setMediaInformation(mediaInformation);
         }
+        av_bprint_finalize(&mediaInformationBuffer, NULL);
     } catch (const std::exception &exception) {
+        av_bprint_finalize(&mediaInformationBuffer, NULL);
         mediaInformationSession->fail(exception.what());
         std::cout << "Get media information execute failed: "
                   << ffmpegkit::FFmpegKitConfig::argumentsToString(

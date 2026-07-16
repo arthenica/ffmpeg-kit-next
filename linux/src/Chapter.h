@@ -20,9 +20,7 @@
 #ifndef FFMPEG_KIT_CHAPTER_H
 #define FFMPEG_KIT_CHAPTER_H
 
-// OVERRIDING THE MACRO TO PREVENT APPLICATION TERMINATION
-#define RAPIDJSON_ASSERT(x)
-#include "rapidjson/document.h"
+#include "json/Value.h"
 #include <iostream>
 #include <memory>
 #include <string>
@@ -42,7 +40,7 @@ class Chapter {
     static constexpr const char *KeyEndTime = "end_time";
     static constexpr const char *KeyTags = "tags";
 
-    Chapter(std::shared_ptr<rapidjson::Value> chapterValue);
+    Chapter(std::shared_ptr<ffmpegkit::json::Value> chapterValue);
 
     std::shared_ptr<int64_t> getId();
 
@@ -56,7 +54,7 @@ class Chapter {
 
     std::shared_ptr<std::string> getEndTime();
 
-    std::shared_ptr<rapidjson::Value> getTags();
+    std::shared_ptr<ffmpegkit::json::Value> getTags();
 
     /**
      * Returns the chapter property associated with the key.
@@ -77,7 +75,7 @@ class Chapter {
      *
      * @return chapter property in a Value or nullptr if the key is not found
      */
-    std::shared_ptr<rapidjson::Value> getProperty(const char *key);
+    std::shared_ptr<ffmpegkit::json::Value> getProperty(const char *key);
 
     /**
      * Returns all chapter properties defined.
@@ -85,10 +83,10 @@ class Chapter {
      * @return all chapter properties in a Value or nullptr if no properties are
      * defined
      */
-    std::shared_ptr<rapidjson::Value> getAllProperties();
+    std::shared_ptr<ffmpegkit::json::Value> getAllProperties();
 
   private:
-    std::shared_ptr<rapidjson::Value> _chapterValue;
+    std::shared_ptr<ffmpegkit::json::Value> _chapterValue;
 };
 
 } // namespace ffmpegkit

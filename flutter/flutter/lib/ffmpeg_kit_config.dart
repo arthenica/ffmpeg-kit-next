@@ -46,8 +46,12 @@ class FFmpegKitConfig {
   static int _activeLogLevel = Level.avLogTrace;
 
   /// Initializes the library asynchronously.
-  static Future<void> init() async {
-    await FFmpegKitInitializer.initialize();
+  ///
+  /// Set [printLoadConfirmation] to false before the first initialization to
+  /// suppress the native "Loaded ffmpeg-kit-next-flutter" confirmation.
+  static Future<void> init({bool printLoadConfirmation = true}) async {
+    await FFmpegKitInitializer.initialize(
+        printLoadConfirmation: printLoadConfirmation);
   }
 
   /// Enables log and statistics redirection.
@@ -369,13 +373,18 @@ class FFmpegKitConfig {
   /// Converts the given Structured Access Framework Uri ("content:…") into
   /// an input url that can be used in FFmpeg and FFprobe commands.
   ///
+  /// When [reusable] is provided it defines whether the generated url can be
+  /// used more than once. When it is omitted the url follows the native
+  /// library's global reuse setting, captured at creation time.
+  ///
   /// Note that this method is Android only. It will fail if called on other
   /// platforms. It also requires API Level &ge; 19. On older API levels it
   /// returns an empty url.
-  static Future<String?> getSafParameterForRead(String uriString) async {
+  static Future<String?> getSafParameterForRead(String uriString,
+      [bool? reusable]) async {
     try {
       await init();
-      return _platform.ffmpegKitConfigGetSafParameter(uriString, "r");
+      return _platform.ffmpegKitConfigGetSafParameter(uriString, "r", reusable);
     } on PlatformException catch (e, stack) {
       print("Plugin getSafParameterForRead error: ${e.message}");
       return Future.error("getSafParameterForRead failed.", stack);
@@ -385,13 +394,18 @@ class FFmpegKitConfig {
   /// Converts the given Structured Access Framework Uri ("content:…") into
   /// an output url that can be used in FFmpeg and FFprobe commands.
   ///
+  /// When [reusable] is provided it defines whether the generated url can be
+  /// used more than once. When it is omitted the url follows the native
+  /// library's global reuse setting, captured at creation time.
+  ///
   /// Note that this method is Android only. It will fail if called on other
   /// platforms. It also requires API Level &ge; 19. On older API levels it
   /// returns an empty url.
-  static Future<String?> getSafParameterForWrite(String uriString) async {
+  static Future<String?> getSafParameterForWrite(String uriString,
+      [bool? reusable]) async {
     try {
       await init();
-      return _platform.ffmpegKitConfigGetSafParameter(uriString, "w");
+      return _platform.ffmpegKitConfigGetSafParameter(uriString, "w", reusable);
     } on PlatformException catch (e, stack) {
       print("Plugin getSafParameterForWrite error: ${e.message}");
       return Future.error("getSafParameterForWrite failed.", stack);
@@ -401,17 +415,63 @@ class FFmpegKitConfig {
   /// Converts the given Structured Access Framework Uri into an saf protocol
   /// url opened with the given open mode.
   ///
+  /// When [reusable] is provided it defines whether the generated url can be
+  /// used more than once. When it is omitted the url follows the native
+  /// library's global reuse setting, captured at creation time.
+  ///
   /// Note that this method is Android only. It will fail if called on other
   /// platforms. It also requires API Level &ge; 19. On older API levels it
   /// returns an empty url.
-  static Future<String?> getSafParameter(
-      String uriString, String openMode) async {
+  static Future<String?> getSafParameter(String uriString, String openMode,
+      [bool? reusable]) async {
     try {
       await init();
-      return _platform.ffmpegKitConfigGetSafParameter(uriString, openMode);
+      return _platform.ffmpegKitConfigGetSafParameter(
+          uriString, openMode, reusable);
     } on PlatformException catch (e, stack) {
       print("Plugin getSafParameter error: ${e.message}");
       return Future.error("getSafParameter failed.", stack);
+    }
+  }
+
+  /// Unregisters a previously created SAF protocol url and releases the
+  /// resources associated with it.
+  ///
+  /// Use this to release a url that was created with the reusable flag enabled.
+  /// Urls that are not reusable are unregistered automatically when the file
+  /// associated with them is closed.
+  ///
+  /// Note that this method is Android only. It will fail if called on other
+  /// platforms.
+  static Future<void> unregisterSafProtocolUrl(String safUrl) async {
+    try {
+      await init();
+      return _platform.ffmpegKitConfigUnregisterSafProtocolUrl(safUrl);
+    } on PlatformException catch (e, stack) {
+      print("Plugin unregisterSafProtocolUrl error: ${e.message}");
+      return Future.error("unregisterSafProtocolUrl failed.", stack);
+    }
+  }
+
+  /// Returns the list of camera ids supported. These devices can be used in
+  /// FFmpeg commands.
+  ///
+  /// Note that this method is Android only. It will fail if called on other
+  /// platforms. It also requires API Level &ge; 24. On older API levels it
+  /// returns an empty list.
+  static Future<List<String>> getSupportedCameraIds() async {
+    try {
+      await init();
+      return _platform.getSupportedCameraIds().then((cameraIds) {
+        if (cameraIds == null) {
+          return List.empty();
+        } else {
+          return cameraIds.cast<String>();
+        }
+      });
+    } on PlatformException catch (e, stack) {
+      print("Plugin getSupportedCameraIds error: ${e.message}");
+      return Future.error("getSupportedCameraIds failed.", stack);
     }
   }
 
@@ -501,10 +561,24 @@ class FFmpegKitConfig {
   static Future<void> clearSessions() async {
     try {
       await init();
-      return _platform.clearSessions();
+      await _platform.clearSessions();
+      FFmpegKitFactory.deleteSessions();
     } on PlatformException catch (e, stack) {
       print("Plugin clearSessions error: ${e.message}");
       return Future.error("clearSessions failed.", stack);
+    }
+  }
+
+  /// Deletes the session specified with [sessionId] from the session history.
+  /// Note that callbacks cannot be triggered for deleted sessions.
+  static Future<void> deleteSession(int sessionId) async {
+    try {
+      await init();
+      await _platform.deleteSession(sessionId);
+      FFmpegKitFactory.deleteSession(sessionId);
+    } on PlatformException catch (e, stack) {
+      print("Plugin deleteSession error: ${e.message}");
+      return Future.error("deleteSession failed.", stack);
     }
   }
 

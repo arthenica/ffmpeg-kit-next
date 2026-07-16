@@ -2,10 +2,18 @@
 
 source "${BASEDIR}/scripts/function.sh"
 
-prepare_inline_sed
+prepare_inline_sed || exit 1
 
+# LINUX LIBRARIES ARE COMPILED NATIVELY, SO ONLY THE ARCHITECTURE OF THE HOST MACHINE CAN BE BUILT
 enable_default_linux_architectures() {
-  ENABLED_ARCHITECTURES[ARCH_X86_64]=1
+  case $(uname -m) in
+  aarch64 | arm64)
+    ENABLED_ARCHITECTURES[ARCH_ARM64]=1
+    ;;
+  *)
+    ENABLED_ARCHITECTURES[ARCH_X86_64]=1
+    ;;
+  esac
 }
 
 get_ffmpeg_kit_version() {
@@ -141,6 +149,9 @@ create_linux_bundle() {
 
 get_cmake_system_processor() {
   case ${ARCH} in
+  arm64)
+    echo "aarch64"
+    ;;
   x86-64)
     echo "x86_64"
     ;;
@@ -149,6 +160,9 @@ get_cmake_system_processor() {
 
 get_target_cpu() {
   case ${ARCH} in
+  arm64)
+    echo "aarch64"
+    ;;
   x86-64)
     echo "x86_64"
     ;;
@@ -165,6 +179,9 @@ get_common_cflags() {
 
 get_arch_specific_cflags() {
   case ${ARCH} in
+  arm64)
+    echo "-march=armv8-a+crc+crypto -DFFMPEG_KIT_ARM64"
+    ;;
   x86-64)
     echo "-march=x86-64 -msse4.2 -mpopcnt -m64 -DFFMPEG_KIT_X86_64"
     ;;
@@ -180,7 +197,7 @@ get_size_optimization_cflags() {
 
   local ARCH_OPTIMIZATION=""
   case ${ARCH} in
-  x86-64)
+  arm64 | x86-64)
     case $1 in
     ffmpeg)
       ARCH_OPTIMIZATION="${LINK_TIME_OPTIMIZATION_FLAGS} -Os -ffunction-sections -fdata-sections"
@@ -302,7 +319,7 @@ get_size_optimization_ldflags() {
   fi
 
   case ${ARCH} in
-  x86-64)
+  arm64 | x86-64)
     case $1 in
     ffmpeg)
       echo "${LINK_TIME_OPTIMIZATION_FLAGS} -O2 -ffunction-sections -fdata-sections -finline-functions"
@@ -317,6 +334,9 @@ get_size_optimization_ldflags() {
 
 get_arch_specific_ldflags() {
   case ${ARCH} in
+  arm64)
+    echo "-march=armv8-a+crc+crypto -Wl,-z,text"
+    ;;
   x86-64)
     echo "-march=x86-64 -Wl,-z,text"
     ;;
@@ -494,6 +514,15 @@ set_toolchain_paths() {
   export RANLIB=$(command -v "llvm-ranlib$CLANG_POSTFIX")
   export STRIP=$(command -v "llvm-strip$CLANG_POSTFIX")
   export NM=$(command -v "llvm-nm$CLANG_POSTFIX")
+
+  # ARM64 ASSEMBLY SOURCES ARE GAS .S FILES, WHICH THE C COMPILER ASSEMBLES.
+  # LLVM-AS ONLY UNDERSTANDS LLVM IR, SO IT CANNOT BE USED HERE.
+  case ${ARCH} in
+  arm64)
+    export AS="${CC}"
+    ;;
+  esac
+
   export INSTALL_PKG_CONFIG_DIR="${BASEDIR}"/prebuilt/$(get_build_directory)/pkgconfig
 
   if [ ! -d "${INSTALL_PKG_CONFIG_DIR}" ]; then
