@@ -2,7 +2,7 @@
 
 source "${BASEDIR}/scripts/function.sh"
 
-prepare_inline_sed
+prepare_inline_sed || exit 1
 
 # LINUX LIBRARIES ARE COMPILED NATIVELY, SO ONLY THE ARCHITECTURE OF THE HOST MACHINE CAN BE BUILT
 enable_default_linux_architectures() {

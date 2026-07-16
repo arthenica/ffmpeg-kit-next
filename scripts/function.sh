@@ -2453,7 +2453,7 @@ prepare_inline_sed() {
   local SED_BIN="${SED:-sed}"
 
   if ! "${SED_BIN}" --version >/dev/null 2>&1; then
-    echo "ERROR: GNU sed is required. Use a Nix shell that provides gnused." 1>&2
+    echo -e "ERROR: GNU sed is required. Provide GNU sed via SED= or build inside the project's Nix shell, which includes it\n" 1>&2
     return 1
   fi
 
