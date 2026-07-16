@@ -4,7 +4,7 @@
 
 - Includes both `FFmpeg` and `FFprobe`
 - Supports
-    - `Android`, `iOS`, `iPadOS` and `macOS`
+    - `Android`, `iOS`, `iPadOS`, `macOS` and `Linux`
     - `arm-v7a`, `arm-v7a-neon`, `arm64-v8a`, `x86` and `x86_64` architectures on Android
     - `Android API Level 24` or later
     - `armv7`, `armv7s`, `arm64`, `arm64-simulator`, `i386`, `x86_64`, `x86_64-mac-catalyst` and `arm64-mac-catalyst`
@@ -13,6 +13,7 @@
     - iPad devices and the iPad Simulator load `iOS` frameworks/xcframeworks
     - `arm64` and `x86_64` architectures on macOS
     - `macOS 10.15+` deployment targets
+    - `x86_64` and `arm64` architectures on Linux
     - Can process Storage Access Framework (SAF) Uris on Android
     - 25 external libraries
 

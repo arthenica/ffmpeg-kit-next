@@ -1,5 +1,6 @@
 ## <NEXT>
 - Documents iPadOS as a supported platform
+- Adds Linux platform support (`x86_64`, `arm64`)
 
 ## 8.1.0
 - Feature release based on native 8.1.0 (FFmpeg 8.1.2)

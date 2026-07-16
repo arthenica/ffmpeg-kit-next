@@ -12,14 +12,17 @@
 #               -> ios/ffmpeg_kit_next_flutter/Frameworks/
 #   macOS   : prebuilt/bundle-apple-xcframework-macos-*/*.xcframework
 #               -> macos/ffmpeg_kit_next_flutter/Frameworks/
+#   Linux   : prebuilt/bundle-linux/ffmpeg-kit-next/{include,lib}
+#               -> linux/Frameworks/ffmpeg-kit-next/
 #
 # Build the binaries first from the repository root, e.g.:
 #   ./nix-android.sh -p <profile>
 #   ./nix-ios.sh     -p <profile>
 #   ./nix-macos.sh   -p <profile>
+#   ./nix-linux.sh   -p <profile>
 #
 # Usage:
-#   ./copy_local_binaries.sh [android] [ios] [macos]
+#   ./copy_local_binaries.sh [android] [ios] [macos] [linux]
 #
 # With no platform arguments, every platform that has a matching bundle in
 # prebuilt/ is copied. Set FFMPEG_KIT_PREBUILT_DIR to override the location of
@@ -97,9 +100,29 @@ copy_apple() {
   echo "${platform}: copied ${count} xcframework(s) from $(basename "${bundle}") -> ${dest_subdir}/ffmpeg_kit_next_flutter/Frameworks/"
 }
 
+copy_linux() {
+  local bundle src dest
+  bundle="${prebuilt_dir}/bundle-linux"
+  if [[ ! -d "${bundle}" ]]; then
+    echo "skip linux: no bundle-linux found in ${prebuilt_dir}" >&2
+    return 0
+  fi
+  src="${bundle}/ffmpeg-kit-next"
+  if [[ ! -f "${src}/lib/libffmpegkit.so" ]]; then
+    echo "error: libffmpegkit.so not found in: ${src}/lib" >&2
+    return 1
+  fi
+  dest="${plugin_dir}/linux/Frameworks/ffmpeg-kit-next"
+  rm -rf "${dest}"
+  mkdir -p "${dest}"
+  cp -R "${src}/include" "${dest}/include"
+  cp -R "${src}/lib" "${dest}/lib"
+  echo "linux: copied bundle-linux -> linux/Frameworks/ffmpeg-kit-next/"
+}
+
 platforms=("$@")
 if ((${#platforms[@]} == 0)); then
-  platforms=(android ios macos)
+  platforms=(android ios macos linux)
 fi
 
 for platform in "${platforms[@]}"; do
@@ -107,8 +130,9 @@ for platform in "${platforms[@]}"; do
     android) copy_android ;;
     ios)     copy_apple ios   'bundle-apple-xcframework-ios-*'   ios ;;
     macos)   copy_apple macos 'bundle-apple-xcframework-macos-*' macos ;;
+    linux)   copy_linux ;;
     *)
-      echo "error: unknown platform '${platform}' (expected android, ios or macos)" >&2
+      echo "error: unknown platform '${platform}' (expected android, ios, macos or linux)" >&2
       exit 1
       ;;
   esac
