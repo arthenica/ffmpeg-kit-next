@@ -15,6 +15,7 @@ with the desired external libraries:
 ./nix-android.sh -p <profile>   # produces prebuilt/bundle-android-aar-*-maven/...
 ./nix-ios.sh     -p <profile>   # produces prebuilt/bundle-apple-xcframework-ios-*/... (covers both iOS and iPadOS)
 ./nix-macos.sh   -p <profile>   # produces prebuilt/bundle-apple-xcframework-macos-*/...
+./nix-linux.sh   -p <profile>   # produces prebuilt/bundle-linux/... (native host architecture only)
 ```
 
 Then copy the built artifacts into this plugin:
@@ -24,6 +25,7 @@ cd flutter/flutter
 ./copy_local_binaries.sh            # all available platforms
 # or copy selectively:
 ./copy_local_binaries.sh android ios
+./copy_local_binaries.sh linux
 ```
 
 This places:
@@ -33,6 +35,7 @@ This places:
 | Android  | `android/libs-maven/` (local Maven repository)           | `android/build.gradle`              |
 | iOS/iPadOS     | `ios/ffmpeg_kit_next_flutter/Frameworks/*.xcframework`   | `ios/*.podspec` + `Package.swift`   |
 | macOS    | `macos/ffmpeg_kit_next_flutter/Frameworks/*.xcframework` | `macos/*.podspec` + `Package.swift` |
+| Linux    | `linux/Frameworks/ffmpeg-kit-next/{include,lib}`         | `linux/CMakeLists.txt`              |
 
 The copied binaries are ignored by git on purpose — every consumer rebuilds and
 copies them. Re-run `copy_local_binaries.sh` whenever you rebuild.

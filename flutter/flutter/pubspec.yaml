@@ -1,5 +1,5 @@
 name: ffmpeg_kit_next_flutter
-description: FFmpeg Kit Next for Flutter. Supports Android, iOS, iPadOS and macOS platforms.
+description: FFmpeg Kit Next for Flutter. Supports Android, iOS, iPadOS, macOS and Linux platforms.
 repository: https://github.com/arthenica/ffmpeg-kit-next
 issue_tracker: https://github.com/arthenica/ffmpeg-kit-next/issues
 homepage: https://github.com/arthenica/ffmpeg-kit-next
@@ -19,6 +19,8 @@ flutter:
       ios:
         pluginClass: FFmpegKitFlutterPlugin
       macos:
+        pluginClass: FFmpegKitFlutterPlugin
+      linux:
         pluginClass: FFmpegKitFlutterPlugin
 
 dependencies:
