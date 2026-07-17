@@ -1,0 +1,32 @@
+{
+  "name": "ffmpeg-kit-next-web",
+  "version": "8.1.0",
+  "description": "FFmpegKitNext bindings for the web (WebAssembly). Native-named FFmpegKit/FFprobeKit/FFmpegKitConfig API over a Web Worker-hosted wasm module.",
+  "type": "module",
+  "main": "binding/index.js",
+  "types": "binding/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./binding/index.d.ts",
+      "default": "./binding/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "binding/",
+    "lib/"
+  ],
+  "keywords": [
+    "ffmpeg",
+    "ffprobe",
+    "webassembly",
+    "wasm",
+    "video",
+    "audio",
+    "transcode"
+  ],
+  "repository": "https://github.com/arthenica/ffmpeg-kit-next",
+  "homepage": "https://github.com/arthenica/ffmpeg-kit-next",
+  "author": "ARTHENICA <open-source@arthenica.com> (https://www.arthenica.com)",
+  "license": "LGPL-3.0"
+}

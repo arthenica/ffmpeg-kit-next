@@ -63,7 +63,7 @@ make install || return 1
 
 # CREATE PACKAGE CONFIG MANUALLY
 if [[ ${FFMPEG_KIT_BUILD_TYPE} == "macos" ]]; then
-  create_gnutls_package_config "3.7.9" "-framework Security" || return 1
+  create_gnutls_package_config "3.7.11" "-framework Security" || return 1
 else
-  create_gnutls_package_config "3.7.9" || return 1
+  create_gnutls_package_config "3.7.11" || return 1
 fi

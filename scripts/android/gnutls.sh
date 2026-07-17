@@ -80,4 +80,4 @@ make -j$(get_cpu_count) || return 1
 make install || return 1
 
 # CREATE PACKAGE CONFIG MANUALLY
-create_gnutls_package_config "3.7.9" || return 1
+create_gnutls_package_config "3.7.11" || return 1

@@ -17,6 +17,7 @@ get_arch_name() {
   10) echo "x86-64-mac-catalyst" ;; # ios
   11) echo "arm64-mac-catalyst" ;; # ios
   12) echo "arm64-simulator" ;; # ios, tvos, visionos
+  13) echo "wasm32" ;; # web
   esac
 }
 
@@ -43,6 +44,7 @@ from_arch_name() {
   x86-64-mac-catalyst) echo 10 ;; # ios
   arm64-mac-catalyst) echo 11 ;; # ios
   arm64-simulator) echo 12 ;; # ios, visionos
+  wasm32) echo 13 ;; # web
   esac
 }
 
@@ -227,6 +229,8 @@ get_library_name() {
   94) echo "libsvtav1" ;;
   95) echo "libjxl" ;;
   96) echo "liblc3" ;;
+  97) echo "web-libiconv" ;;
+  98) echo "web-zlib" ;;
   esac
 }
 
@@ -329,6 +333,8 @@ from_library_name() {
   libsvtav1) echo 94 ;;
   libjxl) echo 95 ;;
   liblc3) echo 96 ;;
+  web-libiconv) echo 97 ;;
+  web-zlib) echo 98 ;;
   esac
 }
 
@@ -417,6 +423,15 @@ is_library_supported_on_platform() {
       echo "1"
     fi
     ;;
+
+  # ONLY WEB
+  97 | 98)
+    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "web" ]]; then
+      echo "0"
+    else
+      echo "1"
+    fi
+    ;;
   *)
     echo "1"
     ;;
@@ -463,6 +478,15 @@ is_arch_supported_on_platform() {
     # IOS, LINUX, MACOS, TVOS OR VISIONOS
   $ARCH_ARM64)
     if [[ ${FFMPEG_KIT_BUILD_TYPE} == "ios" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "linux" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "macos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then
+      echo 1
+    else
+      echo 0
+    fi
+    ;;
+
+    # WEB
+  $ARCH_WASM32)
+    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "web" ]]; then
       echo 1
     else
       echo 0
@@ -939,6 +963,12 @@ display_help_common_libraries() {
   esac
 
   echo -e "  --enable-libilbc\t\tbuild with libilbc [no]"
+  case ${FFMPEG_KIT_BUILD_TYPE} in
+  web)
+    echo -e "  --enable-libsamplerate\tbuild with libsamplerate [no]"
+    echo -e "  --enable-libsndfile\t\tbuild with libsndfile [no]"
+    ;;
+  esac
   echo -e "  --enable-libtheora\t\tbuild with libtheora [no]"
   echo -e "  --enable-libvorbis\t\tbuild with libvorbis [no]"
   echo -e "  --enable-libvpx\t\tbuild with libvpx [no]"
@@ -1213,6 +1243,12 @@ set_library() {
   libiconv)
     ENABLED_LIBRARIES[LIBRARY_LIBICONV]=$2
     ;;
+  web-libiconv)
+    ENABLED_LIBRARIES[LIBRARY_WEB_LIBICONV]=$2
+    ;;
+  web-zlib)
+    ENABLED_LIBRARIES[LIBRARY_WEB_ZLIB]=$2
+    ;;
   libilbc)
     ENABLED_LIBRARIES[LIBRARY_LIBILBC]=$2
     ;;
@@ -1327,8 +1363,18 @@ set_library() {
   zimg)
     ENABLED_LIBRARIES[LIBRARY_ZIMG]=$2
     ;;
-  expat | giflib | jpeg | leptonica | libogg | libsamplerate | libsndfile)
+  expat | giflib | jpeg | leptonica | libogg)
     # THESE LIBRARIES ARE NOT ENABLED DIRECTLY
+    ;;
+  libsamplerate)
+    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "web" ]]; then
+      ENABLED_LIBRARIES[LIBRARY_LIBSAMPLERATE]=$2
+    fi
+    ;;
+  libsndfile)
+    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "web" ]]; then
+      ENABLED_LIBRARIES[LIBRARY_SNDFILE]=$2
+    fi
     ;;
   nettle)
     ENABLED_LIBRARIES[LIBRARY_NETTLE]=$2
@@ -1467,6 +1513,8 @@ set_virtual_library() {
   libiconv)
     if [[ ${FFMPEG_KIT_BUILD_TYPE} == "ios" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "macos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "apple" ]]; then
       ENABLED_LIBRARIES[LIBRARY_APPLE_LIBICONV]=$2
+    elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "web" ]]; then
+      ENABLED_LIBRARIES[LIBRARY_WEB_LIBICONV]=$2
     else
       ENABLED_LIBRARIES[LIBRARY_LIBICONV]=$2
     fi
@@ -1474,12 +1522,19 @@ set_virtual_library() {
   libuuid)
     if [[ ${FFMPEG_KIT_BUILD_TYPE} == "ios" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "macos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "apple" ]]; then
       ENABLED_LIBRARIES[LIBRARY_APPLE_LIBUUID]=$2
+    elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "web" ]]; then
+      # No libuuid consumer on web: fontconfig 2.18 no longer uses uuid
+      :
     else
       ENABLED_LIBRARIES[LIBRARY_LIBUUID]=$2
     fi
     ;;
   zlib)
-    ENABLED_LIBRARIES[LIBRARY_SYSTEM_ZLIB]=$2
+    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "web" ]]; then
+      ENABLED_LIBRARIES[LIBRARY_WEB_ZLIB]=$2
+    else
+      ENABLED_LIBRARIES[LIBRARY_SYSTEM_ZLIB]=$2
+    fi
     ;;
   *)
     print_unknown_virtual_library $1
@@ -1536,6 +1591,9 @@ set_arch() {
     ;;
   x86-64-mac-catalyst)
     ENABLED_ARCHITECTURES[ARCH_X86_64_MAC_CATALYST]=$2
+    ;;
+  wasm32)
+    ENABLED_ARCHITECTURES[ARCH_WASM32]=$2
     ;;
   *)
     print_unknown_arch "$1"
@@ -1595,6 +1653,9 @@ check_if_dependency_rebuilt() {
   libjxl)
     set_dependency_rebuilt_flag "freetype"
     ;;
+  nettle)
+    set_dependency_rebuilt_flag "gnutls"
+    ;;
   libogg)
     set_dependency_rebuilt_flag "libvorbis"
     set_dependency_rebuilt_flag "libtheora"
@@ -1647,7 +1708,7 @@ print_enabled_architectures() {
   echo -n "Architectures: "
 
   let enabled=0
-  for print_arch in {0..12}; do
+  for print_arch in {0..13}; do
     if [[ ${ENABLED_ARCHITECTURES[$print_arch]} -eq 1 ]]; then
       if [[ ${enabled} -ge 1 ]]; then
         echo -n ", "
@@ -1691,7 +1752,7 @@ print_enabled_libraries() {
   let enabled=0
 
   # SUPPLEMENTARY LIBRARIES NOT PRINTED
-  for library in {50..57} {59..92} {0..36} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3}; do
+  for library in {50..57} {59..92} ${LIBRARY_WEB_LIBICONV} ${LIBRARY_WEB_ZLIB} {0..36} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3}; do
     if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
       if [[ ${enabled} -ge 1 ]]; then
         echo -n ", "
