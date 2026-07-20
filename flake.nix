@@ -142,6 +142,7 @@
         gperf
         python3
         perl
+        rsync
         ruby
       ];
 
@@ -183,7 +184,6 @@
         gtk-doc
         patch
         ragel
-        rsync
         tcl
         texinfo
         which
