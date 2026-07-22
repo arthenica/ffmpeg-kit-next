@@ -32,12 +32,18 @@ prepare_rapidjson_headers || return 1
 export CFLAGS="$(get_cflags ${LIB_NAME}) -I${LIB_INSTALL_BASE}/ffmpeg/include"
 # RAPIDJSON_INCLUDE_BASE IS LISTED FIRST SO THAT OUR PINNED HEADERS TAKE PRECEDENCE
 export CXXFLAGS="$(get_cxxflags ${LIB_NAME}) -I${RAPIDJSON_INCLUDE_BASE} -I${LIB_INSTALL_BASE}/ffmpeg/include"
-export LDFLAGS="$(get_ldflags ${LIB_NAME}) -L${LIB_INSTALL_BASE}/ffmpeg/lib -sSIDE_MODULE=1"
 
 cd "${BASEDIR}"/web 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 
-# WEB SHARED LIBRARIES ARE EMSCRIPTEN SIDE MODULES LOADED BY A MAIN MODULE.
-BUILD_LIBRARY_OPTIONS="--enable-shared --disable-static"
+if web_linkage_is_static; then
+  # Static mode whole-archives libffmpegkit.a into the single main module.
+  export LDFLAGS="$(get_ldflags ${LIB_NAME}) -L${LIB_INSTALL_BASE}/ffmpeg/lib"
+  BUILD_LIBRARY_OPTIONS="--disable-shared --enable-static"
+else
+  # Dynamic mode builds libffmpegkit.so as an Emscripten side module.
+  export LDFLAGS="$(get_ldflags ${LIB_NAME}) -L${LIB_INSTALL_BASE}/ffmpeg/lib -sSIDE_MODULE=1"
+  BUILD_LIBRARY_OPTIONS="--enable-shared --disable-static"
+fi
 
 echo -n -e "\n${LIB_NAME}: "
 

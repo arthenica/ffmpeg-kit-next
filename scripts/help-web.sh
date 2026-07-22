@@ -24,6 +24,7 @@ final application with SharedArrayBuffer-compatible COOP/COEP headers when ffmpe
   echo -e "  --disable-wasm32\t\tdo not build wasm32 architecture [no]\n"
 
   echo -e "Web options:"
+  echo -e "  --static\t\t\tbuild static archives and link one main wasm module [no]"
   echo -e "  --enable-pthreads\t\tbuild with Emscripten pthread support [yes]"
   echo -e "  --disable-pthreads\t\tbuild FFmpeg core without pthread support; requires --skip-ffmpeg-kit [no]"
   echo -e "  --enable-relaxed-simd\t\tadd -mrelaxed-simd for experimental optimized builds [no]\n"

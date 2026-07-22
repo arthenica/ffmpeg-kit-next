@@ -90,6 +90,7 @@
 
       toolchainShellHook = pkgs: ''
         export BISON="${pkgs.bison}/bin/bison"
+        export LIBTOOLIZE="${pkgs.libtool}/bin/libtoolize"
         export MESON="${pkgs.meson}/bin/meson"
         export SED="${pkgs.gnused}/bin/sed"
 
@@ -98,6 +99,7 @@
         unset MACOSX_DEPLOYMENT_TARGET
 
         echo -e "INFO: Using BISON at $BISON\n" >> "$PWD/build.log"
+        echo -e "INFO: Using LIBTOOLIZE at $LIBTOOLIZE\n" >> "$PWD/build.log"
         echo -e "INFO: Using MESON at $MESON\n" >> "$PWD/build.log"
         echo -e "INFO: Using SED at $SED\n" >> "$PWD/build.log"
       '';
@@ -148,6 +150,7 @@
         yasm
         gettext
         gperf
+        libtasn1
         python3
         perl
         ruby
@@ -166,7 +169,6 @@
         groff
         gtk-doc
         jdk17
-        libtasn1
         patch
         ragel
         texinfo
@@ -201,44 +203,21 @@
         llvmPackages.libclang
       ];
 
-      webToolchainPackages = pkgs: with pkgs; [
-        bash
+      webToolchainPackages = pkgs: commonToolPackages pkgs ++ (with pkgs; [
         binaryen
-        bison
-        cmake
         coreutils
-        curl
         emscripten
         file
         findutils
         gawk
-        gettext
-        git
-        gperf
         gnumake
         gnugrep
-        gnused
-        gnutar
-        gzip
-        libtool
         m4
-        meson
-        ninja
         nodejs
-        perl
-        pkg-config
-        python3
         rsync
-        ruby
         texinfo
-        unzip
-        wget
         which
-        xz
-        zip
-        autoconf
-        automake
-      ];
+      ]);
 
       xcodeMinCheck = minMajor: ''
         # Respect Apple's normal precedence: an explicitly-set DEVELOPER_DIR wins, then the
@@ -330,6 +309,9 @@
             export ANDROID_NDK_HOME="$ANDROID_NDK_ROOT"
             export ANDROID_NDK="$ANDROID_NDK_ROOT"
             export CMAKE="${androidCmakeRoot}/bin/cmake"
+
+            # Keep JVM locale stable
+            export JAVA_TOOL_OPTIONS="''${JAVA_TOOL_OPTIONS:+$JAVA_TOOL_OPTIONS }-Duser.language=en -Duser.country=US"
 
             export FFMPEG_KIT_NIX_ANDROID_PLATFORM="${android.platformVersion}"
             export FFMPEG_KIT_NIX_ANDROID_BUILD_TOOLS="${android.buildToolsVersion}"

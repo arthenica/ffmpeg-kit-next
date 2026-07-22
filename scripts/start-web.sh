@@ -23,6 +23,7 @@ BUILD_TYPE_ID=""
 BUILD_VERSION=$(git describe --tags --always 2>>"${BASEDIR}"/build.log)
 export FFMPEG_KIT_WEB_PTHREADS="${FFMPEG_KIT_WEB_PTHREADS:-1}"
 export FFMPEG_KIT_WEB_RELAXED_SIMD="${FFMPEG_KIT_WEB_RELAXED_SIMD:-0}"
+export FFMPEG_KIT_WEB_LINKAGE="${FFMPEG_KIT_WEB_LINKAGE:-dynamic}"
 
 # PROCESS BUILD OPTIONS
 while [ ! $# -eq 0 ]; do
@@ -62,6 +63,9 @@ while [ ! $# -eq 0 ]; do
     ;;
   --enable-relaxed-simd)
     export FFMPEG_KIT_WEB_RELAXED_SIMD="1"
+    ;;
+  --static)
+    export FFMPEG_KIT_WEB_LINKAGE="static"
     ;;
   -d | --debug)
     enable_debug
@@ -178,8 +182,10 @@ if [[ -n ${DISPLAY_HELP} ]]; then
   exit 0
 fi
 
-echo -e "\nBuilding ffmpeg-kit-next ${BUILD_TYPE_ID}library for WebAssembly\n"
-echo -e -n "INFO: Building ffmpeg-kit-next ${BUILD_VERSION} ${BUILD_TYPE_ID}library for WebAssembly: " 1>>"${BASEDIR}"/build.log 2>&1
+validate_web_linkage_mode || exit 1
+
+echo -e "\nBuilding ffmpeg-kit-next ${BUILD_TYPE_ID}library for WebAssembly ($(get_web_linkage_mode) linkage)\n"
+echo -e -n "INFO: Building ffmpeg-kit-next ${BUILD_VERSION} ${BUILD_TYPE_ID}library for WebAssembly ($(get_web_linkage_mode) linkage): " 1>>"${BASEDIR}"/build.log 2>&1
 echo -e "$(date)\n" 1>>"${BASEDIR}"/build.log 2>&1
 
 # PRINT BUILD SUMMARY

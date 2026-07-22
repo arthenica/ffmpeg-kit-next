@@ -314,8 +314,15 @@ if [ "$GPL_ENABLED" == "yes" ]; then
   CONFIGURE_POSTFIX+=" --enable-gpl"
 fi
 
-# ALWAYS BUILD SHARED LIBRARIES
-BUILD_LIBRARY_OPTIONS="--disable-static --enable-shared"
+if web_linkage_is_static; then
+  # Static mode links FFmpeg archives into one libffmpegkit.wasm.
+  BUILD_LIBRARY_OPTIONS="--enable-static --disable-shared"
+  SHARED_LIBRARY_OPTIONS=""
+else
+  # Dynamic mode builds FFmpeg shared libraries as Emscripten side modules.
+  BUILD_LIBRARY_OPTIONS="--disable-static --enable-shared"
+  SHARED_LIBRARY_OPTIONS="--extra-ldsoflags=-sSIDE_MODULE=1"
+fi
 
 if [[ ${FFMPEG_KIT_WEB_PTHREADS:-1} == "1" ]]; then
   CONFIGURE_POSTFIX+=" --enable-pthreads --disable-w32threads --disable-os2threads"
@@ -407,7 +414,7 @@ emconfigure ./configure \
   --enable-cross-compile \
   --enable-pic \
   --disable-symver \
-  --extra-ldsoflags="-sSIDE_MODULE=1" \
+  ${SHARED_LIBRARY_OPTIONS} \
   --enable-optimizations \
   --enable-swscale \
   ${BUILD_LIBRARY_OPTIONS} \
