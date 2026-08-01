@@ -1,33 +1,59 @@
 #!/bin/bash
 
+# CHECK IF XCODE IS INSTALLED
+if [ ! -x "$(command -v xcrun)" ]; then
+  echo -e "\n(*) xcrun command not found. Please check your Xcode installation\n"
+  exit 1
+fi
+
+if [ ! -x "$(command -v xcodebuild)" ]; then
+  echo -e "\n(*) xcodebuild command not found. Please check your Xcode installation\n"
+  exit 1
+fi
+
 # LOAD INITIAL SETTINGS
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export BASEDIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+export BASEDIR="${SCRIPT_DIR}"
 cd "${BASEDIR}"
-export FFMPEG_KIT_BUILD_TYPE="web"
-source "${SCRIPT_DIR}"/variable.sh
-source "${SCRIPT_DIR}"/function-${FFMPEG_KIT_BUILD_TYPE}.sh
-source "${SCRIPT_DIR}"/help-${FFMPEG_KIT_BUILD_TYPE}.sh
+export FFMPEG_KIT_BUILD_TYPE="visionos"
+source "${SCRIPT_DIR}"/scripts/variable.sh
+source "${SCRIPT_DIR}"/scripts/function-${FFMPEG_KIT_BUILD_TYPE}.sh
+source "${SCRIPT_DIR}"/scripts/help-${FFMPEG_KIT_BUILD_TYPE}.sh
 disabled_libraries=()
 
 # SET DEFAULT SETTINGS
-enable_default_web_architectures
+enable_default_visionos_architectures
 
-echo -e "INFO: Build options: $*\n" 1>>"${BASEDIR}"/build.log 2>&1
+# SELECT XCODE VERSION USED FOR BUILDING
+XCODE_FOR_FFMPEG_KIT=$(ls ~/.xcode.for.ffmpeg.kit.sh 2>>"${BASEDIR}"/build.log)
+if [[ -f ${XCODE_FOR_FFMPEG_KIT} ]]; then
+  source "${XCODE_FOR_FFMPEG_KIT}" 1>>"${BASEDIR}"/build.log 2>&1
+fi
+
+# DETECT VISIONOS SDK VERSION
+export DETECTED_VISIONOS_SDK_VERSION="$(xcrun --sdk xros --show-sdk-version 2>>"${BASEDIR}"/build.log)"
+XCODE_PATH=$(xcode-select -p 2>>"${BASEDIR}"/build.log)
+echo -e "\nINFO: Using SDK ${DETECTED_VISIONOS_SDK_VERSION} by Xcode provided at ${XCODE_PATH}\n" 1>>"${BASEDIR}"/build.log 2>&1
+echo -e "\nINFO: Build options: $*\n" 1>>"${BASEDIR}"/build.log 2>&1
 
 # SET DEFAULT BUILD OPTIONS
 export GPL_ENABLED="no"
 DISPLAY_HELP=""
-BUILD_FULL=""
 BUILD_TYPE_ID=""
+BUILD_FULL=""
+FFMPEG_KIT_XCF_BUILD=""
+FFMPEG_KIT_SPM_BUILD=""
+BUILD_FORCE=""
 BUILD_VERSION=$(git describe --tags --always 2>>"${BASEDIR}"/build.log)
-export FFMPEG_KIT_WEB_PTHREADS="${FFMPEG_KIT_WEB_PTHREADS:-1}"
-export FFMPEG_KIT_WEB_RELAXED_SIMD="${FFMPEG_KIT_WEB_RELAXED_SIMD:-0}"
-export FFMPEG_KIT_WEB_LINKAGE="${FFMPEG_KIT_WEB_LINKAGE:-dynamic}"
+if [[ -z ${BUILD_VERSION} ]]; then
+  echo -e "\n(*): Can not run git commands in this folder. See build.log.\n"
+  exit 1
+fi
+
+set_default_min_visionos_platform_version
 
 # PROCESS BUILD OPTIONS
 while [ ! $# -eq 0 ]; do
-
   case $1 in
   -h | --help)
     DISPLAY_HELP="1"
@@ -41,6 +67,12 @@ while [ ! $# -eq 0 ]; do
 
     skip_library "${SKIP_LIBRARY}"
     ;;
+  --no-bitcode)
+    export NO_BITCODE="1"
+    ;;
+  --no-framework)
+    NO_FRAMEWORK="1"
+    ;;
   --no-output-redirection)
     no_output_redirection
     ;;
@@ -52,26 +84,17 @@ while [ ! $# -eq 0 ]; do
 
     no_workspace_cleanup_library "${NO_WORKSPACE_CLEANUP_LIBRARY}"
     ;;
-  --no-link-time-optimization)
-    no_link_time_optimization
-    ;;
-  --enable-pthreads)
-    export FFMPEG_KIT_WEB_PTHREADS="1"
-    ;;
-  --disable-pthreads)
-    export FFMPEG_KIT_WEB_PTHREADS="0"
-    ;;
-  --enable-relaxed-simd)
-    export FFMPEG_KIT_WEB_RELAXED_SIMD="1"
-    ;;
-  --static)
-    export FFMPEG_KIT_WEB_LINKAGE="static"
-    ;;
   -d | --debug)
     enable_debug
     ;;
   -s | --speed)
     optimize_for_speed
+    ;;
+  -x | --xcframework)
+    FFMPEG_KIT_XCF_BUILD="1"
+    ;;
+  --spm)
+    export FFMPEG_KIT_SPM_BUILD="1"
     ;;
   -f | --force)
     export BUILD_FORCE="1"
@@ -125,6 +148,11 @@ while [ ! $# -eq 0 ]; do
 
     disable_arch "${DISABLED_ARCH}"
     ;;
+  --target=*)
+    TARGET="${1#--target=}"
+
+    export VISIONOS_MIN_VERSION=${TARGET}
+    ;;
   --package-name=*)
     PACKAGE_NAME="${1#--package-name=}"
 
@@ -158,19 +186,14 @@ while [ ! $# -eq 0 ]; do
   shift
 done
 
-if [[ -z ${BUILD_VERSION} ]]; then
-  echo -e "\n(*) error: Can not run git commands in this folder. See build.log.\n"
-  exit 1
-fi
-
 # PROCESS FULL OPTION AS LAST OPTION
 if [[ -n ${BUILD_FULL} ]]; then
-  for library in {0..98}; do
-    if [ "${GPL_ENABLED}" == "yes" ]; then
-      enable_library "$(get_library_name $library)" 1
+  for library in {0..61} {93..96}; do
+    if [ ${GPL_ENABLED} == "yes" ]; then
+      enable_library "$(get_library_name "$library")" 1
     else
-      if [[ $(is_gpl_licensed $library) -eq 1 ]]; then
-        enable_library "$(get_library_name $library)" 1
+      if [[ $(is_gpl_licensed "$library") -eq 1 ]]; then
+        enable_library "$(get_library_name "$library")" 1
       fi
     fi
   done
@@ -187,10 +210,25 @@ if [[ -n ${DISPLAY_HELP} ]]; then
   exit 0
 fi
 
-validate_web_linkage_mode || exit 1
+# --spm REQUIRES THE XCFRAMEWORK BUILD (-x); FAIL ON INCONSISTENT FLAGS
+if [[ -n ${FFMPEG_KIT_SPM_BUILD} ]] && [[ -z ${FFMPEG_KIT_XCF_BUILD} ]]; then
+  echo -e "\n(*): Inconsistent flags: --spm requires -x (--xcframework). A Swift package can only reference xcframeworks.\n"
+  exit 1
+fi
 
-echo -e "\nBuilding ffmpeg-kit-next ${BUILD_TYPE_ID}library for WebAssembly ($(get_web_linkage_mode) linkage)\n"
-echo -e -n "INFO: Building ffmpeg-kit-next ${BUILD_VERSION} ${BUILD_TYPE_ID}library for WebAssembly ($(get_web_linkage_mode) linkage): " 1>>"${BASEDIR}"/build.log 2>&1
+# DISABLE NOT SUPPORTED ARCHITECTURES
+disable_visionos_architecture_not_supported_on_detected_sdk_version "${ARCH_ARM64_SIMULATOR}"
+
+# CHECK SOME RULES FOR .framework BUNDLES
+
+# 1. DISABLE arm64-simulator WHEN arm64 IS ENABLED IN framework BUNDLES
+if [[ ${NO_FRAMEWORK} -ne 1 ]] && [[ -z ${FFMPEG_KIT_XCF_BUILD} ]] && [[ ${ENABLED_ARCHITECTURES[${ARCH_ARM64}]} -eq 1 ]] && [[ ${ENABLED_ARCHITECTURES[${ARCH_ARM64_SIMULATOR}]} -eq 1 ]]; then
+  echo -e "INFO: Disabled arm64-simulator architecture which cannot co-exist with arm64 in the same framework bundle.\n" 1>>"${BASEDIR}"/build.log 2>&1
+  disable_arch "arm64-simulator"
+fi
+
+echo -e "\nBuilding ffmpeg-kit-next ${BUILD_TYPE_ID}shared library for visionOS\n"
+echo -e -n "INFO: Building ffmpeg-kit-next ${BUILD_VERSION} ${BUILD_TYPE_ID}for visionOS: " 1>>"${BASEDIR}"/build.log 2>&1
 echo -e "$(date)\n" 1>>"${BASEDIR}"/build.log 2>&1
 
 # PRINT BUILD SUMMARY
@@ -204,7 +242,7 @@ print_custom_libraries
 # VALIDATE GPL FLAGS
 for gpl_library in {$LIBRARY_X264,$LIBRARY_XVIDCORE,$LIBRARY_X265,$LIBRARY_LIBVIDSTAB,$LIBRARY_RUBBERBAND}; do
   if [[ ${ENABLED_LIBRARIES[$gpl_library]} -eq 1 ]]; then
-    library_name=$(get_library_name ${gpl_library})
+    library_name=$(get_library_name "${gpl_library}")
 
     if [ ${GPL_ENABLED} != "yes" ]; then
       echo -e "\n(*) Invalid configuration detected. GPL library ${library_name} enabled without --enable-gpl flag.\n"
@@ -214,21 +252,12 @@ for gpl_library in {$LIBRARY_X264,$LIBRARY_XVIDCORE,$LIBRARY_X265,$LIBRARY_LIBVI
   fi
 done
 
-# VALIDATE PTHREAD FLAGS
-if [[ ${FFMPEG_KIT_WEB_PTHREADS} != "1" && ${SKIP_ffmpeg_kit:-0} != "1" ]]; then
-  echo -e "\n(*) The current web ffmpeg-kit wrapper build requires Emscripten pthreads. Use --enable-pthreads or add --skip-ffmpeg-kit for an FFmpeg-core-only build.\n"
-  exit 1
-fi
-
 trap fail_operation EXIT
 echo -n -e "\nDownloading sources: "
 echo -e "INFO: Downloading the source code of ffmpeg and external libraries.\n" 1>>"${BASEDIR}"/build.log 2>&1
 
 # DOWNLOAD GNU CONFIG
 download_gnu_config
-
-# DOWNLOAD RAPIDJSON
-download_rapidjson
 
 # DOWNLOAD LIBRARY SOURCES
 downloaded_library_sources "${ENABLED_LIBRARIES[@]}"
@@ -237,18 +266,20 @@ downloaded_library_sources "${ENABLED_LIBRARIES[@]}"
 TARGET_ARCH_LIST=()
 
 # BUILD ENABLED LIBRARIES ON ENABLED ARCHITECTURES
-for run_arch in ${ARCH_WASM32}; do
+for run_arch in {0..12}; do
   if [[ ${ENABLED_ARCHITECTURES[$run_arch]} -eq 1 ]]; then
     export ARCH=$(get_arch_name "$run_arch")
     export FULL_ARCH=$(get_full_arch_name "$run_arch")
+    export SDK_PATH=$(get_sdk_path)
+    export SDK_NAME=$(get_sdk_name)
 
     # EXECUTE MAIN BUILD SCRIPT
-    . "${SCRIPT_DIR}"/main-web.sh "${ENABLED_LIBRARIES[@]}" || exit 1
+    . "${SCRIPT_DIR}"/scripts/main-visionos.sh "${ENABLED_LIBRARIES[@]}"
 
     TARGET_ARCH_LIST+=("${FULL_ARCH}")
 
     # CLEAR FLAGS
-    for library in {0..97}; do
+    for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3}; do
       library_name=$(get_library_name "${library}")
       unset "$(echo "OK_${library_name}" | sed "s/\-/\_/g")"
       unset "$(echo "DEPENDENCY_REBUILT_${library_name}" | sed "s/\-/\_/g")"
@@ -256,16 +287,43 @@ for run_arch in ${ARCH_WASM32}; do
   fi
 done
 
-# BUILD FFMPEG-KIT BUNDLE
-if [[ -n ${TARGET_ARCH_LIST[0]} ]]; then
+echo -e -n "\n"
 
-  echo -e -n "\nCreating the bundle under prebuilt: "
+# DO NOT BUILD FRAMEWORKS
+if [[ ${NO_FRAMEWORK} -ne 1 ]]; then
 
-  echo -e "DEBUG: Creating the bundle directory\n" 1>>"${BASEDIR}"/build.log 2>&1
+  # BUILD FFMPEG-KIT
+  if [[ -n ${TARGET_ARCH_LIST[0]} ]]; then
 
-  initialize_folder "${BASEDIR}/prebuilt/$(get_bundle_directory)" || exit 1
+    # INITIALIZE TARGET FOLDERS
+    initialize_prebuilt_visionos_folders
 
-  create_web_bundle || exit 1
+    # PREPARE PLATFORM ARCHITECTURE STRINGS
+    build_apple_architecture_variant_strings
 
-  echo -e "ok\n"
+    if [[ -n ${FFMPEG_KIT_XCF_BUILD} ]]; then
+      echo -e -n "\nCreating xcframeworks under prebuilt: "
+
+      create_universal_libraries_for_visionos_xcframeworks
+
+      create_frameworks_for_visionos_xcframeworks
+
+      create_visionos_xcframeworks
+
+      # CREATE A LOCAL SWIFT PACKAGE MANIFEST WHEN --spm IS ENABLED
+      if [[ -n ${FFMPEG_KIT_SPM_BUILD} ]]; then
+        create_spm_package "${BASEDIR}/prebuilt/$(get_xcframework_directory)"
+      fi
+    else
+      echo -e -n "\nCreating frameworks under prebuilt: "
+
+      create_universal_libraries_for_visionos_default_frameworks
+
+      create_visionos_default_frameworks
+    fi
+
+    echo -e "ok\n"
+  fi
+else
+  echo -e "INFO: Skipped creating visionOS frameworks.\n" 1>>"${BASEDIR}"/build.log 2>&1
 fi

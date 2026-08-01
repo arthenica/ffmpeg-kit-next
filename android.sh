@@ -12,12 +12,12 @@ fi
 
 # LOAD INITIAL SETTINGS
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export BASEDIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+export BASEDIR="${SCRIPT_DIR}"
 cd "${BASEDIR}"
 export FFMPEG_KIT_BUILD_TYPE="android"
-source "${SCRIPT_DIR}"/variable.sh
-source "${SCRIPT_DIR}"/function-${FFMPEG_KIT_BUILD_TYPE}.sh
-source "${SCRIPT_DIR}"/help-${FFMPEG_KIT_BUILD_TYPE}.sh
+source "${SCRIPT_DIR}"/scripts/variable.sh
+source "${SCRIPT_DIR}"/scripts/function-${FFMPEG_KIT_BUILD_TYPE}.sh
+source "${SCRIPT_DIR}"/scripts/help-${FFMPEG_KIT_BUILD_TYPE}.sh
 disabled_libraries=()
 
 # SET DEFAULT SETTINGS
@@ -264,7 +264,7 @@ for run_arch in {0..12}; do
     export ARCH=$(get_arch_name $run_arch)
 
     # EXECUTE MAIN BUILD SCRIPT
-    . "${SCRIPT_DIR}"/main-android.sh "${ENABLED_LIBRARIES[@]}" || exit 1
+    . "${SCRIPT_DIR}"/scripts/main-android.sh "${ENABLED_LIBRARIES[@]}" || exit 1
 
     # CLEAR FLAGS
     for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3}; do

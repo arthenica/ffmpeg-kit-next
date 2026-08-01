@@ -13,12 +13,12 @@ fi
 
 # LOAD INITIAL SETTINGS
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export BASEDIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+export BASEDIR="${SCRIPT_DIR}"
 cd "${BASEDIR}"
 export FFMPEG_KIT_BUILD_TYPE="ios"
-source "${SCRIPT_DIR}"/variable.sh
-source "${SCRIPT_DIR}"/function-${FFMPEG_KIT_BUILD_TYPE}.sh
-source "${SCRIPT_DIR}"/help-${FFMPEG_KIT_BUILD_TYPE}.sh
+source "${SCRIPT_DIR}"/scripts/variable.sh
+source "${SCRIPT_DIR}"/scripts/function-${FFMPEG_KIT_BUILD_TYPE}.sh
+source "${SCRIPT_DIR}"/scripts/help-${FFMPEG_KIT_BUILD_TYPE}.sh
 disabled_libraries=()
 
 # SET DEFAULT SETTINGS
@@ -297,7 +297,7 @@ for run_arch in {0..12}; do
     export SDK_NAME=$(get_sdk_name)
 
     # EXECUTE MAIN BUILD SCRIPT
-    . "${SCRIPT_DIR}"/main-ios.sh "${ENABLED_LIBRARIES[@]}"
+    . "${SCRIPT_DIR}"/scripts/main-ios.sh "${ENABLED_LIBRARIES[@]}"
 
     TARGET_ARCH_LIST+=("${FULL_ARCH}")
 

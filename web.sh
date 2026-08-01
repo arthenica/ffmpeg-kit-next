@@ -2,16 +2,16 @@
 
 # LOAD INITIAL SETTINGS
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export BASEDIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+export BASEDIR="${SCRIPT_DIR}"
 cd "${BASEDIR}"
-export FFMPEG_KIT_BUILD_TYPE="linux"
-source "${SCRIPT_DIR}"/variable.sh
-source "${SCRIPT_DIR}"/function-${FFMPEG_KIT_BUILD_TYPE}.sh
-source "${SCRIPT_DIR}"/help-${FFMPEG_KIT_BUILD_TYPE}.sh
+export FFMPEG_KIT_BUILD_TYPE="web"
+source "${SCRIPT_DIR}"/scripts/variable.sh
+source "${SCRIPT_DIR}"/scripts/function-${FFMPEG_KIT_BUILD_TYPE}.sh
+source "${SCRIPT_DIR}"/scripts/help-${FFMPEG_KIT_BUILD_TYPE}.sh
 disabled_libraries=()
 
 # SET DEFAULT SETTINGS
-enable_default_linux_architectures
+enable_default_web_architectures
 
 echo -e "INFO: Build options: $*\n" 1>>"${BASEDIR}"/build.log 2>&1
 
@@ -21,8 +21,9 @@ DISPLAY_HELP=""
 BUILD_FULL=""
 BUILD_TYPE_ID=""
 BUILD_VERSION=$(git describe --tags --always 2>>"${BASEDIR}"/build.log)
-
-set_default_min_linux_platform_version
+export FFMPEG_KIT_WEB_PTHREADS="${FFMPEG_KIT_WEB_PTHREADS:-1}"
+export FFMPEG_KIT_WEB_RELAXED_SIMD="${FFMPEG_KIT_WEB_RELAXED_SIMD:-0}"
+export FFMPEG_KIT_WEB_LINKAGE="${FFMPEG_KIT_WEB_LINKAGE:-dynamic}"
 
 # PROCESS BUILD OPTIONS
 while [ ! $# -eq 0 ]; do
@@ -43,6 +44,9 @@ while [ ! $# -eq 0 ]; do
   --no-output-redirection)
     no_output_redirection
     ;;
+  --no-ffmpeg-kit-protocols)
+    export NO_FFMPEG_KIT_PROTOCOLS="1"
+    ;;
   --no-workspace-cleanup-*)
     NO_WORKSPACE_CLEANUP_LIBRARY="${1#--no-workspace-cleanup-}"
 
@@ -51,8 +55,17 @@ while [ ! $# -eq 0 ]; do
   --no-link-time-optimization)
     no_link_time_optimization
     ;;
-  --no-ffmpeg-kit-protocols)
-    export NO_FFMPEG_KIT_PROTOCOLS="1"
+  --enable-pthreads)
+    export FFMPEG_KIT_WEB_PTHREADS="1"
+    ;;
+  --disable-pthreads)
+    export FFMPEG_KIT_WEB_PTHREADS="0"
+    ;;
+  --enable-relaxed-simd)
+    export FFMPEG_KIT_WEB_RELAXED_SIMD="1"
+    ;;
+  --static)
+    export FFMPEG_KIT_WEB_LINKAGE="static"
     ;;
   -d | --debug)
     enable_debug
@@ -112,11 +125,6 @@ while [ ! $# -eq 0 ]; do
 
     disable_arch "${DISABLED_ARCH}"
     ;;
-  --api-level=*)
-    API_LEVEL="${1#--api-level=}"
-
-    export API=${API_LEVEL}
-    ;;
   --package-name=*)
     PACKAGE_NAME="${1#--package-name=}"
 
@@ -157,8 +165,8 @@ fi
 
 # PROCESS FULL OPTION AS LAST OPTION
 if [[ -n ${BUILD_FULL} ]]; then
-  for library in {0..92} {93..96}; do
-    if [ ${GPL_ENABLED} == "yes" ]; then
+  for library in {0..98}; do
+    if [ "${GPL_ENABLED}" == "yes" ]; then
       enable_library "$(get_library_name $library)" 1
     else
       if [[ $(is_gpl_licensed $library) -eq 1 ]]; then
@@ -179,8 +187,10 @@ if [[ -n ${DISPLAY_HELP} ]]; then
   exit 0
 fi
 
-echo -e "\nBuilding ffmpeg-kit-next ${BUILD_TYPE_ID}library for Linux\n"
-echo -e -n "INFO: Building ffmpeg-kit-next ${BUILD_VERSION} ${BUILD_TYPE_ID}library for Linux: " 1>>"${BASEDIR}"/build.log 2>&1
+validate_web_linkage_mode || exit 1
+
+echo -e "\nBuilding ffmpeg-kit-next ${BUILD_TYPE_ID}library for WebAssembly ($(get_web_linkage_mode) linkage)\n"
+echo -e -n "INFO: Building ffmpeg-kit-next ${BUILD_VERSION} ${BUILD_TYPE_ID}library for WebAssembly ($(get_web_linkage_mode) linkage): " 1>>"${BASEDIR}"/build.log 2>&1
 echo -e "$(date)\n" 1>>"${BASEDIR}"/build.log 2>&1
 
 # PRINT BUILD SUMMARY
@@ -192,7 +202,7 @@ print_redownload_requested_libraries
 print_custom_libraries
 
 # VALIDATE GPL FLAGS
-for gpl_library in {$LIBRARY_X264,$LIBRARY_LINUX_XVIDCORE,$LIBRARY_LINUX_X265,$LIBRARY_LINUX_LIBVIDSTAB,$LIBRARY_LINUX_RUBBERBAND}; do
+for gpl_library in {$LIBRARY_X264,$LIBRARY_XVIDCORE,$LIBRARY_X265,$LIBRARY_LIBVIDSTAB,$LIBRARY_RUBBERBAND}; do
   if [[ ${ENABLED_LIBRARIES[$gpl_library]} -eq 1 ]]; then
     library_name=$(get_library_name ${gpl_library})
 
@@ -203,6 +213,12 @@ for gpl_library in {$LIBRARY_X264,$LIBRARY_LINUX_XVIDCORE,$LIBRARY_LINUX_X265,$L
     fi
   fi
 done
+
+# VALIDATE PTHREAD FLAGS
+if [[ ${FFMPEG_KIT_WEB_PTHREADS} != "1" && ${SKIP_ffmpeg_kit:-0} != "1" ]]; then
+  echo -e "\n(*) The current web ffmpeg-kit wrapper build requires Emscripten pthreads. Use --enable-pthreads or add --skip-ffmpeg-kit for an FFmpeg-core-only build.\n"
+  exit 1
+fi
 
 trap fail_operation EXIT
 echo -n -e "\nDownloading sources: "
@@ -221,18 +237,18 @@ downloaded_library_sources "${ENABLED_LIBRARIES[@]}"
 TARGET_ARCH_LIST=()
 
 # BUILD ENABLED LIBRARIES ON ENABLED ARCHITECTURES
-for run_arch in {0..12}; do
+for run_arch in ${ARCH_WASM32}; do
   if [[ ${ENABLED_ARCHITECTURES[$run_arch]} -eq 1 ]]; then
     export ARCH=$(get_arch_name "$run_arch")
     export FULL_ARCH=$(get_full_arch_name "$run_arch")
 
     # EXECUTE MAIN BUILD SCRIPT
-    . "${SCRIPT_DIR}"/main-linux.sh "${ENABLED_LIBRARIES[@]}"
+    . "${SCRIPT_DIR}"/scripts/main-web.sh "${ENABLED_LIBRARIES[@]}" || exit 1
 
     TARGET_ARCH_LIST+=("${FULL_ARCH}")
 
     # CLEAR FLAGS
-    for library in {0..96}; do
+    for library in {0..97}; do
       library_name=$(get_library_name "${library}")
       unset "$(echo "OK_${library_name}" | sed "s/\-/\_/g")"
       unset "$(echo "DEPENDENCY_REBUILT_${library_name}" | sed "s/\-/\_/g")"
@@ -247,9 +263,9 @@ if [[ -n ${TARGET_ARCH_LIST[0]} ]]; then
 
   echo -e "DEBUG: Creating the bundle directory\n" 1>>"${BASEDIR}"/build.log 2>&1
 
-  initialize_folder "${BASEDIR}/prebuilt/$(get_bundle_directory)"
+  initialize_folder "${BASEDIR}/prebuilt/$(get_bundle_directory)" || exit 1
 
-  create_linux_bundle
+  create_web_bundle || exit 1
 
   echo -e "ok\n"
 fi

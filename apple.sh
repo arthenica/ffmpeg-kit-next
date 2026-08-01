@@ -126,12 +126,12 @@ fi
 
 # LOAD INITIAL SETTINGS
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export BASEDIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+export BASEDIR="${SCRIPT_DIR}"
 cd "${BASEDIR}"
-source "${SCRIPT_DIR}"/variable.sh
+source "${SCRIPT_DIR}"/scripts/variable.sh
 export FFMPEG_KIT_BUILD_TYPE="apple"
-source "${SCRIPT_DIR}"/function-${FFMPEG_KIT_BUILD_TYPE}.sh
-source "${SCRIPT_DIR}"/help-${FFMPEG_KIT_BUILD_TYPE}.sh
+source "${SCRIPT_DIR}"/scripts/function-${FFMPEG_KIT_BUILD_TYPE}.sh
+source "${SCRIPT_DIR}"/scripts/help-${FFMPEG_KIT_BUILD_TYPE}.sh
 
 # SET DEFAULT SETTINGS
 enable_default_architecture_variants

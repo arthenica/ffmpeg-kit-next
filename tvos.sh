@@ -13,16 +13,16 @@ fi
 
 # LOAD INITIAL SETTINGS
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export BASEDIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+export BASEDIR="${SCRIPT_DIR}"
 cd "${BASEDIR}"
-export FFMPEG_KIT_BUILD_TYPE="macos"
-source "${SCRIPT_DIR}"/variable.sh
-source "${SCRIPT_DIR}"/function-${FFMPEG_KIT_BUILD_TYPE}.sh
-source "${SCRIPT_DIR}"/help-${FFMPEG_KIT_BUILD_TYPE}.sh
+export FFMPEG_KIT_BUILD_TYPE="tvos"
+source "${SCRIPT_DIR}"/scripts/variable.sh
+source "${SCRIPT_DIR}"/scripts/function-${FFMPEG_KIT_BUILD_TYPE}.sh
+source "${SCRIPT_DIR}"/scripts/help-${FFMPEG_KIT_BUILD_TYPE}.sh
 disabled_libraries=()
 
 # SET DEFAULT SETTINGS
-enable_default_macos_architectures
+enable_default_tvos_architectures
 
 # SELECT XCODE VERSION USED FOR BUILDING
 XCODE_FOR_FFMPEG_KIT=$(ls ~/.xcode.for.ffmpeg.kit.sh 2>>"${BASEDIR}"/build.log)
@@ -30,10 +30,10 @@ if [[ -f ${XCODE_FOR_FFMPEG_KIT} ]]; then
   source "${XCODE_FOR_FFMPEG_KIT}" 1>>"${BASEDIR}"/build.log 2>&1
 fi
 
-# DETECT MACOS SDK VERSION
-export DETECTED_MACOS_SDK_VERSION="$(xcrun --sdk macosx --show-sdk-version 2>>"${BASEDIR}"/build.log)"
+# DETECT TVOS SDK VERSION
+export DETECTED_TVOS_SDK_VERSION="$(xcrun --sdk appletvos --show-sdk-version 2>>"${BASEDIR}"/build.log)"
 XCODE_PATH=$(xcode-select -p 2>>"${BASEDIR}"/build.log)
-echo -e "\nINFO: Using SDK ${DETECTED_MACOS_SDK_VERSION} by Xcode provided at ${XCODE_PATH}\n" 1>>"${BASEDIR}"/build.log 2>&1
+echo -e "\nINFO: Using SDK ${DETECTED_TVOS_SDK_VERSION} by Xcode provided at ${XCODE_PATH}\n" 1>>"${BASEDIR}"/build.log 2>&1
 echo -e "\nINFO: Build options: $*\n" 1>>"${BASEDIR}"/build.log 2>&1
 
 # SET DEFAULT BUILD OPTIONS
@@ -50,7 +50,7 @@ if [[ -z ${BUILD_VERSION} ]]; then
   exit 1
 fi
 
-set_default_min_macos_platform_version
+set_default_min_tvos_platform_version
 
 # PROCESS BUILD OPTIONS
 while [ ! $# -eq 0 ]; do
@@ -66,6 +66,9 @@ while [ ! $# -eq 0 ]; do
     SKIP_LIBRARY="${1#--skip-}"
 
     skip_library "${SKIP_LIBRARY}"
+    ;;
+  --no-bitcode)
+    export NO_BITCODE="1"
     ;;
   --no-framework)
     NO_FRAMEWORK="1"
@@ -148,7 +151,7 @@ while [ ! $# -eq 0 ]; do
   --target=*)
     TARGET="${1#--target=}"
 
-    export MACOS_MIN_VERSION=${TARGET}
+    export TVOS_MIN_VERSION=${TARGET}
     ;;
   --package-name=*)
     PACKAGE_NAME="${1#--package-name=}"
@@ -214,10 +217,21 @@ if [[ -n ${FFMPEG_KIT_SPM_BUILD} ]] && [[ -z ${FFMPEG_KIT_XCF_BUILD} ]]; then
 fi
 
 # DISABLE NOT SUPPORTED ARCHITECTURES
-disable_macos_architecture_not_supported_on_detected_sdk_version "${ARCH_ARM64}"
+disable_tvos_architecture_not_supported_on_detected_sdk_version "${ARCH_ARM64_SIMULATOR}"
 
-echo -e "\nBuilding ffmpeg-kit-next ${BUILD_TYPE_ID}shared library for macOS\n"
-echo -e -n "INFO: Building ffmpeg-kit-next ${BUILD_VERSION} ${BUILD_TYPE_ID}for macOS: " 1>>"${BASEDIR}"/build.log 2>&1
+# DISABLE NOT SUPPORTED LIBRARIES
+disable_tvos_videotoolbox_on_not_supported_sdk_version
+
+# CHECK SOME RULES FOR .framework BUNDLES
+
+# 1. DISABLE arm64-simulator WHEN arm64 IS ENABLED IN framework BUNDLES
+if [[ ${NO_FRAMEWORK} -ne 1 ]] && [[ -z ${FFMPEG_KIT_XCF_BUILD} ]] && [[ ${ENABLED_ARCHITECTURES[${ARCH_ARM64}]} -eq 1 ]] && [[ ${ENABLED_ARCHITECTURES[${ARCH_ARM64_SIMULATOR}]} -eq 1 ]]; then
+  echo -e "INFO: Disabled arm64-simulator architecture which cannot co-exist with arm64 in the same framework bundle.\n" 1>>"${BASEDIR}"/build.log 2>&1
+  disable_arch "arm64-simulator"
+fi
+
+echo -e "\nBuilding ffmpeg-kit-next ${BUILD_TYPE_ID}shared library for tvOS\n"
+echo -e -n "INFO: Building ffmpeg-kit-next ${BUILD_VERSION} ${BUILD_TYPE_ID}for tvOS: " 1>>"${BASEDIR}"/build.log 2>&1
 echo -e "$(date)\n" 1>>"${BASEDIR}"/build.log 2>&1
 
 # PRINT BUILD SUMMARY
@@ -263,7 +277,7 @@ for run_arch in {0..12}; do
     export SDK_NAME=$(get_sdk_name)
 
     # EXECUTE MAIN BUILD SCRIPT
-    . "${SCRIPT_DIR}"/main-macos.sh "${ENABLED_LIBRARIES[@]}"
+    . "${SCRIPT_DIR}"/scripts/main-tvos.sh "${ENABLED_LIBRARIES[@]}"
 
     TARGET_ARCH_LIST+=("${FULL_ARCH}")
 
@@ -285,7 +299,7 @@ if [[ ${NO_FRAMEWORK} -ne 1 ]]; then
   if [[ -n ${TARGET_ARCH_LIST[0]} ]]; then
 
     # INITIALIZE TARGET FOLDERS
-    initialize_prebuilt_macos_folders
+    initialize_prebuilt_tvos_folders
 
     # PREPARE PLATFORM ARCHITECTURE STRINGS
     build_apple_architecture_variant_strings
@@ -293,11 +307,11 @@ if [[ ${NO_FRAMEWORK} -ne 1 ]]; then
     if [[ -n ${FFMPEG_KIT_XCF_BUILD} ]]; then
       echo -e -n "\nCreating xcframeworks under prebuilt: "
 
-      create_universal_libraries_for_macos_xcframeworks
+      create_universal_libraries_for_tvos_xcframeworks
 
-      create_frameworks_for_macos_xcframeworks
+      create_frameworks_for_tvos_xcframeworks
 
-      create_macos_xcframeworks
+      create_tvos_xcframeworks
 
       # CREATE A LOCAL SWIFT PACKAGE MANIFEST WHEN --spm IS ENABLED
       if [[ -n ${FFMPEG_KIT_SPM_BUILD} ]]; then
@@ -306,14 +320,13 @@ if [[ ${NO_FRAMEWORK} -ne 1 ]]; then
     else
       echo -e -n "\nCreating frameworks under prebuilt: "
 
-      create_universal_libraries_for_macos_default_frameworks
+      create_universal_libraries_for_tvos_default_frameworks
 
-      create_macos_default_frameworks
+      create_tvos_default_frameworks
     fi
 
     echo -e "ok\n"
   fi
-
 else
-  echo -e "INFO: Skipped creating macOS frameworks.\n" 1>>"${BASEDIR}"/build.log 2>&1
+  echo -e "INFO: Skipped creating tvOS frameworks.\n" 1>>"${BASEDIR}"/build.log 2>&1
 fi
