@@ -1,6 +1,6 @@
 # FFmpegKitNext for iOS, iPadOS, macOS, tvOS and visionOS
 
-`FFmpegKitNext` for Apple platforms can be built via [Nix](https://nixos.org/) and integrated locally.
+`FFmpegKitNext` for Apple platforms can be built via the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix) and integrated locally.
 
 ### 1. Features
 #### 1.1 iOS / iPadOS
@@ -41,7 +41,7 @@
 
 ### 2. Building
 
-Apple builds are Nix-based. You must install [Nix](https://nixos.org/) first to build the binaries. Then run the `nix-*` wrappers from the project root.
+Apple builds use the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix). You must install it on macOS first to build the binaries. Then run the `nix-*` wrappers from the project root.
 
 Note that, `FFmpegKitNext` does not publish binaries and building it yourself is the only way to use it.
 
@@ -78,25 +78,25 @@ Apple builds require the following tools.
 
 ##### 2.1.1 iOS / iPadOS
 
-- **Nix**
+- **Nix package manager**
 - **Xcode 26.0** or later
 - **Command Line Tools**
 
 ##### 2.1.2 macOS
 
-- **Nix**
+- **Nix package manager**
 - **Xcode 26.0** or later
 - **Command Line Tools**
 
 ##### 2.1.3 tvOS
 
-- **Nix**
+- **Nix package manager**
 - **Xcode 26.0** or later
 - **Command Line Tools**
 
 ##### 2.1.4 visionOS
 
-- **Nix**
+- **Nix package manager**
 - **Xcode 26.0** or later with the **visionOS (xros) SDK** installed
 - **Command Line Tools**
 

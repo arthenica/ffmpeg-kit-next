@@ -14,8 +14,10 @@
 
 ### 2 Building
 
-Web builds are Nix-based. You must install [Nix](https://nixos.org/) first to build the binaries. Then run the
+Web builds use the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix). You must install it on a supported host first to build the binaries. Then run the
 `nix-web.sh` wrapper from the project root.
+
+NixOS is not required. The scripts require the Nix package manager on a supported host, and NixOS is not a supported Web build host.
 
 Note that, `FFmpegKitNext` does not publish binaries and building it yourself is the only way to use it.
 
@@ -41,7 +43,7 @@ provides Emscripten (emsdk), CMake and the build tools.
 
 Web builds require the following tools.
 
-- **Nix** — the `web-wasm32-emscripten` profile supplies the Emscripten and CMake.
+- **Nix package manager** — the `web-wasm32-emscripten` profile supplies the Emscripten and CMake.
 
 #### 2.2 Build Variants and External Libraries
 

@@ -1,6 +1,6 @@
 # FFmpegKitNext for Linux
 
-`FFmpegKitNext` for Linux can be built via [Nix](https://nixos.org/) and integrated locally.
+`FFmpegKitNext` for Linux can be built via the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix) and integrated locally.
 
 ### 1. Features
 - Provides a `C++` API built with `c++11`
@@ -11,8 +11,10 @@
 
 ### 2. Building
 
-Linux builds are Nix-based. You must install [Nix](https://nixos.org/) first to build the binaries. Then run the
+Linux builds use the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix). You must install it on a supported Linux host first to build the binaries. Then run the
 `nix-linux.sh` wrapper from the project root.
+
+NixOS is not required. The scripts require the Nix package manager on a supported host, and NixOS is not a supported Linux build host.
 
 Note that, `FFmpegKitNext` does not publish binaries and building it yourself is the only way to use it.
 
@@ -44,7 +46,7 @@ Nix provides the compiler toolchain (`clang`/`llvm`), `pkg-config` inputs and th
 
 Linux builds require the following tools.
 
-- **Nix** — the `default` profile supplies the `clang`/`llvm` toolchain, `pkg-config` and the build packages.
+- **Nix package manager** — the `default` profile supplies the `clang`/`llvm` toolchain, `pkg-config` and the build packages.
 
 #### 2.2 Options
 

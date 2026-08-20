@@ -76,7 +76,7 @@ see [BUILD.md](BUILD.md)). iOS, iPadOS and macOS need no extra repository step.
 enabled in the native build. For example, `mp3` encoding needs `lame` or `shine`, `h264` needs `x264`, and `vp8`/`vp9`
 needs `libvpx`.
 
-Those libraries are selected when you build `FFmpegKitNext` locally with the Nix-based build scripts. There are no
+Those libraries are selected when you build `FFmpegKitNext` locally with the Nix wrapper build scripts. There are no
 separate `pub.dev` packages such as `min`, `https`, `audio`, `video`, `full`, or `full-gpl` to install.
 
 #### 2.2 Platform Support
