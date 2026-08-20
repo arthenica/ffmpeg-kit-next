@@ -21,6 +21,7 @@
 #define FFMPEG_KIT_STREAM_INFORMATION_H
 
 #include "json/Value.h"
+#include <cstdint>
 #include <memory>
 #include <string>
 
