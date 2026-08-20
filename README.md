@@ -10,10 +10,10 @@ It builds on the foundations of `FFmpegKit` while improving the build infrastruc
 
 `FFmpegKitNext` does not publish ready-to-use packages to `Maven Central`, `CocoaPods`, `pub.dev`, or `npm` as `FFmpegKit` did.
 
-To use it, build it locally for your target platform via [Nix](https://nixos.org/), then integrate the generated artifacts into your application.
+To use it, build it locally for your target platform via the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix), then integrate the generated artifacts into your application.
 
 ### 1. Features
-- Nix-based scripts to build FFmpeg native libraries
+- Nix package manager-based scripts to build FFmpeg native libraries
 - `FFmpegKitNext` wrapper library to run `FFmpeg`/`FFprobe` commands in applications
 - Supports native platforms: Android, iOS, iPadOS, Linux, macOS, tvOS, visionOS and Web
 - Supports hybrid platforms: Flutter, React Native
@@ -46,7 +46,9 @@ See [Web](web) to learn more about `FFmpegKitNext` for `Web` (`WebAssembly`).
 
 ### 8. Build Scripts
 
-`FFmpegKitNext` uses [Nix](https://nixos.org/) as the default and recommended build environment. Nix provides the inputs, toolchains and platform-specific build environment required to produce reproducible binaries across machines.
+`FFmpegKitNext` uses the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix) as the default and recommended build environment. Nix provides pinned inputs, toolchains and platform-specific build packages for supported hosts.
+
+NixOS is not required. The scripts require the Nix package manager on a supported host, and NixOS is not a supported build host. See [Host Support](https://github.com/arthenica/ffmpeg-kit-next/wiki/Host-Support) before setting up a machine or CI image.
 
 Use `nix-android.sh`, `nix-ios.sh` (for both iOS and iPadOS), `nix-linux.sh`, `nix-macos.sh`, `nix-tvos.sh`, `nix-visionos.sh` and `nix-web.sh` to build `FFmpegKitNext` locally for each supported target platform.
 
