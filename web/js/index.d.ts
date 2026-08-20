@@ -107,6 +107,9 @@ export declare class ArchDetect {
 
 /** Helper class to extract binary package information. */
 export declare class Packages {
+    /** Returns the FFmpegKit binary package name. */
+    static getPackageName(): Promise<string>;
+
     /** Returns enabled external libraries by FFmpeg. */
     static getExternalLibraries(): Promise<string[]>;
 }

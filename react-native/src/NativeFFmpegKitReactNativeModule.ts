@@ -51,6 +51,9 @@ export interface Spec extends TurboModule {
 
   // Version / build / env
   getFFmpegVersion(): Promise<string>;
+  /**
+   * @deprecated Flutter builds do not have an LTS build concept.
+   */
   isLTSBuild(): Promise<boolean>;
   getBuildDate(): Promise<string>;
   setEnvironmentVariable(variableName: string, variableValue: string): Promise<void>;

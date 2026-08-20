@@ -23,7 +23,7 @@ disabled_libraries=()
 # SET DEFAULT SETTINGS
 enable_default_android_architectures
 enable_default_android_libraries
-enable_main_build
+set_default_min_android_platform_version
 
 # DETECT ANDROID NDK VERSION
 export DETECTED_NDK_VERSION=$(grep -E "^Pkg\.Revision[[:space:]]*=" "${ANDROID_NDK_ROOT}"/source.properties | head -1 | sed 's/^.*=[[:space:]]*//')
@@ -135,6 +135,11 @@ while [ ! $# -eq 0 ]; do
     ;;
   --no-ffmpeg-kit-protocols)
     export NO_FFMPEG_KIT_PROTOCOLS="1"
+    ;;
+  --package-name=*)
+    PACKAGE_NAME="${1#--package-name=}"
+
+    export FFMPEG_KIT_PACKAGE_NAME="${PACKAGE_NAME}"
     ;;
   --toolchain=*)
     ANDROID_TOOLCHAIN="${1#--toolchain=}"

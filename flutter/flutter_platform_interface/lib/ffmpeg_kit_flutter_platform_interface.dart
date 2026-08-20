@@ -183,6 +183,7 @@ abstract class FFmpegKitPlatform extends PlatformInterface {
         'ffmpegKitConfigGetFFmpegVersion() has not been implemented!');
   }
 
+  @Deprecated('Flutter builds do not have an LTS build concept.')
   Future<bool?> ffmpegKitConfigIsLTSBuild() async {
     throw UnimplementedError(
         'ffmpegKitConfigIsLTSBuild() has not been implemented!');

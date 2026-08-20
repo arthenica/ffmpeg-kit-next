@@ -54,18 +54,6 @@ class FFmpegKitConfigTest {
     }
 
     @Test
-    fun getPackageName() {
-        Assert.assertEquals("min", listToPackageName(listOf("")))
-        Assert.assertEquals("min-gpl", listToPackageName(listOf("xvidcore")))
-        Assert.assertEquals("full-gpl", listToPackageName(listOf("gnutls", "speex", "fribidi", "xvidcore")))
-        Assert.assertEquals("full", listToPackageName(listOf("fribidi", "speex")))
-        Assert.assertEquals("video", listToPackageName(listOf("fribidi")))
-        Assert.assertEquals("audio", listToPackageName(listOf("speex")))
-        Assert.assertEquals("https", listToPackageName(listOf("gnutls")))
-        Assert.assertEquals("https-gpl", listToPackageName(listOf("gnutls", "xvidcore")))
-    }
-
-    @Test
     fun extractExtensionFromSafDisplayName() {
         var extension = FFmpegKitConfig.extractExtensionFromSafDisplayName("video.mp4 (2)")
         Assert.assertEquals("mp4", extension)
@@ -269,25 +257,6 @@ class FFmpegKitConfigTest {
     @Test
     fun unregisterSafProtocolUrl() {
         FFmpegKitConfig.unregisterSafProtocolUrl("ffkitsaf:1.mp4")
-    }
-
-    private fun listToPackageName(externalLibraryList: List<String>): String {
-        val speex = externalLibraryList.contains("speex")
-        val fribidi = externalLibraryList.contains("fribidi")
-        val gnutls = externalLibraryList.contains("gnutls")
-        val xvidcore = externalLibraryList.contains("xvidcore")
-
-        return if (speex && fribidi) {
-            if (xvidcore) "full-gpl" else "full"
-        } else if (speex) {
-            "audio"
-        } else if (fribidi) {
-            "video"
-        } else if (xvidcore) {
-            if (gnutls) "https-gpl" else "min-gpl"
-        } else {
-            if (gnutls) "https" else "min"
-        }
     }
 
     companion object {

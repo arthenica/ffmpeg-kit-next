@@ -26,7 +26,7 @@ get_min_api_level_flag() {
   echo "-DFFMPEG_KIT_MIN_SDK=${API}"
 }
 
-enable_main_build() {
+set_default_min_android_platform_version() {
   export API=24
 }
 
@@ -60,6 +60,8 @@ APP_STL := ${APP_STL}
 APP_ALLOW_MISSING_DEPS := true
 
 APP_PLATFORM := android-${API}
+
+FFMPEG_KIT_PACKAGE_NAME_CFLAG := $(get_package_name_cflag)
 
 APP_CFLAGS := -O3 -DANDROID ${MIN_API} ${BUILD_DATE} -Wall -Wno-deprecated-declarations -Wno-pointer-sign -Wno-switch -Wno-unused-result -Wno-unused-variable ${USES_FFMPEG_KIT_PROTOCOLS} ${FFMPEG_KIT_DEBUG} ${EXTRA_CFLAGS}
 
@@ -279,6 +281,9 @@ get_size_optimization_cflags() {
 get_app_specific_cflags() {
   local APP_FLAGS=""
   case $1 in
+  ffmpeg-kit)
+    APP_FLAGS="-std=c99 -Wno-unused-function $(get_package_name_cflag)"
+    ;;
   ffmpeg)
     APP_FLAGS="-Wno-unused-function -DBIONIC_IOCTL_NO_SIGNEDNESS_OVERLOAD"
     ;;
@@ -351,8 +356,8 @@ get_cxxflags() {
   fi
 
   case $1 in
-  gnutls)
-    echo "${COMMON_FLAGS} -std=c++11 -fno-rtti ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
+  ffmpeg-kit)
+    echo "${COMMON_FLAGS} -std=c++11 -fno-exceptions -fno-rtti ${OPTIMIZATION_FLAGS} $(get_package_name_cflag) ${EXTRA_CXXFLAGS}"
     ;;
   ffmpeg)
     if [[ -z ${FFMPEG_KIT_DEBUG} ]]; then
@@ -360,6 +365,9 @@ get_cxxflags() {
     else
       echo "${COMMON_FLAGS} -std=c++11 -fno-exceptions -fno-rtti ${FFMPEG_KIT_DEBUG} ${EXTRA_CXXFLAGS}"
     fi
+    ;;
+  gnutls)
+    echo "${COMMON_FLAGS} -std=c++11 -fno-rtti ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
     ;;
   opencore-amr)
     echo "${COMMON_FLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"

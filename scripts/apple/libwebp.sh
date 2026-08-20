@@ -31,14 +31,6 @@ fi
   --disable-dependency-tracking \
   --enable-libwebpmux \
   ${ASM_OPTIONS} \
-  --with-pngincludedir="${LIB_INSTALL_BASE}/libpng/include" \
-  --with-pnglibdir="${LIB_INSTALL_BASE}/libpng/lib" \
-  --with-jpegincludedir="${LIB_INSTALL_BASE}/jpeg/include" \
-  --with-jpeglibdir="${LIB_INSTALL_BASE}/jpeg/lib" \
-  --with-gifincludedir="${LIB_INSTALL_BASE}/giflib/include" \
-  --with-giflibdir="${LIB_INSTALL_BASE}/giflib/lib" \
-  --with-tiffincludedir="${LIB_INSTALL_BASE}/tiff/include" \
-  --with-tifflibdir="${LIB_INSTALL_BASE}/tiff/lib" \
   --host="${HOST}" || return 1
 
 make -j$(get_cpu_count) || return 1

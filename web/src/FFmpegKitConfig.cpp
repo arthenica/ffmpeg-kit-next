@@ -1606,7 +1606,12 @@ void *ffmpegKitInitialize() {
         // that early faults across the module boundary ("memory access out of bounds"
         // in std::ostream::sentry). C stdio's stdout is a constant-initialized FILE and
         // is safe at this point.
-        printf("Loaded ffmpeg-kit-next-%s-%s-%s.\n",
+        const std::string packageName = ffmpegkit::Packages::getPackageName();
+        const std::string packageNamePart =
+            packageName.empty() ? "" : packageName + "-";
+
+        printf("Loaded ffmpeg-kit-next-%s%s-%s-%s.\n",
+               packageNamePart.c_str(),
                ffmpegkit::ArchDetect::getArch().c_str(),
                ffmpegkit::FFmpegKitConfig::getVersion().c_str(),
                ffmpegkit::FFmpegKitConfig::getBuildDate().c_str());

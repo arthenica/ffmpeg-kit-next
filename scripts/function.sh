@@ -526,6 +526,10 @@ get_package_config_file_name() {
   esac
 }
 
+get_package_name_cflag() {
+  echo "-DFFMPEG_KIT_PACKAGE_NAME=${FFMPEG_KIT_PACKAGE_NAME}"
+}
+
 get_meson_target_host_family() {
   case ${FFMPEG_KIT_BUILD_TYPE} in
   android)

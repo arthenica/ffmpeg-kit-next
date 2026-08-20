@@ -73,11 +73,6 @@ while [ ${#enabled_library_list[@]} -gt $completed ]; do
         run=1
       fi
       ;;
-    lame)
-      if [[ $OK_libiconv -eq 1 ]]; then
-        run=1
-      fi
-      ;;
     leptonica)
       if [[ $OK_giflib -eq 1 ]] && [[ $OK_jpeg -eq 1 ]] && [[ $OK_libpng -eq 1 ]] && [[ $OK_tiff -eq 1 ]] && [[ $OK_libwebp -eq 1 ]]; then
         run=1
@@ -100,11 +95,6 @@ while [ ${#enabled_library_list[@]} -gt $completed ]; do
       ;;
     libvpx)
       if [[ $OK_cpu_features -eq 1 ]]; then
-        run=1
-      fi
-      ;;
-    libwebp)
-      if [[ $OK_giflib -eq 1 ]] && [[ $OK_jpeg -eq 1 ]] && [[ $OK_libpng -eq 1 ]] && [[ $OK_tiff -eq 1 ]]; then
         run=1
       fi
       ;;

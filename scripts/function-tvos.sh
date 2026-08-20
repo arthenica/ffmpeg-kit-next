@@ -122,7 +122,7 @@ get_app_specific_cflags() {
     APP_FLAGS="-Wno-unused-function -Wno-deprecated-declarations"
     ;;
   ffmpeg-kit)
-    APP_FLAGS="-std=c99 -Wno-unused-function -Wall -Wno-deprecated-declarations -Wno-pointer-sign -Wno-switch -Wno-unused-result -Wno-unused-variable -DPIC -fobjc-arc"
+    APP_FLAGS="-std=c99 -Wno-unused-function -Wall -Wno-deprecated-declarations -Wno-pointer-sign -Wno-switch -Wno-unused-result -Wno-unused-variable -DPIC -fobjc-arc $(get_package_name_cflag)"
     ;;
   gnutls)
     APP_FLAGS="-std=c99 -Wno-unused-function -D_GL_USE_STDLIB_ALLOC=1"
@@ -207,6 +207,9 @@ get_cxxflags() {
   esac
 
   case $1 in
+  ffmpeg-kit)
+    echo "-std=c++11 -fno-exceptions -fno-rtti -fPIC ${BITCODE_FLAGS} ${COMMON_CFLAGS} ${OPTIMIZATION_FLAGS} $(get_package_name_cflag) ${EXTRA_CXXFLAGS}"
+    ;;
   gnutls)
     echo "-std=c++11 -fno-rtti ${BITCODE_FLAGS} ${COMMON_CFLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
     ;;

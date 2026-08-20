@@ -76,7 +76,7 @@ see [BUILD.md](BUILD.md)). iOS, iPadOS and macOS need no extra repository step.
 enabled in the native build. For example, `mp3` encoding needs `lame` or `shine`, `h264` needs `x264`, and `vp8`/`vp9`
 needs `libvpx`.
 
-Those libraries are selected when you build `FFmpegKitNext` locally with the Nix-based build scripts. There are no
+Those libraries are selected when you build `FFmpegKitNext` locally with the Nix wrapper build scripts. There are no
 separate `pub.dev` packages such as `min`, `https`, `audio`, `video`, `full`, or `full-gpl` to install.
 
 #### 2.2 Platform Support
@@ -309,6 +309,30 @@ The following table shows Android API level, iOS/iPadOS deployment target and ma
 
     ```dart
     FFmpegKitConfig.setFontDirectoryList(["/system/fonts", "/System/Library/Fonts", "<folder with fonts>"]);
+    ```
+
+11. (Android) Get the camera ids supported by the native camera input.
+
+    ```dart
+    FFmpegKitConfig.getSupportedCameraIds().then((cameraIds) {
+      cameraIds.forEach((cameraId) {
+        print("Camera id: $cameraId");
+      });
+    });
+    ```
+
+12. Use the Flutter API from an isolate.
+
+    ```dart
+    import 'package:flutter/services.dart';
+
+    Future<void> ffmpegWorker(RootIsolateToken rootIsolateToken) async {
+      BackgroundIsolateBinaryMessenger.ensureInitialized(rootIsolateToken);
+      await FFmpegKitConfig.init(printLoadConfirmation: false);
+
+      final session = await FFmpegKit.execute('-version');
+      final output = await session.getOutput();
+    }
     ```
 
 ### 4. Test Application

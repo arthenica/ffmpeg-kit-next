@@ -32,6 +32,12 @@ namespace ffmpegkit {
  */
 class Packages {
   public:
+    /**
+     * Returns the FFmpegKit binary package name.
+     *
+     * @return FFmpegKit binary package name
+     */
+    static std::string getPackageName();
 
     /**
      * Returns enabled external libraries by FFmpeg.

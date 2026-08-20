@@ -161,11 +161,14 @@ std::string extractPackageNameFromExternalLibraries() {
 }
 
 std::string ffmpegkit::Packages::getPackageName() {
-#ifdef FFMPEG_KIT_PACKAGE
-    return std::string(FFMPEG_KIT_PACKAGE);
-#else
-    return extractPackageNameFromExternalLibraries();
+#ifndef FFMPEG_KIT_PACKAGE_NAME
+#define FFMPEG_KIT_PACKAGE_NAME
 #endif
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+#define FFMPEG_KIT_PACKAGE_NAME_STR TOSTRING(FFMPEG_KIT_PACKAGE_NAME)
+
+    return FFMPEG_KIT_PACKAGE_NAME_STR;
 }
 
 std::shared_ptr<std::set<std::string>>

@@ -987,6 +987,14 @@ self.onmessage = async (event) => {
         });
         break;
       }
+      case 'getPackageName': {
+        postMessage({
+          id,
+          type: MSG_RESULT,
+          result: { packageName: Module.Packages.getPackageName() },
+        });
+        break;
+      }
       case 'getExternalLibraries': {
         const externalLibraries = Module.Packages.getExternalLibraries();
         postMessage({

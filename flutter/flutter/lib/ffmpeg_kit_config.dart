@@ -171,6 +171,9 @@ class FFmpegKitConfig {
   static Future<String> getVersion() async => FFmpegKitFactory.getVersion();
 
   /// Returns whether FFmpegKit release is a Long Term Release or not.
+  ///
+  /// Flutter builds do not have an LTS build concept.
+  @Deprecated('Flutter builds do not have an LTS build concept.')
   static Future<bool> isLTSBuild() async {
     try {
       await init();

@@ -35,7 +35,7 @@ class Packages {
     /**
      * Returns the FFmpegKit binary package name.
      *
-     * @return predicted FFmpegKit binary package name
+     * @return FFmpegKit binary package name
      */
     static std::string getPackageName();
 

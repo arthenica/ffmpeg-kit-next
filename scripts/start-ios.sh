@@ -50,8 +50,7 @@ if [[ -z ${BUILD_VERSION} ]]; then
   exit 1
 fi
 
-# MAIN BUILDS ENABLED BY DEFAULT
-enable_ios_main_build
+set_default_min_ios_platform_version
 
 # PROCESS BUILD OPTIONS
 while [ ! $# -eq 0 ]; do
@@ -158,6 +157,11 @@ while [ ! $# -eq 0 ]; do
     TARGET="${1#--mac-catalyst-target=}"
 
     export MAC_CATALYST_MIN_VERSION=${TARGET}
+    ;;
+  --package-name=*)
+    PACKAGE_NAME="${1#--package-name=}"
+
+    export FFMPEG_KIT_PACKAGE_NAME="${PACKAGE_NAME}"
     ;;
   --extra-cflags=*)
     EXTRA_CFLAGS="${1#--extra-cflags=}"

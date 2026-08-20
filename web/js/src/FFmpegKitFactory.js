@@ -447,6 +447,11 @@ class FFmpegKitFactory {
         return msg.result ? msg.result.arch : '';
     }
 
+    async getPackageName() {
+        const msg = await this._call('getPackageName', {});
+        return msg.result ? msg.result.packageName : '';
+    }
+
     async getExternalLibraries() {
         const msg = await this._call('getExternalLibraries', {});
         return msg.result ? msg.result.externalLibraries : [];

@@ -26,7 +26,7 @@
 #import <ffmpegkit/FFmpegKitStreamOutput.h>
 
 static NSString *const PLATFORM_NAME = @"ios";
-static NSString *const LIBRARY_VERSION = @"8.1.0";
+static NSString *const LIBRARY_VERSION = @"8.1.1";
 
 static NSString *const METHOD_CHANNEL = @"flutter.arthenica.com/ffmpeg_kit";
 static NSString *const EVENT_CHANNEL = @"flutter.arthenica.com/ffmpeg_kit_event";
@@ -187,7 +187,7 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
   SEL selector = NSSelectorFromString(@"addSessionDeleteListener:");
   if ([FFmpegKitConfig respondsToSelector:selector]) {
     void (*registerListener)(id, SEL, id) = (void (*)(id, SEL, id))[FFmpegKitConfig methodForSelector:selector];
-    registerListener(FFmpegKitConfig, selector, self);
+    registerListener([FFmpegKitConfig class], selector, self);
   }
 }
 
@@ -195,7 +195,7 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
   SEL selector = NSSelectorFromString(@"removeSessionDeleteListener:");
   if ([FFmpegKitConfig respondsToSelector:selector]) {
     void (*unregisterListener)(id, SEL, id) = (void (*)(id, SEL, id))[FFmpegKitConfig methodForSelector:selector];
-    unregisterListener(FFmpegKitConfig, selector, self);
+    unregisterListener([FFmpegKitConfig class], selector, self);
   }
 }
 
@@ -1040,7 +1040,9 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
 - (void)printLoadConfirmation:(FlutterResult)result {
   static dispatch_once_t loadedLoggedToken;
   dispatch_once(&loadedLoggedToken, ^{
-    NSLog(@"Loaded ffmpeg-kit-next-flutter-%@-%@-%@.", PLATFORM_NAME, [ArchDetect getArch], LIBRARY_VERSION);
+    NSString* packageName = [Packages getPackageName];
+    NSString* packageNamePart = [packageName length] > 0 ? [NSString stringWithFormat:@"%@-", packageName] : @"";
+    NSLog(@"Loaded ffmpeg-kit-next-flutter-%@%@-%@-%@.", packageNamePart, PLATFORM_NAME, [ArchDetect getArch], LIBRARY_VERSION);
   });
 
   result(nil);

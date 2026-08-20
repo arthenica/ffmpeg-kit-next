@@ -1657,15 +1657,14 @@ JNIEXPORT jstring JNICALL
 Java_com_arthenica_ffmpegkit_FFmpegKitConfig_getNativePackageName(
     JNIEnv *env, jclass object) {
 
+#ifndef FFMPEG_KIT_PACKAGE_NAME
+#define FFMPEG_KIT_PACKAGE_NAME
+#endif
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
-#define FFMPEG_KIT_PACKAGE_STR TOSTRING(FFMPEG_KIT_PACKAGE)
+#define FFMPEG_KIT_PACKAGE_NAME_STR TOSTRING(FFMPEG_KIT_PACKAGE_NAME)
 
-#ifdef FFMPEG_KIT_PACKAGE
-    return (*env)->NewStringUTF(env, FFMPEG_KIT_PACKAGE_STR);
-#else
-    return (*env)->NewStringUTF(env, "");
-#endif
+    return (*env)->NewStringUTF(env, FFMPEG_KIT_PACKAGE_NAME_STR);
 }
 
 /**

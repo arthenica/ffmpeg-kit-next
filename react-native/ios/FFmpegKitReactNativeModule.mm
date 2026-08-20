@@ -33,7 +33,7 @@
 #import <ffmpegkit/FFmpegKitStreamOutput.h>
 
 static NSString *const PLATFORM_NAME = @"ios";
-static NSString *const LIBRARY_VERSION = @"8.1.0";
+static NSString *const LIBRARY_VERSION = @"8.1.1";
 
 // LOG CLASS
 static NSString *const KEY_LOG_SESSION_ID = @"sessionId";
@@ -525,7 +525,9 @@ RCT_EXPORT_METHOD(getLogLevel:(RCTPromiseResolveBlock)resolve reject:(RCTPromise
 RCT_EXPORT_METHOD(printLoadConfirmation:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
     static dispatch_once_t loadedLoggedToken;
     dispatch_once(&loadedLoggedToken, ^{
-        NSLog(@"Loaded ffmpeg-kit-next-react-native-%@-%@-%@.", PLATFORM_NAME, [ArchDetect getArch], LIBRARY_VERSION);
+        NSString* packageName = [Packages getPackageName];
+        NSString* packageNamePart = [packageName length] > 0 ? [NSString stringWithFormat:@"%@-", packageName] : @"";
+        NSLog(@"Loaded ffmpeg-kit-next-react-native-%@%@-%@-%@.", packageNamePart, PLATFORM_NAME, [ArchDetect getArch], LIBRARY_VERSION);
     });
 
     resolve(nil);
@@ -977,7 +979,7 @@ RCT_EXPORT_METHOD(uninit:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejec
     SEL selector = NSSelectorFromString(@"addSessionDeleteListener:");
     if ([FFmpegKitConfig respondsToSelector:selector]) {
         void (*registerListener)(id, SEL, id) = (void (*)(id, SEL, id))[FFmpegKitConfig methodForSelector:selector];
-        registerListener(FFmpegKitConfig, selector, self);
+        registerListener([FFmpegKitConfig class], selector, self);
     }
 }
 
@@ -985,7 +987,7 @@ RCT_EXPORT_METHOD(uninit:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejec
     SEL selector = NSSelectorFromString(@"removeSessionDeleteListener:");
     if ([FFmpegKitConfig respondsToSelector:selector]) {
         void (*unregisterListener)(id, SEL, id) = (void (*)(id, SEL, id))[FFmpegKitConfig methodForSelector:selector];
-        unregisterListener(FFmpegKitConfig, selector, self);
+        unregisterListener([FFmpegKitConfig class], selector, self);
     }
 }
 

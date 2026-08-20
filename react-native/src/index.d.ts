@@ -162,6 +162,9 @@ declare module 'ffmpeg-kit-react-native' {
 
     static getVersion(): Promise<string>;
 
+    /**
+     * @deprecated Flutter builds do not have an LTS build concept.
+     */
     static isLTSBuild(): Promise<boolean>;
 
     static getBuildDate(): Promise<string>;

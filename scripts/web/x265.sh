@@ -32,7 +32,6 @@ emcmake cmake -Wno-dev \
   -DCMAKE_SYSTEM_PROCESSOR="$(get_cmake_system_processor)" \
   -DENABLE_PIC=1 \
   -DENABLE_CLI=0 \
-  -DHIGH_BIT_DEPTH=1 \
   -DENABLE_ASSEMBLY=0 \
   -DENABLE_SHARED=0 "${BASEDIR}"/src/"${LIB_NAME}"/source 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 

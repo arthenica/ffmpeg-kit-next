@@ -1598,8 +1598,12 @@ void *ffmpegKitInitialize() {
 
         ffmpegkit::FFmpegKitConfig::enableRedirection();
 
+        const std::string packageName = ffmpegkit::Packages::getPackageName();
+        const std::string packageNamePart =
+            packageName.empty() ? "" : packageName + "-";
+
         std::cout << "Loaded ffmpeg-kit-next-"
-                  << ffmpegkit::ArchDetect::getArch() << "-"
+                  << packageNamePart << ffmpegkit::ArchDetect::getArch() << "-"
                   << ffmpegkit::FFmpegKitConfig::getVersion() << "-"
                   << ffmpegkit::FFmpegKitConfig::getBuildDate() << "."
                   << std::endl;
@@ -1687,9 +1691,11 @@ void ffmpegkit::FFmpegKitConfig::setFontDirectoryList(
     auto tempConfigurationDirectory = ffmpegKitDir + "/fontconfig";
     auto fontConfigurationFile =
         std::string(tempConfigurationDirectory) + "/fonts.conf";
+    auto fontConfigurationCacheDirectory = tempConfigurationDirectory + "/cache";
 
     if (!fs_create_dir(cacheDir) || !fs_create_dir(ffmpegKitDir) ||
-        !fs_create_dir(tempConfigurationDirectory)) {
+        !fs_create_dir(tempConfigurationDirectory) ||
+        !fs_create_dir(fontConfigurationCacheDirectory)) {
         return;
     }
     std::cout << "Created temporary font conf directory: TRUE." << std::endl;
@@ -1737,6 +1743,9 @@ void ffmpegkit::FFmpegKitConfig::setFontDirectoryList(
         fontConfiguration += fontDirectoryPath;
         fontConfiguration += "</dir>\n";
     }
+    fontConfiguration += "    <cachedir>";
+    fontConfiguration += fontConfigurationCacheDirectory;
+    fontConfiguration += "</cachedir>\n";
     fontConfiguration += fontNameMappingBlock;
     fontConfiguration += "</fontconfig>\n";
 
@@ -2176,19 +2185,11 @@ std::string ffmpegkit::FFmpegKitConfig::getFFmpegVersion() {
 }
 
 std::string ffmpegkit::FFmpegKitConfig::getVersion() {
-    if (FFmpegKitConfig::isLTSBuild()) {
-        return std::string("").append(FFmpegKitVersion).append("-lts");
-    } else {
-        return FFmpegKitVersion;
-    }
+    return FFmpegKitVersion;
 }
 
 bool ffmpegkit::FFmpegKitConfig::isLTSBuild() {
-#if defined(FFMPEG_KIT_LTS)
-    return true;
-#else
     return false;
-#endif
 }
 
 std::string ffmpegkit::FFmpegKitConfig::getBuildDate() {

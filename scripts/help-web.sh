@@ -17,7 +17,7 @@ final application with SharedArrayBuffer-compatible COOP/COEP headers when ffmpe
   echo -e "Usage: ./$COMMAND ${PROFILE_USAGE}[OPTION]...\n"
   echo -e "Specify environment variables as VARIABLE=VALUE to override default build options.\n"
 
-  display_help_options "${PROFILE_OPTION}" "      --jobs=N\t\t\tnumber of jobs to run [auto]" "      --no-ffmpeg-kit-protocols\tdisable custom ffmpeg-kit protocols (ffkitmem, ffkitstream) [no]"
+  display_help_options "${PROFILE_OPTION}" "      --jobs=N\t\t\tnumber of jobs to run [auto]" "      --package-name=name\t\tset FFmpegKit package name in the native build [empty]" "      --no-ffmpeg-kit-protocols\tdisable custom ffmpeg-kit protocols (ffkitmem, ffkitstream) [no]"
   display_help_licensing
 
   echo -e "Architectures:"

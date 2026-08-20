@@ -30,7 +30,7 @@
 /**
  * Returns the FFmpegKit binary package name.
  *
- * @return predicted FFmpegKit binary package name
+ * @return FFmpegKit binary package name
  */
 + (NSString *)getPackageName;
 

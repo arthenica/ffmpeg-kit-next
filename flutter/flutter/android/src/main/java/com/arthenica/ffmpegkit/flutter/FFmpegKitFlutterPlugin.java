@@ -90,7 +90,7 @@ import io.flutter.plugin.common.PluginRegistry;
 public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCallHandler, EventChannel.StreamHandler, PluginRegistry.ActivityResultListener {
 
     public static final String LIBRARY_NAME = "ffmpeg-kit-flutter";
-    public static final String LIBRARY_VERSION = "8.1.0";
+    public static final String LIBRARY_VERSION = "8.1.1";
     public static final String PLATFORM_NAME = "android";
 
     private static final String METHOD_CHANNEL = "flutter.arthenica.com/ffmpeg_kit";
@@ -1328,7 +1328,9 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
 
     protected void printLoadConfirmation(@NonNull final Result result) {
         if (loadedLogged.compareAndSet(false, true)) {
-            Log.d(LIBRARY_NAME, String.format("Loaded ffmpeg-kit-next-flutter-%s-%s-%s.", PLATFORM_NAME, AbiDetect.getAbi(), LIBRARY_VERSION));
+            final String packageName = Packages.getPackageName();
+            final String packageNamePart = packageName.isEmpty() ? "" : packageName + "-";
+            Log.d(LIBRARY_NAME, String.format("Loaded ffmpeg-kit-next-flutter-%s%s-%s-%s.", packageNamePart, PLATFORM_NAME, AbiDetect.getAbi(), LIBRARY_VERSION));
         }
 
         resultHandler.successAsync(result, null);

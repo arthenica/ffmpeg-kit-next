@@ -22,6 +22,17 @@
 #include <algorithm>
 #include <memory>
 
+std::string ffmpegkit::Packages::getPackageName() {
+#ifndef FFMPEG_KIT_PACKAGE_NAME
+#define FFMPEG_KIT_PACKAGE_NAME
+#endif
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+#define FFMPEG_KIT_PACKAGE_NAME_STR TOSTRING(FFMPEG_KIT_PACKAGE_NAME)
+
+    return FFMPEG_KIT_PACKAGE_NAME_STR;
+}
+
 std::shared_ptr<std::set<std::string>>
 ffmpegkit::Packages::getExternalLibraries() {
     const std::set<const char *> supportedExternalLibraries{

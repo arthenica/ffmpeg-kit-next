@@ -17,7 +17,7 @@ set explicitly. When compilation ends, libraries are created under the prebuilt 
   echo -e "Usage: ./$COMMAND ${PROFILE_USAGE}[OPTION]...\n"
   echo -e "Specify environment variables as VARIABLE=VALUE to override default build options.\n"
 
-  display_help_options "${PROFILE_OPTION}" "  -x, --xcframework\t\tbuild xcframework bundles instead of framework bundles" "      --spm\t\t\tcreate a local Swift package (Package.swift) next to xcframeworks; requires -x" "      --jobs=N\t\t\tnumber of jobs to run [auto]" "      --target=visionos sdk version\toverride minimum deployment target [1.0]" "      --no-ffmpeg-kit-protocols\tdisable custom ffmpeg-kit protocols (ffkitmem, ffkitstream) [no]"
+  display_help_options "${PROFILE_OPTION}" "  -x, --xcframework\t\tbuild xcframework bundles instead of framework bundles" "      --spm\t\t\tcreate a local Swift package (Package.swift) next to xcframeworks; requires -x" "      --jobs=N\t\t\tnumber of jobs to run [auto]" "      --target=visionos sdk version\toverride minimum deployment target [1.0]" "      --package-name=name\t\tset FFmpegKit package name in the native build [empty]" "      --no-ffmpeg-kit-protocols\tdisable custom ffmpeg-kit protocols (ffkitmem, ffkitstream) [no]"
   display_help_licensing
 
   echo -e "Architectures:"

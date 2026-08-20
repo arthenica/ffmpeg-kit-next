@@ -612,7 +612,7 @@ create_ffmpeg_kit_xcframework() {
   echo -e "DEBUG: xcframework for ffmpeg-kit built successfully\n" 1>>"${BASEDIR}"/build.log 2>&1
 }
 
-enable_ios_main_build() {
+set_default_min_ios_platform_version() {
   if [[ $(compare_versions "$DETECTED_IOS_SDK_VERSION" "12.1") -le 0 ]]; then
     export IOS_MIN_VERSION=$DETECTED_IOS_SDK_VERSION
   else
@@ -626,7 +626,7 @@ enable_ios_main_build() {
   fi
 }
 
-enable_macos_main_build() {
+set_default_min_macos_platform_version() {
   if [[ $(compare_versions "$DETECTED_MACOS_SDK_VERSION" "10.15") -le 0 ]]; then
     export MACOS_MIN_VERSION=$DETECTED_MACOS_SDK_VERSION
   else
@@ -634,7 +634,7 @@ enable_macos_main_build() {
   fi
 }
 
-enable_tvos_main_build() {
+set_default_min_tvos_platform_version() {
   if [[ $(compare_versions "$DETECTED_TVOS_SDK_VERSION" "11.0") -le 0 ]]; then
     export TVOS_MIN_VERSION=$DETECTED_TVOS_SDK_VERSION
   else
@@ -642,7 +642,7 @@ enable_tvos_main_build() {
   fi
 }
 
-enable_visionos_main_build() {
+set_default_min_visionos_platform_version() {
   if [[ $(compare_versions "$DETECTED_VISIONOS_SDK_VERSION" "1.0") -le 0 ]]; then
     export VISIONOS_MIN_VERSION=$DETECTED_VISIONOS_SDK_VERSION
   else
@@ -1291,7 +1291,7 @@ get_min_version_cflags() {
 # arm64e to iOS 14.0 because arm64e userland (pointer authentication) does not
 # exist before iOS 14. It is harmless: the fat binary also carries an arm64
 # slice at IOS_MIN_VERSION, and dyld falls back to it on any device that cannot
-# use arm64e, so no device is locked out. See also enable_ios_main_build().
+# use arm64e, so no device is locked out. See also set_default_min_xx_platform_version().
 get_min_sdk_version() {
   case ${ARCH} in
   *-mac-catalyst)

@@ -1,6 +1,6 @@
 {
   "name": "ffmpeg-kit-next-web",
-  "version": "8.1.0",
+  "version": "8.1.1",
   "description": "FFmpegKitNext bindings for the web (WebAssembly). Native-named FFmpegKit API over a web worker-hosted wasm module",
   "type": "module",
   "main": "dist/index.js",
@@ -14,7 +14,10 @@
   },
   "files": [
     "dist/",
-    "lib/"
+    "lib/",
+    "licenses/",
+    "LICENSE",
+    "SOURCE"
   ],
   "keywords": [
     "ffmpeg",

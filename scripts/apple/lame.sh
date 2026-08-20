@@ -14,7 +14,6 @@ fi
   --prefix="${LIB_INSTALL_PREFIX}" \
   --with-pic \
   --with-sysroot="${SDK_PATH}" \
-  --with-libiconv-prefix="${SDK_PATH}"/usr \
   --enable-static \
   --disable-shared \
   --disable-fast-install \

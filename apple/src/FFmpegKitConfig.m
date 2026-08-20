@@ -44,7 +44,7 @@
 #import <sys/types.h>
 
 /** Global library version */
-NSString *const FFmpegKitVersion = @"8.1.0";
+NSString *const FFmpegKitVersion = @"8.1.1";
 
 /**
  * Prefix of named pipes created by ffmpeg-kit.
@@ -2006,12 +2006,15 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
                         with:(NSDictionary *)fontNameMapping {
     NSError *error = nil;
     BOOL isDirectory = YES;
+    BOOL isCacheDirectory = YES;
     BOOL isFile = NO;
     int validFontNameMappingCount = 0;
     NSString *tempConfigurationDirectory =
         [NSTemporaryDirectory() stringByAppendingPathComponent:@"fontconfig"];
     NSString *fontConfigurationFile = [tempConfigurationDirectory
         stringByAppendingPathComponent:@"fonts.conf"];
+    NSString *fontConfigurationCacheDirectory = [tempConfigurationDirectory
+        stringByAppendingPathComponent:@"cache"];
 
     if (![[NSFileManager defaultManager]
             fileExistsAtPath:tempConfigurationDirectory
@@ -2028,6 +2031,24 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
             return;
         }
         NSLog(@"Created temporary font conf directory: TRUE.");
+    }
+
+    if (![[NSFileManager defaultManager]
+            fileExistsAtPath:fontConfigurationCacheDirectory
+                 isDirectory:&isCacheDirectory] ||
+        !isCacheDirectory) {
+        if (![[NSFileManager defaultManager]
+                      createDirectoryAtPath:fontConfigurationCacheDirectory
+                withIntermediateDirectories:YES
+                                 attributes:nil
+                                      error:&error]) {
+            NSLog(@"Failed to set font directory. Error received while "
+                  @"creating temp "
+                  @"cache directory: %@.",
+                  error);
+            return;
+        }
+        NSLog(@"Created temporary font cache directory: TRUE.");
     }
 
     if ([[NSFileManager defaultManager] fileExistsAtPath:fontConfigurationFile
@@ -2073,6 +2094,9 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
         [fontConfiguration appendString:fontDirectoryPath];
         [fontConfiguration appendString:@"</dir>\n"];
     }
+    [fontConfiguration appendString:@"    <cachedir>"];
+    [fontConfiguration appendString:fontConfigurationCacheDirectory];
+    [fontConfiguration appendString:@"</cachedir>\n"];
     [fontConfiguration appendString:fontNameMappingBlock];
     [fontConfiguration appendString:@"</fontconfig>\n"];
 
@@ -2155,11 +2179,7 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
 }
 
 + (int)isLTSBuild {
-#if defined(FFMPEG_KIT_LTS)
-    return 1;
-#else
     return 0;
-#endif
 }
 
 + (NSString *)getBuildDate {

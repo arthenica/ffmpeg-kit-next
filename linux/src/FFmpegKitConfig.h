@@ -54,7 +54,7 @@ enum Signal {
 class FFmpegKitConfig {
   public:
     /** Global library version */
-    static constexpr const char *FFmpegKitVersion = "8.1.0";
+    static constexpr const char *FFmpegKitVersion = "8.1.1";
 
     /**
      * Prefix of named pipes created by ffmpeg-kit.
@@ -194,9 +194,11 @@ class FFmpegKitConfig {
     /**
      * <p>Returns whether FFmpegKit release is a Long Term Release or not.
      *
+     * @deprecated Deprecated. Linux builds do not have an LTS build concept.
      * @return true/yes or false/no
      */
-    static bool isLTSBuild();
+    static bool isLTSBuild()
+        __attribute__((deprecated("Deprecated. Linux builds do not have an LTS build concept.")));
 
     /**
      * Returns FFmpegKit library build date.

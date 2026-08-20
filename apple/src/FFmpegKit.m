@@ -41,8 +41,11 @@
         NSString* osType = @"macos";
     #endif
 
-    NSLog(@"Loaded ffmpeg-kit-next-%@-%@-%@%@-%@.\n", [ArchDetect getArch],
-          [FFmpegKitConfig getVersion], osType,
+    NSString* packageName = [Packages getPackageName];
+    NSString* packageNamePart = [packageName length] > 0 ? [NSString stringWithFormat:@"%@-", packageName] : @"";
+
+    NSLog(@"Loaded ffmpeg-kit-next-%@%@-%@-%@%@-%@.\n", packageNamePart,
+          [ArchDetect getArch], [FFmpegKitConfig getVersion], osType,
           [ArchDetect getMinSdk], [FFmpegKitConfig getBuildDate]);
 }
 

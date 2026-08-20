@@ -243,11 +243,14 @@ static NSMutableArray *supportedExternalLibraries;
 }
 
 + (NSString *)getPackageName {
-#ifdef FFMPEG_KIT_PACKAGE
-    return [NSString stringWithUTF8String:FFMPEG_KIT_PACKAGE];
-#else
-    return [self extractPackageNameFromExternalLibraries];
+#ifndef FFMPEG_KIT_PACKAGE_NAME
+#define FFMPEG_KIT_PACKAGE_NAME
 #endif
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+#define FFMPEG_KIT_PACKAGE_NAME_STR TOSTRING(FFMPEG_KIT_PACKAGE_NAME)
+
+    return [NSString stringWithUTF8String:FFMPEG_KIT_PACKAGE_NAME_STR];
 }
 
 + (NSArray *)getExternalLibraries {

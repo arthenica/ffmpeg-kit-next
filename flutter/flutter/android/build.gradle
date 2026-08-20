@@ -5,7 +5,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.0'
+        classpath 'com.android.tools.build:gradle:8.1.4'
     }
 }
 
@@ -28,8 +28,8 @@ android {
 
     defaultConfig {
         minSdkVersion 24
-        versionCode 810
-        versionName "8.1.0"
+        versionCode 811
+        versionName "8.1.1"
     }
 
     buildTypes {
@@ -59,5 +59,5 @@ dependencies {
     implementation 'androidx.activity:activity:1.8.1'
     implementation 'androidx.annotation:annotation:1.5.0'
     // Locally built FFmpegKit AAR resolved from the android/libs-maven Maven repo.
-    implementation 'com.arthenica:ffmpeg-kit-next:8.1.0'
+    implementation 'com.arthenica:ffmpeg-kit-next:8.1.1'
 }

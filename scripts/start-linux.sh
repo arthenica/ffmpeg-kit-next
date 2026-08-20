@@ -22,8 +22,7 @@ BUILD_FULL=""
 BUILD_TYPE_ID=""
 BUILD_VERSION=$(git describe --tags --always 2>>"${BASEDIR}"/build.log)
 
-# MAIN BUILDS ENABLED BY DEFAULT
-enable_main_build
+set_default_min_linux_platform_version
 
 # PROCESS BUILD OPTIONS
 while [ ! $# -eq 0 ]; do
@@ -117,6 +116,11 @@ while [ ! $# -eq 0 ]; do
     API_LEVEL="${1#--api-level=}"
 
     export API=${API_LEVEL}
+    ;;
+  --package-name=*)
+    PACKAGE_NAME="${1#--package-name=}"
+
+    export FFMPEG_KIT_PACKAGE_NAME="${PACKAGE_NAME}"
     ;;
   --extra-cflags=*)
     EXTRA_CFLAGS="${1#--extra-cflags=}"

@@ -14,7 +14,6 @@ fi
   --prefix="${LIB_INSTALL_PREFIX}" \
   --with-pic \
   --with-sysroot="${ANDROID_SYSROOT}" \
-  --with-libiconv-prefix="${LIB_INSTALL_BASE}"/libiconv \
   --enable-static \
   --disable-shared \
   --disable-fast-install \

@@ -1,6 +1,6 @@
 # FFmpegKitNext for Android
 
-`FFmpegKitNext` for Android can be built via [Nix](https://nixos.org/) and integrated locally.
+`FFmpegKitNext` for Android can be built via the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix) and integrated locally.
 
 ### 1. Features
 - Supports `API Level 24+`
@@ -12,8 +12,10 @@
 
 ### 2. Building
 
-Android builds are Nix-based. You must install [Nix](https://nixos.org/) first to build the binaries. Then run the
+Android builds use the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix). You must install it on a supported host first to build the binaries. Then run the
 `nix-android.sh` wrapper from the project root.
+
+NixOS is not required. The scripts require the Nix package manager on a supported host, and NixOS is not a supported Android build host.
 
 Note that, `FFmpegKitNext` does not publish binaries and building it yourself is the only way to use it.
 
@@ -39,13 +41,13 @@ the Android SDK, NDK (r27d), CMake and the build tools.
 
 Android builds require the following tools.
 
-- **Nix** — the `android-r27d` profile supplies the Android SDK, NDK r27d and CMake.
+- **Nix package manager** — the `android-r27d` profile supplies the Android SDK, NDK r27d and CMake.
 
 #### 2.2 Options
 
 Use `--enable-<library name>` flag to support additional external or system libraries and
 `--disable-<architecture name>` to disable architectures you don't want to build. Use `--enable-gpl` to allow
-GPL-licensed libraries.
+GPL-licensed libraries. Use `--prefab` to add a Prefab payload to the generated AAR for native/CMake consumers.
 
 ```
 ./nix-android.sh -p android-r27d --enable-fontconfig --disable-arm-v7a-neon
@@ -59,14 +61,15 @@ All libraries created can be found under the `prebuilt` directory.
 
 - A local Maven repository is created under each `bundle-android-aar-*-maven` folder, containing the Android
   archive (`.aar`, artifact id `ffmpeg-kit-next`) and its generated POM.
+- When `--prefab` is used, the generated AAR also includes Prefab metadata and native modules.
 
 For example, a default `API Level 24` build produces:
 
 ```
 prebuilt/bundle-android-aar-24-maven/
-└── com/arthenica/ffmpeg-kit-next/6.1.2/
-    ├── ffmpeg-kit-next-6.1.2.aar
-    └── ffmpeg-kit-next-6.1.2.pom
+└── com/arthenica/ffmpeg-kit-next/8.1.1/
+    ├── ffmpeg-kit-next-8.1.1.aar
+    └── ffmpeg-kit-next-8.1.1.pom
 ```
 
 ### 3. Using
@@ -84,7 +87,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.arthenica:ffmpeg-kit-next:6.1.2'
+    implementation 'com.arthenica:ffmpeg-kit-next:8.1.1'
 }
 ```
 

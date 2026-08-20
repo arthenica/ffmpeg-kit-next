@@ -27,7 +27,7 @@ cmake -Wno-dev \
   -DSNAPPY_BUILD_TESTS=0 \
   -DSNAPPY_BUILD_BENCHMARKS=0 \
   -DHAVE_LIBLZO2=0 \
-  -DHAVE_LIBZ=1 \
+  -DHAVE_LIBZ=0 \
   -DCMAKE_SYSTEM_PROCESSOR="$(get_target_cpu)" \
   -DBUILD_SHARED_LIBS=0 "${BASEDIR}"/src/"${LIB_NAME}" || return 1
 

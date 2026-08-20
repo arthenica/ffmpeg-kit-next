@@ -162,6 +162,7 @@ class MethodChannelFFmpegKit extends FFmpegKitPlatform {
   Future<String?> ffmpegKitConfigGetFFmpegVersion() async =>
       _channel.invokeMethod<String>('getFFmpegVersion');
 
+  @Deprecated('Flutter builds do not have an LTS build concept.')
   @override
   Future<bool?> ffmpegKitConfigIsLTSBuild() async =>
       _channel.invokeMethod<bool>('isLTSBuild');

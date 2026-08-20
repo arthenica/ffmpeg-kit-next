@@ -36,7 +36,7 @@ get_linux_pkg_config_libdir() {
   echo "${PKG_CONFIG_LIBDIR_VALUE}"
 }
 
-enable_main_build() {
+set_default_min_linux_platform_version() {
   local _TMP
 }
 
@@ -75,10 +75,12 @@ create_linux_bundle() {
   local FFMPEG_KIT_BUNDLE_INCLUDE_DIRECTORY="${BASEDIR}/prebuilt/$(get_bundle_directory)/ffmpeg-kit-next/include"
   local FFMPEG_KIT_BUNDLE_LIB_DIRECTORY="${BASEDIR}/prebuilt/$(get_bundle_directory)/ffmpeg-kit-next/lib"
   local FFMPEG_KIT_BUNDLE_PKG_CONFIG_DIRECTORY="${BASEDIR}/prebuilt/$(get_bundle_directory)/ffmpeg-kit-next/pkgconfig"
+  local FFMPEG_KIT_BUNDLE_LICENSE_DIRECTORY="${BASEDIR}/prebuilt/$(get_bundle_directory)/ffmpeg-kit-next/licenses"
 
   initialize_folder "${FFMPEG_KIT_BUNDLE_INCLUDE_DIRECTORY}"
   initialize_folder "${FFMPEG_KIT_BUNDLE_LIB_DIRECTORY}"
   initialize_folder "${FFMPEG_KIT_BUNDLE_PKG_CONFIG_DIRECTORY}"
+  initialize_folder "${FFMPEG_KIT_BUNDLE_LICENSE_DIRECTORY}"
 
   # COPY HEADERS
   cp -r -P "${LIB_INSTALL_BASE}"/ffmpeg-kit/include/* "${BASEDIR}/prebuilt/$(get_bundle_directory)/ffmpeg-kit-next/include" 2>>"${BASEDIR}"/build.log
@@ -98,7 +100,7 @@ create_linux_bundle() {
   install_pkg_config_file "ffmpeg-kit-next.pc"
 
   # COPY EXTERNAL LIBRARY LICENSES
-  LICENSE_BASEDIR="${BASEDIR}/prebuilt/$(get_bundle_directory)/ffmpeg-kit-next/lib"
+  LICENSE_BASEDIR="${FFMPEG_KIT_BUNDLE_LICENSE_DIRECTORY}"
   rm -f "${LICENSE_BASEDIR}"/*.txt 1>>"${BASEDIR}"/build.log 2>&1 || exit 1
   for library in $(get_common_library_indexes); do
     if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
@@ -221,7 +223,7 @@ get_app_specific_cflags() {
     APP_FLAGS="-Wno-unused-function"
     ;;
   ffmpeg-kit)
-    APP_FLAGS="-Wno-unused-function -Wno-pointer-sign -Wno-switch -Wno-deprecated-declarations"
+    APP_FLAGS="-Wno-unused-function -Wno-pointer-sign -Wno-switch -Wno-deprecated-declarations $(get_package_name_cflag)"
     ;;
   kvazaar | libsvtav1)
     APP_FLAGS="-std=gnu99 -Wno-unused-function"
@@ -284,7 +286,7 @@ get_cxxflags() {
     fi
     ;;
   ffmpeg-kit)
-    echo "${COMMON_FLAGS} ${USES_FFMPEG_KIT_PROTOCOLS}"
+    echo "-fPIC ${COMMON_FLAGS} $(get_package_name_cflag) ${USES_FFMPEG_KIT_PROTOCOLS}"
     ;;
   libjxl)
     echo "-stdlib=libstdc++ -std=c++17 ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS} ${BUILD_DATE} $(get_arch_specific_cflags) -fcxx-exceptions -fPIC"

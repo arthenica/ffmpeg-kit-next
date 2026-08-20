@@ -24,6 +24,15 @@ import {getFactory} from './FFmpegKitFactory.js';
  */
 export class Packages {
     /**
+     * Returns the FFmpegKit binary package name.
+     *
+     * @returns {Promise<string>} FFmpegKit binary package name
+     */
+    static async getPackageName() {
+        return getFactory().getPackageName();
+    }
+
+    /**
      * Returns enabled external libraries by FFmpeg.
      *
      * @returns {Promise<string[]>} enabled external libraries

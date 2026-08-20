@@ -243,6 +243,7 @@ void config_setLogLevel(const int level) {
 // Do not bind the waiting variants.
 val session_getLogs(AbstractSession &self) { return listToArray(self.getLogs()); }
 val ffmpegSession_getStatistics(FFmpegSession &self) { return listToArray(self.getStatistics()); }
+std::string packages_getPackageName() { return Packages::getPackageName(); }
 val packages_getExternalLibraries() { return stringSetToArray(Packages::getExternalLibraries()); }
 
 // Session timestamps as epoch milliseconds (doubles). JS wraps them in Date; a value
@@ -1103,6 +1104,7 @@ EMSCRIPTEN_BINDINGS(ffmpegkit_bindings) {
         .class_function("getArch", &ArchDetect::getArch);
 
     class_<Packages>("Packages")
+        .class_function("getPackageName", &packages_getPackageName)
         .class_function("getExternalLibraries", &packages_getExternalLibraries);
 
     // Public FFmpegKitConfig surface — mirrors the native API only (no web-only

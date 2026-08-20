@@ -1,46 +1,25 @@
 # FFmpegKitNext for Web
 
 ### 1. Features
-
-- Includes both `FFmpeg` and `FFprobe`
 - Supports
     - Modern browsers with `WebAssembly`, `SharedArrayBuffer` and module `Web Worker` support
     - `wasm32` architecture (`wasm32-unknown-emscripten`), compiled with `Emscripten`
     - `WebAssembly SIMD`, with `pthreads` enabled by default
-    - 38 external libraries
-
-      `chromaprint`, `dav1d`, `fontconfig`, `freetype`, `fribidi`, `gmp`, `gnutls`, `harfbuzz`, `kvazaar`, `lame`,
-      `libaom`, `libass`, `libilbc`, `libjxl`, `liblc3`, `libsamplerate`, `libsndfile`, `libsvtav1`, `libtheora`,
-      `libvorbis`, `libvpx`, `libwebp`, `libxml2`, `opencore-amr`, `openh264`, `openssl`, `opus`, `sdl`, `shine`,
-      `snappy`, `soxr`, `speex`, `srt`, `tesseract`, `twolame`, `vo-amrwbenc`, `vvenc`, `zimg`
-
-    - 5 external libraries with GPL license
-
-      `rubberband`, `vid.stab`, `x264`, `x265`, `xvidcore`
-
-    - Built-in `libiconv` and `zlib`
-
 - Runs the `FFmpeg` and `ffmpeg-kit` core inside a `Web Worker`, off the main (UI) thread
-- Native-named JavaScript API (`FFmpegKit`, `FFprobeKit`, `FFmpegKitConfig`, …) — the same class names as the
-  Android, Apple, Flutter and React Native platforms — shipped as ES modules
-- Custom `FFmpegKit` protocols: `ffkitmem:` for finite in-memory input/output and `ffkitstream:` for
-  memory-backed streaming input/output
+- Native-compatible JavaScript API with TypeScript declarations, shipped as ES modules
+- Custom `FFmpegKit` protocols: `ffkitmem:` for finite in-memory input/output and `ffkitstream:` for memory-backed streaming input/output
 - Virtual filesystem helpers: `writeFile`/`readFile` (`MEMFS`) and `mount` (`WORKERFS`, for large inputs without a
   heap copy)
-- Includes Typescript definitions
-- Licensed under `LGPL 3.0` by default, `GPL v3.0` if GPL licensed libraries are enabled
+- Supports both web linkage modes: dynamic builds load FFmpeg side modules at runtime, while static builds link the FFmpeg libraries into one main WebAssembly module
 
-### 2. Installation
+### 2 Building
 
-`ffmpeg-kit-next-web` is not published to `npm`. Build `FFmpegKitNext` locally for the web target, then integrate
-the generated package from this repository using a local file dependency.
-
-Note that `FFmpegKitNext` does not publish binaries and building it yourself is the only way to use it.
-
-#### 2.1 Building
-
-Web builds are Nix-based. You must install [Nix](https://nixos.org/) first to build the binaries. Then run the
+Web builds use the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix). You must install it on a supported host first to build the binaries. Then run the
 `nix-web.sh` wrapper from the project root.
+
+NixOS is not required. The scripts require the Nix package manager on a supported host, and NixOS is not a supported Web build host.
+
+Note that, `FFmpegKitNext` does not publish binaries and building it yourself is the only way to use it.
 
 Use `--list-profiles` to see the local Nix profiles available on your machine.
 
@@ -60,6 +39,12 @@ them, together with the JavaScript/TypeScript API and the worker runtime, into a
 The build downloads `FFmpeg` and enabled external libraries when they are not already available locally. Nix
 provides Emscripten (emsdk), CMake and the build tools.
 
+#### 2.1 Prerequisites
+
+Web builds require the following tools.
+
+- **Nix package manager** — the `web-wasm32-emscripten` profile supplies the Emscripten and CMake.
+
 #### 2.2 Build Variants and External Libraries
 
 `FFmpeg` includes built-in encoders for some popular formats. Some formats/codecs require external libraries to be
@@ -74,6 +59,13 @@ allow GPL-licensed libraries.
 ```
 
 Run `--help` to see all available build options.
+
+Dynamic linkage is the default. Add `--static` to build static archives and link the FFmpeg libraries into one main
+WebAssembly module.
+
+```sh
+./nix-web.sh -p web-wasm32-emscripten --static
+```
 
 The C++ wrapper uses `pthreads`, so full `ffmpeg-kit` web builds keep `--enable-pthreads`.
 
@@ -105,7 +97,12 @@ hosting page must be served with both of the following response headers:
 
 Without them the module fails to instantiate.
 
-#### 2.5 Local Integration
+### 3. Using
+
+`ffmpeg-kit-next-web` is not published to `npm`. Build `FFmpegKitNext` locally for the web target, then integrate
+the generated package from this repository using a local file dependency.
+
+#### 3.1 Local Integration
 
 Build the package locally first, then depend on the generated folder.
 
@@ -127,7 +124,7 @@ are never exposed.
 import { FFmpegKit, FFprobeKit, FFmpegKitConfig } from 'ffmpeg-kit-next-web';
 ```
 
-### 3. Using
+#### 3.2 JavaScript API
 
 1. Execute FFmpeg commands.
 
@@ -403,15 +400,3 @@ import { FFmpegKit, FFprobeKit, FFmpegKitConfig } from 'ffmpeg-kit-next-web';
 
 You can see how `FFmpegKitNext` is used inside an application by running the `Web` test application developed
 under the [FFmpegKitNext Test](https://github.com/arthenica/ffmpeg-kit-next-test) project.
-
-### 5. Tips
-
-See [Tips](https://github.com/arthenica/ffmpeg-kit-next/wiki/Tips) wiki page.
-
-### 6. License
-
-See [License](https://github.com/arthenica/ffmpeg-kit-next/wiki/License) wiki page.
-
-### 7. Patents
-
-See [Patents](https://github.com/arthenica/ffmpeg-kit-next/wiki/Patents) wiki page.

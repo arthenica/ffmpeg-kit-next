@@ -1,4 +1,4 @@
-## <NEXT>
+## 8.1.1
 - Documents iPadOS as a supported platform
 - Adds Linux platform support (`x86_64`, `arm64`)
 

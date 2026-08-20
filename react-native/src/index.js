@@ -1197,6 +1197,7 @@ export class FFmpegKitConfig {
   /**
    * <p>Returns whether FFmpegKit release is a Long Term Release or not.
    *
+   * @deprecated Flutter builds do not have an LTS build concept.
    * @return true/yes or false/no
    */
   static async isLTSBuild() {
@@ -1923,7 +1924,7 @@ class FFmpegKitFactory {
   }
 
   static getVersion() {
-    return "8.1.0";
+    return "8.1.1";
   }
 
   static getLogRedirectionStrategy(sessionId) {

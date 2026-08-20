@@ -59,7 +59,7 @@
 #include <json/Value.h>
 
 #define FFMPEG_KIT_PLATFORM_NAME "linux"
-#define FFMPEG_KIT_LIBRARY_VERSION "8.1.0"
+#define FFMPEG_KIT_LIBRARY_VERSION "8.1.1"
 
 static const char* kMethodChannelName = "flutter.arthenica.com/ffmpeg_kit";
 static const char* kEventChannelName = "flutter.arthenica.com/ffmpeg_kit_event";
@@ -889,7 +889,11 @@ static FlMethodResponse* handle_method_call(FfmpegKitNextFlutterPlugin* self,
     static gboolean logged = FALSE;
     if (!logged) {
       logged = TRUE;
-      g_message("Loaded ffmpeg-kit-next-flutter-%s-%s-%s.",
+      const std::string packageName = ffmpegkit::Packages::getPackageName();
+      const std::string packageNamePart =
+          packageName.empty() ? "" : packageName + "-";
+      g_message("Loaded ffmpeg-kit-next-flutter-%s%s-%s-%s.",
+                packageNamePart.c_str(),
                 FFMPEG_KIT_PLATFORM_NAME,
                 ffmpegkit::ArchDetect::getArch().c_str(),
                 FFMPEG_KIT_LIBRARY_VERSION);

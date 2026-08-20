@@ -80,7 +80,7 @@ open class NativeLoader {
 
         @JvmStatic
         internal fun loadVersion(): String {
-            val version = "8.1.0"
+            val version = "8.1.1"
 
             return if (isTestModeDisabled()) {
                 FFmpegKitConfig.getVersion()
@@ -104,6 +104,15 @@ open class NativeLoader {
                 FFmpegKitConfig.getBuildDate()
             } else {
                 SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
+            }
+        }
+
+        @JvmStatic
+        internal fun loadPackageName(): String {
+            return if (isTestModeDisabled()) {
+                FFmpegKitConfig.getNativePackageName()
+            } else {
+                ""
             }
         }
 

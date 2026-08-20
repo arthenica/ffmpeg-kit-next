@@ -32,7 +32,8 @@ BUILD_LIBRARY_OPTIONS="--enable-shared --disable-static"
 
 echo -n -e "\n${LIB_NAME}: "
 
-make distclean 2>/dev/null 1>/dev/null
+# CLEAN UP PREVIOUS BUILD FILES
+find "${BASEDIR}/apple/src" \( -name '*.o' -o -name '*.lo' -o -name '.libs' -o -name '.deps' \) -prune -exec rm -rf {} +
 
 rm -f "${BASEDIR}"/apple/src/libffmpegkit* 1>>"${BASEDIR}"/build.log 2>&1
 

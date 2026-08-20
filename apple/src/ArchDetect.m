@@ -118,11 +118,9 @@
         case CPU_SUBTYPE_ARM_V7S:
             [cpu appendString:@"v7s"];
             break;
-#ifndef FFMPEG_KIT_LTS
         case CPU_SUBTYPE_ARM_V8:
             [cpu appendString:@"v8"];
             break;
-#endif
         }
 
 #if defined(__IPHONE_OS_VERSION_MAX_ALLOWED) &&                                \

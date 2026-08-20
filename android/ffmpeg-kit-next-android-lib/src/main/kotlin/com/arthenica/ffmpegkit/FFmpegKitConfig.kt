@@ -150,10 +150,14 @@ open class FFmpegKitConfig private constructor() {
                 LogRedirectionStrategy.PRINT_LOGS_WHEN_NO_CALLBACKS_DEFINED
             safUrlsReusable = AtomicBoolean(false)
 
+            val packageName = NativeLoader.loadPackageName()
+            val packageNamePart = if (packageName.isNotEmpty()) "$packageName-" else ""
+
             android.util.Log.i(
                 TAG,
                 String.format(
-                    "Loaded ffmpeg-kit-next-%s-%s-api%s-%s.",
+                    "Loaded ffmpeg-kit-next-%s%s-%s-api%s-%s.",
+                    packageNamePart,
                     NativeLoader.loadAbi(),
                     NativeLoader.loadVersion(),
                     NativeLoader.loadMinSdk(),
@@ -442,6 +446,7 @@ open class FFmpegKitConfig private constructor() {
             var validFontNameMappingCount = 0
 
             val tempConfigurationDirectory = File(cacheDir, "fontconfig")
+            val fontConfigurationCacheDirectory = File(tempConfigurationDirectory, "cache")
             if (!tempConfigurationDirectory.exists()) {
                 val tempFontConfDirectoryCreated = tempConfigurationDirectory.mkdirs()
                 android.util.Log.d(
@@ -449,6 +454,26 @@ open class FFmpegKitConfig private constructor() {
                     String.format(
                         "Created temporary font conf directory: %s.",
                         tempFontConfDirectoryCreated
+                    )
+                )
+            }
+            if (!fontConfigurationCacheDirectory.isDirectory) {
+                val tempFontCacheDirectoryCreated = fontConfigurationCacheDirectory.mkdirs()
+                if (!tempFontCacheDirectoryCreated && !fontConfigurationCacheDirectory.isDirectory) {
+                    android.util.Log.e(
+                        TAG,
+                        String.format(
+                            "Failed to set font directory. Error received while creating temp cache directory: %s.",
+                            fontConfigurationCacheDirectory.absolutePath
+                        )
+                    )
+                    return
+                }
+                android.util.Log.d(
+                    TAG,
+                    String.format(
+                        "Created temporary font cache directory: %s.",
+                        tempFontCacheDirectoryCreated
                     )
                 )
             }
@@ -467,37 +492,36 @@ open class FFmpegKitConfig private constructor() {
 
             /* PROCESS MAPPINGS FIRST */
             val fontNameMappingBlock = buildString {
-            if (fontNameMapping != null && fontNameMapping.isNotEmpty()) {
-                fontNameMapping.entries
-                for (mapping in fontNameMapping.entries) {
-                    val fontName = mapping.key
-                    val mappedFontName = mapping.value
+                if (fontNameMapping != null && fontNameMapping.isNotEmpty()) {
+                    for (mapping in fontNameMapping.entries) {
+                        val fontName = mapping.key
+                        val mappedFontName = mapping.value
 
-                    if (!fontName.isNullOrBlank() && !mappedFontName.isNullOrBlank()) {
-                        append("    <match target=\"pattern\">\n")
-                        append("        <test qual=\"any\" name=\"family\">\n")
-                        append(
-                            String.format(
-                                "            <string>%s</string>\n",
-                                fontName
+                        if (!fontName.isNullOrBlank() && !mappedFontName.isNullOrBlank()) {
+                            append("    <match target=\"pattern\">\n")
+                            append("        <test qual=\"any\" name=\"family\">\n")
+                            append(
+                                String.format(
+                                    "            <string>%s</string>\n",
+                                    fontName
+                                )
                             )
-                        )
-                        append("        </test>\n")
-                        append("        <edit name=\"family\" mode=\"assign\" binding=\"same\">\n")
-                        append(
-                            String.format(
-                                "            <string>%s</string>\n",
-                                mappedFontName
+                            append("        </test>\n")
+                            append("        <edit name=\"family\" mode=\"assign\" binding=\"same\">\n")
+                            append(
+                                String.format(
+                                    "            <string>%s</string>\n",
+                                    mappedFontName
+                                )
                             )
-                        )
-                        append("        </edit>\n")
-                        append("    </match>\n")
+                            append("        </edit>\n")
+                            append("    </match>\n")
 
-                        validFontNameMappingCount++
+                            validFontNameMappingCount++
+                        }
                     }
                 }
             }
-                }
 
             val fontConfigBuilder = buildString {
                 append("<?xml version=\"1.0\"?>\n")
@@ -509,6 +533,9 @@ open class FFmpegKitConfig private constructor() {
                     append(fontDirectoryPath)
                     append("</dir>\n")
                 }
+                append("    <cachedir>")
+                append(fontConfigurationCacheDirectory.absolutePath)
+                append("</cachedir>\n")
                 append(fontNameMappingBlock)
                 append("</fontconfig>\n")
             }
@@ -748,7 +775,7 @@ open class FFmpegKitConfig private constructor() {
          * determine the features supported by this version
          */
         @JvmStatic
-        @Deprecated("as of version 6.1.2, use the AbiDetect#getNativeMinSdk() method to determine the features supported by this version")
+        @Deprecated("Android builds do not have an LTS build concept.")
         fun isLTSBuild(): Boolean {
             return AbiDetect.isNativeLTSBuild()
         }
