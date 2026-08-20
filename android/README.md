@@ -1,6 +1,6 @@
 # FFmpegKitNext for Android
 
-`FFmpegKitNext` for Android can be built via [Nix](https://nixos.org/) and integrated locally.
+`FFmpegKitNext` for Android can be built via the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix) and integrated locally.
 
 ### 1. Features
 - Supports `API Level 24+`
@@ -12,8 +12,10 @@
 
 ### 2. Building
 
-Android builds are Nix-based. You must install [Nix](https://nixos.org/) first to build the binaries. Then run the
+Android builds use the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix). You must install it on a supported host first to build the binaries. Then run the
 `nix-android.sh` wrapper from the project root.
+
+NixOS is not required. The scripts require the Nix package manager on a supported host, and NixOS is not a supported Android build host.
 
 Note that, `FFmpegKitNext` does not publish binaries and building it yourself is the only way to use it.
 
@@ -39,7 +41,7 @@ the Android SDK, NDK (r27d), CMake and the build tools.
 
 Android builds require the following tools.
 
-- **Nix** — the `android-r27d` profile supplies the Android SDK, NDK r27d and CMake.
+- **Nix package manager** — the `android-r27d` profile supplies the Android SDK, NDK r27d and CMake.
 
 #### 2.2 Options
 
