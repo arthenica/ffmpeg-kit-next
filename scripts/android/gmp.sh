@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# gmp HAS NO OPTION TO SKIP ITS MANUAL. IT DOES SHIP doc/gmp.info, BUT git DOES
+# NOT PRESERVE TIMESTAMPS, SO AFTER A CLONE gmp.texi IS OFTEN A FEW MILLISECONDS
+# NEWER THAN gmp.info AND make REGENERATES THE MANUAL. THAT NEEDS makeinfo,
+# WHICH IS NOT ALWAYS INSTALLED. POINTING MAKEINFO AT true SKIPS THE
+# REGENERATION AND LEAVES THE LIBRARY ITSELF UNAFFECTED.
+export MAKEINFO=true
+
 # ALWAYS CLEAN THE PREVIOUS BUILD
 make distclean 2>/dev/null 1>/dev/null
 
@@ -19,9 +26,11 @@ fi
   --disable-maintainer-mode \
   --host="${HOST}" || return 1
 
-make -j$(get_cpu_count) || return 1
+# MAKEINFO IS ALSO PASSED ON THE COMMAND LINE SO IT OVERRIDES THE VALUE BAKED
+# INTO THE GENERATED Makefiles IN EVERY RECURSIVE SUBMAKE
+make -j$(get_cpu_count) MAKEINFO=true || return 1
 
-make install || return 1
+make install MAKEINFO=true || return 1
 
 # CREATE PACKAGE CONFIG MANUALLY
 create_gmp_package_config "6.3.0" || return 1

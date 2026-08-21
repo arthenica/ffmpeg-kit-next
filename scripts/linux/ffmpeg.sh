@@ -40,7 +40,7 @@ LINUX_SYSTEM_INCLUDE_FLAGS="$(get_linux_system_include_flags)"
 export CFLAGS="$(get_cflags "${LIB_NAME}") ${LINUX_SYSTEM_INCLUDE_FLAGS}"
 export CXXFLAGS="$(get_cxxflags "${LIB_NAME}") ${LINUX_SYSTEM_INCLUDE_FLAGS}"
 export LDFLAGS=$(get_ldflags "${LIB_NAME}")
-export PKG_CONFIG_LIBDIR="$(get_linux_pkg_config_libdir)"
+export PKG_CONFIG_LIBDIR="$(get_pkg_config_libdir)"
 unset PKG_CONFIG_PATH
 
 echo -e "\nINFO: Using Linux system include flags: ${LINUX_SYSTEM_INCLUDE_FLAGS}\n" 1>>"${BASEDIR}"/build.log 2>&1

@@ -31,7 +31,7 @@ set_toolchain_paths "${LIB_NAME}"
 
 # SET BUILD FLAGS
 HOST=$(get_host)
-export PKG_CONFIG_LIBDIR="$(get_linux_pkg_config_libdir)"
+export PKG_CONFIG_LIBDIR="$(get_pkg_config_libdir)"
 unset PKG_CONFIG_PATH
 
 prepare_rapidjson_headers || return 1

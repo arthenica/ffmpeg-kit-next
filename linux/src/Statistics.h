@@ -20,6 +20,7 @@
 #ifndef FFMPEG_KIT_STATISTICS_H
 #define FFMPEG_KIT_STATISTICS_H
 
+#include <cstdint>
 #include <stdlib.h>
 
 namespace ffmpegkit {

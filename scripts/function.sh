@@ -113,6 +113,8 @@ get_library_name() {
       echo "tvos-zlib"
     elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then
       echo "visionos-zlib"
+    elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "web" ]]; then
+      echo "web-zlib"
     fi
     ;;
   51) echo "linux-alsa" ;;
@@ -230,7 +232,7 @@ get_library_name() {
   95) echo "libjxl" ;;
   96) echo "liblc3" ;;
   97) echo "web-libiconv" ;;
-  98) echo "web-zlib" ;;
+  98) echo "zlib" ;;
   esac
 }
 
@@ -286,7 +288,7 @@ from_library_name() {
   libsamplerate) echo 47 ;;
   harfbuzz) echo 48 ;;
   cpu-features) echo 49 ;;
-  android-zlib | ios-zlib | linux-zlib | macos-zlib | tvos-zlib | visionos-zlib) echo 50 ;;
+  android-zlib | ios-zlib | linux-zlib | macos-zlib | tvos-zlib | visionos-zlib | web-zlib) echo 50 ;;
   linux-alsa) echo 51 ;;
   android-media-codec) echo 52 ;;
   ios-audiotoolbox | macos-audiotoolbox | tvos-audiotoolbox | visionos-audiotoolbox) echo 53 ;;
@@ -334,7 +336,7 @@ from_library_name() {
   libjxl) echo 95 ;;
   liblc3) echo 96 ;;
   web-libiconv) echo 97 ;;
-  web-zlib) echo 98 ;;
+  zlib) echo 98 ;;
   esac
 }
 
@@ -342,6 +344,9 @@ get_common_library_indexes() {
   for library in {0..49}; do
     echo "${library}"
   done
+  if [[ ${FFMPEG_KIT_BUILD_TYPE} == "windows" ]]; then
+    echo "${LIBRARY_ZLIB}"
+  fi
   echo "${LIBRARY_VVENC}"
   echo "${LIBRARY_LIBSVTAV1}"
   echo "${LIBRARY_LIBJXL}"
@@ -355,8 +360,29 @@ is_library_supported_on_platform() {
   local library_index=$(from_library_name "$1")
   case ${library_index} in
   # ALL
-  16 | 17 | 18 | 23 | 27 | 28 | 32 | 34 | 35 | 36 | 50 | 93 | 94 | 95 | 96)
+  16 | 17 | 18 | 23 | 27 | 28 | 32 | 34 | 35 | 36 | 93 | 94 | 95 | 96)
     echo "0"
+    ;;
+
+  # PLATFORM zlib
+  50)
+    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "android" ]] && [[ $1 == "android-zlib" ]]; then
+      echo "0"
+    elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "ios" ]] && [[ $1 == "ios-zlib" ]]; then
+      echo "0"
+    elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "linux" ]] && [[ $1 == "linux-zlib" ]]; then
+      echo "0"
+    elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "macos" ]] && [[ $1 == "macos-zlib" ]]; then
+      echo "0"
+    elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]] && [[ $1 == "tvos-zlib" ]]; then
+      echo "0"
+    elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]] && [[ $1 == "visionos-zlib" ]]; then
+      echo "0"
+    elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "web" ]] && [[ $1 == "web-zlib" ]]; then
+      echo "0"
+    else
+      echo "1"
+    fi
     ;;
 
   # ALL EXCEPT LINUX
@@ -368,8 +394,17 @@ is_library_supported_on_platform() {
     fi
     ;;
 
+  # ANDROID OR WINDOWS
+  7)
+    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "android" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "windows" ]]; then
+      echo "0"
+    else
+      echo "1"
+    fi
+    ;;
+
   # ANDROID
-  7 | 41 | 49 | 52)
+  41 | 49 | 52)
     if [[ ${FFMPEG_KIT_BUILD_TYPE} == "android" ]]; then
       echo "0"
     else
@@ -425,8 +460,17 @@ is_library_supported_on_platform() {
     ;;
 
   # ONLY WEB
-  97 | 98)
+  97)
     if [[ ${FFMPEG_KIT_BUILD_TYPE} == "web" ]]; then
+      echo "0"
+    else
+      echo "1"
+    fi
+    ;;
+
+  # ONLY WINDOWS
+  98)
+    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "windows" ]]; then
       echo "0"
     else
       echo "1"
@@ -475,9 +519,9 @@ is_arch_supported_on_platform() {
     fi
     ;;
 
-    # IOS, LINUX, MACOS, TVOS OR VISIONOS
+    # IOS, LINUX, MACOS, TVOS, VISIONOS OR WINDOWS
   $ARCH_ARM64)
-    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "ios" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "linux" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "macos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then
+    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "ios" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "linux" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "macos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "windows" ]]; then
       echo 1
     else
       echo 0
@@ -537,6 +581,9 @@ get_meson_target_host_family() {
     ;;
   linux)
     echo "linux"
+    ;;
+  windows)
+    echo "windows"
     ;;
   *)
     echo "darwin"
@@ -961,14 +1008,14 @@ display_help_common_libraries() {
   echo -e "  --enable-libsvtav1\t\tbuild with libsvtav1 [no]"
 
   case ${FFMPEG_KIT_BUILD_TYPE} in
-  android)
+  android | windows)
     echo -e "  --enable-libiconv\t\tbuild with libiconv [no]"
     ;;
   esac
 
   echo -e "  --enable-libilbc\t\tbuild with libilbc [no]"
   case ${FFMPEG_KIT_BUILD_TYPE} in
-  web)
+  web | windows)
     echo -e "  --enable-libsamplerate\tbuild with libsamplerate [no]"
     echo -e "  --enable-libsndfile\t\tbuild with libsndfile [no]"
     ;;
@@ -1148,7 +1195,7 @@ set_library() {
   fi
 
   case $1 in
-  android-zlib | ios-zlib | linux-zlib | macos-zlib | tvos-zlib | visionos-zlib)
+  android-zlib | ios-zlib | linux-zlib | macos-zlib | tvos-zlib | visionos-zlib | web-zlib)
     ENABLED_LIBRARIES[LIBRARY_SYSTEM_ZLIB]=$2
     ;;
   linux-alsa)
@@ -1250,9 +1297,6 @@ set_library() {
   web-libiconv)
     ENABLED_LIBRARIES[LIBRARY_WEB_LIBICONV]=$2
     ;;
-  web-zlib)
-    ENABLED_LIBRARIES[LIBRARY_WEB_ZLIB]=$2
-    ;;
   libilbc)
     ENABLED_LIBRARIES[LIBRARY_LIBILBC]=$2
     ;;
@@ -1297,6 +1341,7 @@ set_library() {
   libxml2)
     ENABLED_LIBRARIES[LIBRARY_LIBXML2]=$2
     set_virtual_library "libiconv" $2
+    set_virtual_library "zlib" $2
     ;;
   opencore-amr)
     ENABLED_LIBRARIES[LIBRARY_OPENCOREAMR]=$2
@@ -1306,6 +1351,7 @@ set_library() {
     ;;
   openssl)
     ENABLED_LIBRARIES[LIBRARY_OPENSSL]=$2
+    set_virtual_library "zlib" $2
     ;;
   opus)
     ENABLED_LIBRARIES[LIBRARY_OPUS]=$2
@@ -1387,6 +1433,10 @@ set_library() {
   tiff)
     ENABLED_LIBRARIES[LIBRARY_TIFF]=$2
     ENABLED_LIBRARIES[LIBRARY_JPEG]=$2
+    set_virtual_library "zlib" $2
+    ;;
+  zlib)
+    ENABLED_LIBRARIES[LIBRARY_ZLIB]=$2
     ;;
   linux-fontconfig)
     ENABLED_LIBRARIES[LIBRARY_LINUX_FONTCONFIG]=$2
@@ -1526,16 +1576,16 @@ set_virtual_library() {
   libuuid)
     if [[ ${FFMPEG_KIT_BUILD_TYPE} == "ios" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "macos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "apple" ]]; then
       ENABLED_LIBRARIES[LIBRARY_APPLE_LIBUUID]=$2
-    elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "web" ]]; then
-      # No libuuid consumer on web: fontconfig 2.18 no longer uses uuid
+    elif [[ ${FFMPEG_KIT_BUILD_TYPE} == "web" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "windows" ]]; then
+      # No libuuid consumer on web or windows: fontconfig 2.18 no longer uses uuid
       :
     else
       ENABLED_LIBRARIES[LIBRARY_LIBUUID]=$2
     fi
     ;;
   zlib)
-    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "web" ]]; then
-      ENABLED_LIBRARIES[LIBRARY_WEB_ZLIB]=$2
+    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "windows" ]]; then
+      ENABLED_LIBRARIES[LIBRARY_ZLIB]=$2
     else
       ENABLED_LIBRARIES[LIBRARY_SYSTEM_ZLIB]=$2
     fi
@@ -1700,6 +1750,17 @@ check_if_dependency_rebuilt() {
     set_dependency_rebuilt_flag "leptonica"
     set_dependency_rebuilt_flag "tesseract"
     ;;
+  zlib)
+    set_dependency_rebuilt_flag "freetype"
+    set_dependency_rebuilt_flag "gnutls"
+    set_dependency_rebuilt_flag "leptonica"
+    set_dependency_rebuilt_flag "libpng"
+    set_dependency_rebuilt_flag "libxml2"
+    set_dependency_rebuilt_flag "openssl"
+    set_dependency_rebuilt_flag "snappy"
+    set_dependency_rebuilt_flag "tesseract"
+    set_dependency_rebuilt_flag "tiff"
+    ;;
   esac
 }
 
@@ -1756,7 +1817,7 @@ print_enabled_libraries() {
   let enabled=0
 
   # SUPPLEMENTARY LIBRARIES NOT PRINTED
-  for library in {50..57} {59..92} ${LIBRARY_WEB_LIBICONV} ${LIBRARY_WEB_ZLIB} {0..36} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3}; do
+  for library in {50..57} {59..92} ${LIBRARY_WEB_LIBICONV} ${LIBRARY_ZLIB} {0..36} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3}; do
     if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
       if [[ ${enabled} -ge 1 ]]; then
         echo -n ", "
@@ -1943,7 +2004,7 @@ get_external_library_license_path() {
   46) echo "${BASEDIR}/src/$(get_library_name "$1")/leptonica-license.txt" ;;
   93) echo "${BASEDIR}/src/$(get_library_name "$1")/LICENSE.txt" ;;
   43 |94) echo "${BASEDIR}/src/$(get_library_name "$1")/LICENSE.md" ;;
-  4 | 10 | 13 | 17 | 21 | 27 | 31 | 32 | 36 | 40 | 49 | 95 | 96) echo "${BASEDIR}/src/$(get_library_name "$1")/LICENSE" ;;
+  4 | 10 | 13 | 17 | 21 | 27 | 31 | 32 | 36 | 40 | 49 | 95 | 96 | 98) echo "${BASEDIR}/src/$(get_library_name "$1")/LICENSE" ;;
   *) echo "${BASEDIR}/src/$(get_library_name "$1")/COPYING" ;;
   esac
 }

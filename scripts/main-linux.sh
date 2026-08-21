@@ -132,7 +132,7 @@ if [[ ${SKIP_ffmpeg} -ne 1 ]]; then
   export CFLAGS=$(get_cflags "${LIB_NAME}")
   export CXXFLAGS=$(get_cxxflags "${LIB_NAME}")
   export LDFLAGS=$(get_ldflags "${LIB_NAME}")
-  export PKG_CONFIG_LIBDIR="$(get_linux_pkg_config_libdir)"
+  export PKG_CONFIG_LIBDIR="$(get_pkg_config_libdir)"
   unset PKG_CONFIG_PATH
 
   cd "${BASEDIR}"/src/"${LIB_NAME}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
