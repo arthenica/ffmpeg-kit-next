@@ -335,7 +335,7 @@ from_library_name() {
   libsvtav1) echo 94 ;;
   libjxl) echo 95 ;;
   liblc3) echo 96 ;;
-  web-libiconv) echo 97 ;;
+  web-iconv) echo 97 ;;
   zlib) echo 98 ;;
   esac
 }
@@ -1450,7 +1450,7 @@ set_library() {
   libiconv)
     ENABLED_LIBRARIES[LIBRARY_LIBICONV]=$2
     ;;
-  web-libiconv)
+  web-iconv)
     ENABLED_LIBRARIES[LIBRARY_WEB_LIBICONV]=$2
     ;;
   libilbc)
