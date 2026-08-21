@@ -12,7 +12,7 @@ display_help() {
 
   echo -e "\n'$COMMAND' builds FFmpegKit for Android platform. By default five Android architectures (armeabi-v7a, \
 armeabi-v7a-neon, arm64-v8a, x86 and x86_64) are built without any external libraries enabled. Options can be used to \
-disable architectures and/or enable external libraries. Please note that GPL libraries (external libraries with GPL \
+select architectures and/or enable external libraries. Please note that GPL libraries (external libraries with GPL \
 license) need --enable-gpl flag to be set explicitly. When compilation ends an Android Archive (AAR) file is created \
 under the prebuilt folder.\n"
   echo -e "Usage: ./$COMMAND ${PROFILE_USAGE}[OPTION]... [VAR=VALUE]...\n"
@@ -22,16 +22,17 @@ under the prebuilt folder.\n"
   display_help_licensing
 
   echo -e "Architectures:"
-  echo -e "  --disable-arm-v7a\t\tdo not build arm-v7a architecture [yes]"
-  echo -e "  --disable-arm-v7a-neon\tdo not build arm-v7a-neon architecture [yes]"
-  echo -e "  --disable-arm64-v8a\t\tdo not build arm64-v8a architecture [yes]"
-  echo -e "  --disable-x86\t\t\tdo not build x86 architecture [yes]"
-  echo -e "  --disable-x86-64\t\tdo not build x86-64 architecture [yes]\n"
+  echo -e "  --arch=ARCH[,ARCH...]\t\tbuild only the listed architectures [default]"
+  echo -e "  --disable-arch-arm-v7a\tdo not build arm-v7a architecture [yes]"
+  echo -e "  --disable-arch-arm-v7a-neon\tdo not build arm-v7a-neon architecture [yes]"
+  echo -e "  --disable-arch-arm64-v8a\tdo not build arm64-v8a architecture [yes]"
+  echo -e "  --disable-arch-x86\t\tdo not build x86 architecture [yes]"
+  echo -e "  --disable-arch-x86-64\tdo not build x86-64 architecture [yes]\n"
 
   echo -e "Libraries:"
-  echo -e "  --full\t\t\tenables all external libraries"
-  echo -e "  --enable-android-media-codec\tbuild with built-in Android MediaCodec support [no]"
-  echo -e "  --enable-android-zlib\t\tbuild with built-in zlib support [no]"
+  echo -e "  --enable-lib-all\t\tenable all libraries allowed by the selected license policy"
+  echo -e "  --enable-lib-android-media-codec\tbuild with built-in Android MediaCodec support [no]"
+  echo -e "  --enable-lib-android-zlib\tbuild with built-in zlib support [no]"
 
   display_help_common_libraries
   display_help_gpl_libraries

@@ -10,6 +10,7 @@ Run a platform wrapper from the repository root:
 scripts/apple/ffmpeg-kit-protocols-test.sh "$(pwd)" "$(pwd)/src/ffmpeg"
 scripts/android/ffmpeg-kit-protocols-test.sh "$(pwd)" "$(pwd)/src/ffmpeg"
 scripts/linux/ffmpeg-kit-protocols-test.sh "$(pwd)" "$(pwd)/src/ffmpeg"
+scripts/windows/ffmpeg-kit-protocols-test.sh "$(pwd)" "$(pwd)/src/ffmpeg"
 ```
 
 The FFmpeg source directory passed to a wrapper must already contain that

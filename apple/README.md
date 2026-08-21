@@ -1,6 +1,6 @@
 # FFmpegKitNext for iOS, iPadOS, macOS, tvOS and visionOS
 
-`FFmpegKitNext` for Apple platforms can be built via the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix) and integrated locally.
+`FFmpegKitNext` for Apple platforms can be built locally with the recommended [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix) workflow, or without Nix by installing the required Apple toolchain yourself.
 
 ### 1. Features
 #### 1.1 iOS / iPadOS
@@ -41,7 +41,11 @@
 
 ### 2. Building
 
-Apple builds use the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix). You must install it on macOS first to build the binaries. Then run the `nix-*` wrappers from the project root.
+Apple builds can be run in two ways: with the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix), which is the default and recommended workflow, or without Nix by installing the required Apple toolchain yourself.
+
+The examples below use the recommended Nix workflow. Install Nix on macOS first, then run the `nix-*` wrappers from the project root.
+
+Building without Nix is also supported. The non-Nix workflow is documented in the [Building](https://github.com/arthenica/ffmpeg-kit-next/wiki/Building) wiki page.
 
 Note that, `FFmpegKitNext` does not publish binaries and building it yourself is the only way to use it.
 
@@ -74,45 +78,42 @@ the build tools and pkg-config inputs. Xcode provides the Apple SDKs and Apple t
 
 #### 2.1 Prerequisites
 
-Apple builds require the following tools.
+Apple build prerequisites depend on the workflow you choose.
+
+For all Apple targets:
+
+- **Nix workflow, recommended** — install the Nix package manager on macOS. The `xcode26` profile supplies the required build tools and pkg-config inputs.
+- **Non-Nix workflow** — install the required Apple build tools yourself. See the [Building](https://github.com/arthenica/ffmpeg-kit-next/wiki/Building) wiki page for the non-Nix setup.
 
 ##### 2.1.1 iOS / iPadOS
 
-- **Nix package manager**
-- **Xcode 26.0** or later
-- **Command Line Tools**
+- **Xcode 26.0** or later with **Command Line Tools**
 
 ##### 2.1.2 macOS
 
-- **Nix package manager**
-- **Xcode 26.0** or later
-- **Command Line Tools**
+- **Xcode 26.0** or later with **Command Line Tools**
 
 ##### 2.1.3 tvOS
 
-- **Nix package manager**
-- **Xcode 26.0** or later
-- **Command Line Tools**
+- **Xcode 26.0** or later with **Command Line Tools**
 
 ##### 2.1.4 visionOS
 
-- **Nix package manager**
-- **Xcode 26.0** or later with the **visionOS (xros) SDK** installed
-- **Command Line Tools**
+- **Xcode 26.0** or later with **Command Line Tools** and the **visionOS (xros) SDK** installed
 
 #### 2.2 Options
 
-Use `--enable-<library name>` flag to support additional external or system libraries and
-`--disable-<architecture name>` to disable architectures you don't want to build.
+Use `--enable-lib-<library name>` flag to support additional external or system libraries and
+`--disable-arch-<architecture name>` to disable architectures you don't want to build.
 
 ```
-./nix-ios.sh -p xcode26 --enable-fontconfig --disable-arm64e
+./nix-ios.sh -p xcode26 --enable-lib-fontconfig --disable-arch-arm64e
 
-./nix-macos.sh -p xcode26 --enable-freetype --enable-macos-avfoundation --disable-arm64
+./nix-macos.sh -p xcode26 --enable-lib-freetype --enable-lib-macos-avfoundation --disable-arch-arm64
 
-./nix-tvos.sh -p xcode26 --enable-dav1d --enable-libvpx --disable-arm64-simulator
+./nix-tvos.sh -p xcode26 --enable-lib-dav1d --enable-lib-libvpx --disable-arch-arm64-simulator
 
-./nix-visionos.sh -p xcode26 --enable-visionos-videotoolbox --enable-visionos-avfoundation --disable-arm64-simulator
+./nix-visionos.sh -p xcode26 --enable-lib-visionos-videotoolbox --enable-lib-visionos-audiotoolbox --disable-arch-arm64-simulator
 ```
 
 Run `--help` to see all available build options.

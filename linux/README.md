@@ -1,6 +1,6 @@
 # FFmpegKitNext for Linux
 
-`FFmpegKitNext` for Linux can be built via the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix) and integrated locally.
+`FFmpegKitNext` for Linux can be built locally with the recommended [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix) workflow, or without Nix by installing the required Linux toolchain yourself.
 
 ### 1. Features
 - Provides a `C++` API built with `c++11`
@@ -11,10 +11,11 @@
 
 ### 2. Building
 
-Linux builds use the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix). You must install it on a supported Linux host first to build the binaries. Then run the
-`nix-linux.sh` wrapper from the project root.
+Linux builds can be run in two ways: with the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix), which is the default and recommended workflow, or without Nix by installing the required Linux toolchain yourself.
 
-NixOS is not required. The scripts require the Nix package manager on a supported host, and NixOS is not a supported Linux build host.
+The examples below use the recommended Nix workflow. Install Nix on a supported Linux host first, then run the `nix-linux.sh` wrapper from the project root. Note that NixOS itself is not supported as a Linux build host.
+
+Building without Nix is also supported. The non-Nix workflow is documented in the [Building](https://github.com/arthenica/ffmpeg-kit-next/wiki/Building) wiki page.
 
 Note that, `FFmpegKitNext` does not publish binaries and building it yourself is the only way to use it.
 
@@ -44,18 +45,19 @@ Nix provides the compiler toolchain (`clang`/`llvm`), `pkg-config` inputs and th
 
 #### 2.1 Prerequisites
 
-Linux builds require the following tools.
+Linux build prerequisites depend on the workflow you choose.
 
-- **Nix package manager** — the `default` profile supplies the `clang`/`llvm` toolchain, `pkg-config` and the build packages.
+- **Nix workflow, recommended** — install the Nix package manager on a supported Linux host. The `default` profile supplies the `clang`/`llvm` toolchain, `pkg-config` inputs and build packages.
+- **Non-Nix workflow** — install the required Linux toolchain yourself, including `clang`/`llvm`, `pkg-config` and platform build tools. See the [Building](https://github.com/arthenica/ffmpeg-kit-next/wiki/Building) wiki page for the non-Nix setup.
 
 #### 2.2 Options
 
-Use `--enable-<library name>` flag to support additional external or system libraries and
-`--disable-<architecture name>` (`--disable-arm64`, `--disable-x86-64`) to skip the architecture. Use `--enable-gpl` to
+Use `--enable-lib-<library name>` flag to support additional external or system libraries and
+`--disable-arch-<architecture name>` (`--disable-arch-arm64`, `--disable-arch-x86-64`) to skip the architecture. Use `--enable-gpl` to
 allow GPL-licensed libraries.
 
 ```
-./nix-linux.sh -p default --enable-fontconfig
+./nix-linux.sh -p default --enable-lib-linux-fontconfig
 ```
 
 Run `--help` to see all available build options.

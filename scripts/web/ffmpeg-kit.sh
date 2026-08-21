@@ -6,7 +6,7 @@ source "${BASEDIR}"/scripts/function-"${FFMPEG_KIT_BUILD_TYPE}".sh 1>>"${BASEDIR
 LIB_NAME="ffmpeg-kit"
 
 if [[ ${FFMPEG_KIT_WEB_PTHREADS:-1} != "1" ]]; then
-  echo -e "\nERROR: The current web ffmpeg-kit wrapper build requires Emscripten pthreads. Re-run with --enable-pthreads or use --skip-ffmpeg-kit for an FFmpeg-core-only build.\n" 1>>"${BASEDIR}"/build.log 2>&1
+  echo -e "\nERROR: The current web ffmpeg-kit wrapper build requires Emscripten pthreads. Re-run with --enable-pthreads.\n" 1>>"${BASEDIR}"/build.log 2>&1
   exit 1
 fi
 

@@ -6,11 +6,6 @@ source "${BASEDIR}"/scripts/function-"${FFMPEG_KIT_BUILD_TYPE}".sh || return 1
 LIB_NAME=$1
 ENABLED_LIBRARY_PATH="${LIB_INSTALL_BASE}/${LIB_NAME}"
 
-# DELETE THE PREVIOUS BUILD OF THE LIBRARY
-if [ -d "${ENABLED_LIBRARY_PATH}" ]; then
-  rm -rf "${ENABLED_LIBRARY_PATH}" || return 1
-fi
-
 # PREPARE PATHS & DEFINE ${INSTALL_PKG_CONFIG_DIR}
 SCRIPT_PATH="${BASEDIR}/scripts/android/${LIB_NAME}.sh"
 set_toolchain_paths "${LIB_NAME}"
@@ -33,9 +28,10 @@ echo -e "----------------------------------------------------------------\n"
 cd "${BASEDIR}"/src/"${LIB_NAME}" || return 1
 
 LIB_INSTALL_PREFIX="${ENABLED_LIBRARY_PATH}"
-ANDROID_SYSROOT="${ANDROID_TOOLCHAIN}"/sysroot
 BUILD_DIR=$(get_cmake_build_directory)
+ANDROID_SYSROOT="${ANDROID_TOOLCHAIN}"/sysroot
 
+# DELETE THE PREVIOUS BUILD OF THE LIBRARY
 rm -rf "${LIB_INSTALL_PREFIX}" || return 1
 rm -rf "${BUILD_DIR}" || return 1
 

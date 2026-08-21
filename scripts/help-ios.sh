@@ -12,7 +12,7 @@ display_help() {
 
   echo -e "\n'$COMMAND' builds FFmpegKit for iOS platform. By default six architectures (arm64, arm64-mac-catalyst, \
 arm64-simulator, arm64e, x86-64 and x86-64-mac-catalyst) are enabled without any external \
-libraries. Options can be used to disable architectures and/or enable external libraries. Please note that GPL \
+libraries. Options can be used to select architectures and/or enable external libraries. Please note that GPL \
 libraries (external libraries with GPL license) need --enable-gpl flag to be set explicitly. When compilation ends, \
 libraries are created under the prebuilt folder.\n"
   echo -e "Usage: ./$COMMAND ${PROFILE_USAGE}[OPTION]...\n"
@@ -22,22 +22,23 @@ libraries are created under the prebuilt folder.\n"
   display_help_licensing
 
   echo -e "Architectures:"
-  echo -e "  --disable-arm64\t\tdo not build arm64 architecture [yes]"
-  echo -e "  --disable-arm64-mac-catalyst\tdo not build arm64-mac-catalyst architecture [yes]"
-  echo -e "  --disable-arm64-simulator\tdo not build arm64-simulator architecture [yes]"
-  echo -e "  --disable-arm64e\t\tdo not build arm64e architecture [yes]"
-  echo -e "  --disable-x86-64\t\tdo not build x86-64 architecture [yes]"
-  echo -e "  --disable-x86-64-mac-catalyst\tdo not build x86-64-mac-catalyst architecture [yes]\n"
+  echo -e "  --arch=ARCH[,ARCH...]\t\tbuild only the listed architectures [default]"
+  echo -e "  --disable-arch-arm64\t\tdo not build arm64 architecture [yes]"
+  echo -e "  --disable-arch-arm64-mac-catalyst\tdo not build arm64-mac-catalyst architecture [yes]"
+  echo -e "  --disable-arch-arm64-simulator\tdo not build arm64-simulator architecture [yes]"
+  echo -e "  --disable-arch-arm64e\tdo not build arm64e architecture [yes]"
+  echo -e "  --disable-arch-x86-64\tdo not build x86-64 architecture [yes]"
+  echo -e "  --disable-arch-x86-64-mac-catalyst\tdo not build x86-64-mac-catalyst architecture [yes]\n"
 
   echo -e "Libraries:"
 
-  echo -e "  --full\t\t\tenables all non-GPL external libraries"
-  echo -e "  --enable-ios-audiotoolbox\tbuild with built-in Apple AudioToolbox support [no]"
-  echo -e "  --enable-ios-avfoundation\tbuild with built-in Apple AVFoundation support [no]"
-  echo -e "  --enable-ios-bzip2\t\tbuild with built-in bzip2 support [no]"
-  echo -e "  --enable-ios-videotoolbox\tbuild with built-in Apple VideoToolbox support [no]"
-  echo -e "  --enable-ios-zlib\t\tbuild with built-in zlib [no]"
-  echo -e "  --enable-ios-libiconv\t\tbuild with built-in libiconv [no]"
+  echo -e "  --enable-lib-all\t\tenable all libraries allowed by the selected license policy"
+  echo -e "  --enable-lib-ios-audiotoolbox\tbuild with built-in Apple AudioToolbox support [no]"
+  echo -e "  --enable-lib-ios-avfoundation\tbuild with built-in Apple AVFoundation support [no]"
+  echo -e "  --enable-lib-ios-bzip2\tbuild with built-in bzip2 support [no]"
+  echo -e "  --enable-lib-ios-videotoolbox\tbuild with built-in Apple VideoToolbox support [no]"
+  echo -e "  --enable-lib-ios-zlib\t\tbuild with built-in zlib [no]"
+  echo -e "  --enable-lib-ios-libiconv\tbuild with built-in libiconv [no]"
 
   display_help_common_libraries
   display_help_gpl_libraries

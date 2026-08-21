@@ -12,8 +12,8 @@ display_help() {
 It uses frameworks created under the prebuilt folder for iOS, tvOS, macOS and visionOS architecture variants (iphoneos, \
 iphonesimulator, mac-catalyst, appletvos, appletvsimulator, macosx, xros, xrsimulator) as input and builds an umbrella xcframework under \
 the prebuilt folder.\n\nPlease note that this script is only responsible of packaging existing frameworks, created by \
-'start-ios.sh', 'start-tvos.sh', 'start-macos.sh' and 'start-visionos.sh'. Running it will not compile any of these libraries again. Top level build scripts \
-('start-ios.sh', 'start-tvos.sh', 'start-macos.sh', 'start-visionos.sh') must be used to build ffmpeg with support for a specific external library first. \
+'ios.sh', 'tvos.sh', 'macos.sh' and 'visionos.sh'. Running it will not compile any of these libraries again. Top level build scripts \
+('ios.sh', 'tvos.sh', 'macos.sh', 'visionos.sh') must be used to build ffmpeg with support for a specific external library first. \
 After that this script should be used to create an umbrella xcframework.\n"
   echo -e "Usage: ./$COMMAND ${PROFILE_USAGE}[OPTION]...\n"
   echo -e "Specify environment variables as VARIABLE=VALUE to override default build options.\n"
@@ -34,12 +34,12 @@ After that this script should be used to create an umbrella xcframework.\n"
   echo -e "  --visionos-target=visionos sdk version\toverride minimum deployment target for visionOS [1.0]\n"
 
   echo -e "Architectures:"
-  echo -e "  --disable-iphoneos\t\tdo not include iphoneos architecture variant [yes]"
-  echo -e "  --disable-iphonesimulator\tdo not include iphonesimulator architecture variant [yes]"
-  echo -e "  --disable-mac-catalyst\tdo not include ios mac-catalyst architecture variant [yes]"
-  echo -e "  --disable-appletvos\t\tdo not include appletvos architecture variant [yes]"
-  echo -e "  --disable-appletvsimulator\tdo not include appletvsimulator architecture variant [yes]"
-  echo -e "  --disable-macosx\t\tdo not include macosx architecture variant [yes]"
-  echo -e "  --disable-xros\t\tdo not include xros architecture variant [yes]"
-  echo -e "  --disable-xrsimulator\t\tdo not include xrsimulator architecture variant [yes]\n"
+  echo -e "  --disable-arch-iphoneos\t\tdo not include iphoneos architecture variant [yes]"
+  echo -e "  --disable-arch-iphonesimulator\tdo not include iphonesimulator architecture variant [yes]"
+  echo -e "  --disable-arch-mac-catalyst\tdo not include ios mac-catalyst architecture variant [yes]"
+  echo -e "  --disable-arch-appletvos\t\tdo not include appletvos architecture variant [yes]"
+  echo -e "  --disable-arch-appletvsimulator\tdo not include appletvsimulator architecture variant [yes]"
+  echo -e "  --disable-arch-macosx\t\tdo not include macosx architecture variant [yes]"
+  echo -e "  --disable-arch-xros\t\t\tdo not include xros architecture variant [yes]"
+  echo -e "  --disable-arch-xrsimulator\t\tdo not include xrsimulator architecture variant [yes]\n"
 }
