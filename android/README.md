@@ -1,6 +1,6 @@
 # FFmpegKitNext for Android
 
-`FFmpegKitNext` for Android can be built via the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix) and integrated locally.
+`FFmpegKitNext` for Android can be built locally with the recommended [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix) workflow, or without Nix by installing the required Android toolchain yourself.
 
 ### 1. Features
 - Supports `API Level 24+`
@@ -12,10 +12,11 @@
 
 ### 2. Building
 
-Android builds use the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix). You must install it on a supported host first to build the binaries. Then run the
-`nix-android.sh` wrapper from the project root.
+Android builds can be run in two ways: with the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix), which is the default and recommended workflow, or without Nix by installing the required Android toolchain yourself.
 
-NixOS is not required. The scripts require the Nix package manager on a supported host, and NixOS is not a supported Android build host.
+The examples below use the recommended Nix workflow. Install Nix on a supported host first, then run the `nix-android.sh` wrapper from the project root. Note that NixOS itself is not supported as an Android build host.
+
+Building without Nix is also supported. The non-Nix workflow is documented in the [Building](https://github.com/arthenica/ffmpeg-kit-next/wiki/Building) wiki page.
 
 Note that, `FFmpegKitNext` does not publish binaries and building it yourself is the only way to use it.
 
@@ -39,9 +40,10 @@ the Android SDK, NDK (r27d), CMake and the build tools.
 
 #### 2.1 Prerequisites
 
-Android builds require the following tools.
+Android build prerequisites depend on the workflow you choose.
 
-- **Nix package manager** — the `android-r27d` profile supplies the Android SDK, NDK r27d and CMake.
+- **Nix workflow, recommended** — install the Nix package manager on a supported host. The `android-r27d` profile supplies the Android SDK, NDK r27d, CMake and required build tools.
+- **Non-Nix workflow** — install the required Android toolchain yourself, including the Android SDK, NDK r27d, CMake and platform build tools. See the [Building](https://github.com/arthenica/ffmpeg-kit-next/wiki/Building) wiki page for the non-Nix setup.
 
 #### 2.2 Options
 

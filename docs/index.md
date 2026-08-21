@@ -10,12 +10,13 @@ It builds on the foundations of `FFmpegKit` while improving the build infrastruc
 
 `FFmpegKitNext` does not publish ready-to-use packages to `Maven Central`, `CocoaPods`, `pub.dev`, or `npm` as `FFmpegKit` did.
 
-To use it, build it locally for your target platform via the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix), then integrate the generated artifacts into your application.
+To use it, build it locally for your target platform via the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix) or the MSYS2 / MinGW-w64 toolchain on Windows, then integrate the generated artifacts into your application.
 
 ### 1. Features
-- Nix package manager-based scripts to build FFmpeg native libraries
+- Nix package manager-based scripts to build FFmpeg native libraries for Android, Apple platforms, Linux and Web
+- Native Windows build script based on MSYS2 / MinGW-w64
 - `FFmpegKitNext` wrapper library to run `FFmpeg`/`FFprobe` commands in applications
-- Supports native platforms: Android, iOS, iPadOS, Linux, macOS, tvOS, visionOS and Web
+- Supports native platforms: Android, iOS, iPadOS, Linux, macOS, tvOS, visionOS, Web and Windows
 - Supports hybrid platforms: Flutter, React Native
 - Based on FFmpeg `v6.1.x` or later with optional system and external libraries
 - Licensed under `LGPL 3.0` by default, `GPL v3.0` if GPL licensed libraries are enabled
@@ -44,28 +45,32 @@ See [React Native](react-native) to learn more about `FFmpegKitNext` for `React 
 
 See [Web](web) to learn more about `FFmpegKitNext` for `Web` (`WebAssembly`).
 
-### 8. Build Scripts
+### 8. Windows
 
-`FFmpegKitNext` uses the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix) as the default and recommended build environment. Nix provides pinned inputs, toolchains and platform-specific build packages for supported hosts.
+See [Windows](windows) to learn more about `FFmpegKitNext` for `Windows`.
 
-NixOS is not required. The scripts require the Nix package manager on a supported host, and NixOS is not a supported build host. See [Host Support](https://github.com/arthenica/ffmpeg-kit-next/wiki/Host-Support) before setting up a machine or CI image.
+### 9. Build Scripts
 
-Use `nix-android.sh`, `nix-ios.sh` (for both iOS and iPadOS), `nix-linux.sh`, `nix-macos.sh`, `nix-tvos.sh`, `nix-visionos.sh` and `nix-web.sh` to build `FFmpegKitNext` locally for each supported target platform.
+`FFmpegKitNext` uses the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix) as the default and recommended build environment. It provides pinned inputs, toolchains, and platform-specific build packages for supported hosts.
 
-Building `FFmpegKitNext` without Nix is also supported. The non-Nix build workflow, together with script options for enabling optional libraries and disabling target architectures is explained in the [Building](https://github.com/arthenica/ffmpeg-kit-next/wiki/Building) wiki page.
+Install Nix on a supported host to build the project. Note that NixOS itself is not supported as a build host. See [Host Support](https://github.com/arthenica/ffmpeg-kit-next/wiki/Host-Support) before setting up a machine or CI image.
 
-### 9. FFmpegKitNext Library
+Use `nix-android.sh`, `nix-ios.sh` (for both iOS and iPadOS), `nix-linux.sh`, `nix-macos.sh`, `nix-tvos.sh`, `nix-visionos.sh` and `nix-web.sh` to build `FFmpegKitNext` locally for Nix-supported target platforms.
+
+Building `FFmpegKitNext` without Nix is also supported. The non-Nix build workflow, together with script options for enabling optional libraries and disabling target architectures is explained in the [Building](https://github.com/arthenica/ffmpeg-kit-next/wiki/Building) wiki page. `Windows` is built without Nix using the `windows.sh` script from the project root.
+
+### 10. FFmpegKitNext Library
 
 `FFmpegKitNext` is a wrapper library that allows you to easily run `FFmpeg`/`FFprobe` commands in applications. It
 provides additional features on top of `FFmpeg` to enable platform specific resources, control how commands are 
 executed and how the results are handled.
 
 `Android` library of `FFmpegKitNext` has a `Kotlin` API, `Apple` libraries (`iOS`, `iPadOS`, `macOS`, `tvOS`, `visionOS`) have an
-`Objective-C` API, `Flutter` library comes with a `Dart` API, `Linux` library has a `C++` API, `React Native` and `Web`
+`Objective-C` API, `Flutter` library comes with a `Dart` API, `Linux` has a `C++` API, `Windows` has `C++` and `C` APIs, `React Native` and `Web`
 libraries provide a `JavaScript` API with `Typescript` definitions, which are identical in terms of features and
 capabilities.
 
-### 10. External Libraries
+### 11. External Libraries
 
 The table below lists the optional external libraries that can be enabled in local `FFmpegKitNext` builds.
 
@@ -81,7 +86,7 @@ Some parts of `FFmpeg` and some external libraries are licensed under the `GPL`.
 <tbody>
 <tr>
 <td align="center"><sup>external libraries</sup></td>
-<td align="center"><sup>chromaprint</sup><br><sup>dav1d</sup><br><sup>fontconfig</sup><br><sup>freetype</sup><br><sup>fribidi</sup><br><sup>gmp</sup><br><sup>gnutls</sup><br><sup>harfbuzz</sup><br><sup>kvazaar</sup><br><sup>lame</sup><br><sup>libaom</sup><br><sup>libass</sup><br><sup>libiconv</sup><br><sup>libilbc</sup><br><sup>libjxl</sup><br><sup>liblc3</sup><br><sup>libsvtav1</sup><br><sup>libtheora</sup><br><sup>libvorbis</sup><br><sup>libvpx</sup><br><sup>libwebp</sup><br><sup>libxml2</sup><br><sup>opencore-amr</sup><br><sup>openh264</sup><br><sup>openssl</sup><br><sup>opus</sup><br><sup>rubberband</sup><br><sup>sdl</sup><br><sup>shine</sup><br><sup>snappy</sup><br><sup>soxr</sup><br><sup>speex</sup><br><sup>srt</sup><br><sup>tesseract</sup><br><sup>twolame</sup><br><sup>vid.stab</sup><br><sup>vo-amrwbenc</sup><br><sup>vvenc</sup><br><sup>x264</sup><br><sup>x265</sup><br><sup>xvidcore</sup><br><sup>zimg</sup></td>
+<td align="center"><sup>chromaprint</sup><br><sup>dav1d</sup><br><sup>fontconfig</sup><br><sup>freetype</sup><br><sup>fribidi</sup><br><sup>gmp</sup><br><sup>gnutls</sup><br><sup>harfbuzz</sup><br><sup>kvazaar</sup><br><sup>lame</sup><br><sup>libaom</sup><br><sup>libass</sup><br><sup>libiconv</sup><br><sup>libilbc</sup><br><sup>libjxl</sup><br><sup>liblc3</sup><br><sup>libsvtav1</sup><br><sup>libtheora</sup><br><sup>libvorbis</sup><br><sup>libvpx</sup><br><sup>libwebp</sup><br><sup>libxml2</sup><br><sup>opencore-amr</sup><br><sup>openh264</sup><br><sup>openssl</sup><br><sup>opus</sup><br><sup>rubberband</sup><br><sup>sdl</sup><br><sup>shine</sup><br><sup>snappy</sup><br><sup>soxr</sup><br><sup>speex</sup><br><sup>srt</sup><br><sup>tesseract</sup><br><sup>twolame</sup><br><sup>vid.stab</sup><br><sup>vo-amrwbenc</sup><br><sup>vvenc</sup><br><sup>x264</sup><br><sup>x265</sup><br><sup>xvidcore</sup><br><sup>zimg</sup><br><sup>zlib</sup></td>
 </tr>
 <tr>
 <td align="center"><sup>android system libraries</sup></td>
@@ -89,34 +94,34 @@ Some parts of `FFmpeg` and some external libraries are licensed under the `GPL`.
 </tr>
 <tr>
 <td align="center"><sup>ios/ipados system libraries</sup></td>
-<td align="center"><sup>bzip2</sup><br><sup>AudioToolbox</sup><br><sup>AVFoundation</sup><br><sup>iconv</sup><br><sup>VideoToolbox</sup><br><sup>zlib</sup></td>
+<td align="center"><sup>bzip2</sup><br><sup>AudioToolbox</sup><br><sup>AVFoundation</sup><br><sup>libiconv</sup><br><sup>VideoToolbox</sup><br><sup>zlib</sup></td>
 </tr>
 <tr>
 <td align="center"><sup>linux system libraries</sup></td>
-<td align="center"><sup>alsa</sup><br><sup>iconv</sup><br><sup>OpenCL</sup><br><sup>vaapi</sup><br><sup>v4l2</sup><br><sup>zlib</sup></td>
+<td align="center"><sup>alsa</sup><br><sup>libiconv</sup><br><sup>OpenCL</sup><br><sup>vaapi</sup><br><sup>v4l2</sup><br><sup>zlib</sup></td>
 </tr>
 <tr>
 <td align="center"><sup>macos system libraries</sup></td>
-<td align="center"><sup>bzip2</sup><br><sup>AudioToolbox</sup><br><sup>AVFoundation</sup><br><sup>Core Image</sup><br><sup>iconv</sup><br><sup>OpenCL</sup><br><sup>OpenGL</sup><br><sup>VideoToolbox</sup><br><sup>zlib</sup></td>
+<td align="center"><sup>bzip2</sup><br><sup>AudioToolbox</sup><br><sup>AVFoundation</sup><br><sup>Core Image</sup><br><sup>libiconv</sup><br><sup>OpenCL</sup><br><sup>OpenGL</sup><br><sup>VideoToolbox</sup><br><sup>zlib</sup></td>
 </tr>
 <tr>
 <td align="center"><sup>tvos system libraries</sup></td>
-<td align="center"><sup>bzip2</sup><br><sup>AudioToolbox</sup><br><sup>iconv</sup><br><sup>VideoToolbox</sup><br><sup>zlib</sup></td>
+<td align="center"><sup>bzip2</sup><br><sup>AudioToolbox</sup><br><sup>libiconv</sup><br><sup>VideoToolbox</sup><br><sup>zlib</sup></td>
 </tr>
 <tr>
 <td align="center"><sup>visionos system libraries</sup></td>
-<td align="center"><sup>bzip2</sup><br><sup>AudioToolbox</sup><br><sup>iconv</sup><br><sup>VideoToolbox</sup><br><sup>zlib</sup></td>
+<td align="center"><sup>bzip2</sup><br><sup>AudioToolbox</sup><br><sup>libiconv</sup><br><sup>VideoToolbox</sup><br><sup>zlib</sup></td>
 </tr>
 <tr>
 <td align="center"><sup>web system libraries</sup></td>
-<td align="center"><sup>iconv</sup><br><sup>zlib</sup></td>
+<td align="center"><sup>libiconv</sup><br><sup>zlib</sup></td>
 </tr>
 </tbody>
 </table>
 
  - `AVFoundation` is not available on `tvOS` and `visionOS`
 
-### 11. Versions
+### 12. Versions
 
 `FFmpegKitNext` binaries generated use the same major and minor version numbers as the upstream `FFmpeg`<sup>1</sup> project. The
 third and last number in the version string, if exists, is specific to `FFmpegKitNext`. It shows different releases from
@@ -131,11 +136,11 @@ the same `FFmpeg` release branch.
 |  Android<br>Flutter<br>iOS / iPadOS<br>Linux<br>macOS<br>React Native<br>tvOS      |   [6.1.0](https://github.com/arthenica/ffmpeg-kit-next/releases/tag/v6.1.0)    |      6.1.2       | Jun 26, 2026 |
 
 
-### 12. Documentation
+### 13. Documentation
 
 A more detailed documentation is available under [Wiki](https://github.com/arthenica/ffmpeg-kit-next/wiki).
 
-### 13. Test Applications
+### 14. Test Applications
 
 You can see how `FFmpegKitNext` is used inside an application by running test applications created under
 [FFmpegKitNext Test](https://github.com/arthenica/ffmpeg-kit-next-test) project.
@@ -143,7 +148,7 @@ You can see how `FFmpegKitNext` is used inside an application by running test ap
 All applications are identical and supports command execution, video encoding, accessing https urls, encoding audio,
 burning subtitles, video stabilisation, pipe operations, ffkit protocols and concurrent command execution.
 
-### 14. License
+### 15. License
 
 `FFmpegKitNext` library alone is licensed under the `LGPL v3.0`.
 
@@ -160,7 +165,7 @@ Refer to [Licenses and Notices](https://github.com/arthenica/ffmpeg-kit-next/wik
 licenses of all libraries. [Trademarks](https://github.com/arthenica/ffmpeg-kit-next/wiki/Trademarks) lists the
 trademarks used in the `FFmpegKitNext` documentation.
 
-### 15. Patents
+### 16. Patents
 
 `FFmpeg`, `kvazaar`, `x264` and `x265` may implement codec technologies that are covered by patents in some
  jurisdictions. Patent rules vary by country and this documentation is not legal advice. If you use or distribute
@@ -174,11 +179,11 @@ If you build `openh264` from source, include it in `ffmpeg-kit-next` and distrib
 you may be responsible for any applicable patent licenses or royalties. See the
 [OpenH264 FAQ](https://www.openh264.org/faq.html) for details.
 
-### 16. Trademarks
+### 17. Trademarks
 
 <sup>1</sup> `FFmpeg` is a trademark of [Fabrice Bellard](http://www.bellard.org/). `FFmpegKitNext` and `FFmpegKit` are independent projects and not affiliated with the `FFmpeg` trademark holder.
 
-### 17. See Also
+### 18. See Also
 
 - [FFmpeg API Documentation](https://ffmpeg.org/doxygen/4.0/index.html)
 - [FFmpeg Wiki](https://trac.ffmpeg.org/wiki/WikiStart)

@@ -17,7 +17,7 @@
 Web builds use the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix). You must install it on a supported host first to build the binaries. Then run the
 `nix-web.sh` wrapper from the project root.
 
-NixOS is not required. The scripts require the Nix package manager on a supported host, and NixOS is not a supported Web build host.
+Install Nix on a supported host to build the project. Note that NixOS itself is not supported as a Web build host.
 
 Note that, `FFmpegKitNext` does not publish binaries and building it yourself is the only way to use it.
 
