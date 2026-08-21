@@ -73,7 +73,7 @@ FFmpegContext *saveFFmpegContext(void *arg) {
     context->format_opts = format_opts;
     context->codec_opts = codec_opts;
     context->hide_banner = hide_banner;
-#if 0 && HAVE_COMMANDLINETOARGVW && defined(_WIN32)
+#if HAVE_COMMANDLINETOARGVW && defined(_WIN32)
     /* Will be leaked on exit */
     context->win32_argv_utf8 = win32_argv_utf8;
     context->win32_argc = win32_argc;
@@ -169,7 +169,7 @@ void *loadFFmpegContext(FFmpegContext *context) {
     format_opts = context->format_opts;
     codec_opts = context->codec_opts;
     hide_banner = context->hide_banner;
-#if 0 && HAVE_COMMANDLINETOARGVW && defined(_WIN32)
+#if HAVE_COMMANDLINETOARGVW && defined(_WIN32)
     /* Will be leaked on exit */
     win32_argv_utf8 = context->win32_argv_utf8;
     win32_argc = context->win32_argc;

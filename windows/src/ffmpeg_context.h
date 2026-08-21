@@ -69,7 +69,7 @@ typedef struct FFmpegContext {
     AVDictionary *swr_opts;
     AVDictionary *format_opts, *codec_opts;
     int hide_banner;
-#if 0 && HAVE_COMMANDLINETOARGVW && defined(_WIN32)
+#if HAVE_COMMANDLINETOARGVW && defined(_WIN32)
     /* Will be leaked on exit */
     char **win32_argv_utf8;
     int win32_argc;
