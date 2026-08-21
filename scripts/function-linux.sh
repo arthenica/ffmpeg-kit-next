@@ -22,7 +22,7 @@ get_ffmpeg_kit_version() {
   echo "${FFMPEG_KIT_VERSION}"
 }
 
-get_linux_pkg_config_libdir() {
+get_pkg_config_libdir() {
   local PKG_CONFIG_LIBDIR_VALUE="${INSTALL_PKG_CONFIG_DIR}"
 
   if [[ -n ${FFMPEG_KIT_SYSTEM_PKG_CONFIG_LIBDIR} ]]; then

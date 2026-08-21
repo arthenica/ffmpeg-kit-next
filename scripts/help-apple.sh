@@ -12,8 +12,8 @@ display_help() {
 It uses frameworks created under the prebuilt folder for iOS, tvOS, macOS and visionOS architecture variants (iphoneos, \
 iphonesimulator, mac-catalyst, appletvos, appletvsimulator, macosx, xros, xrsimulator) as input and builds an umbrella xcframework under \
 the prebuilt folder.\n\nPlease note that this script is only responsible of packaging existing frameworks, created by \
-'start-ios.sh', 'start-tvos.sh', 'start-macos.sh' and 'start-visionos.sh'. Running it will not compile any of these libraries again. Top level build scripts \
-('start-ios.sh', 'start-tvos.sh', 'start-macos.sh', 'start-visionos.sh') must be used to build ffmpeg with support for a specific external library first. \
+'ios.sh', 'tvos.sh', 'macos.sh' and 'visionos.sh'. Running it will not compile any of these libraries again. Top level build scripts \
+('ios.sh', 'tvos.sh', 'macos.sh', 'visionos.sh') must be used to build ffmpeg with support for a specific external library first. \
 After that this script should be used to create an umbrella xcframework.\n"
   echo -e "Usage: ./$COMMAND ${PROFILE_USAGE}[OPTION]...\n"
   echo -e "Specify environment variables as VARIABLE=VALUE to override default build options.\n"

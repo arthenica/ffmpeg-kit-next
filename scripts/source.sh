@@ -291,6 +291,11 @@ get_library_source() {
     SOURCE_ID="release-3.0.6"
     SOURCE_TYPE="TAG"
     ;;
+  zlib)
+    SOURCE_REPO_URL="https://github.com/arthenica/zlib"
+    SOURCE_ID="v1.3.2"
+    SOURCE_TYPE="TAG"
+    ;;
   esac
 
   case $2 in

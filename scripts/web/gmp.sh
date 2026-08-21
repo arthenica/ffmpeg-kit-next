@@ -13,6 +13,13 @@ if [[ -z ${GMP_CC_FOR_BUILD} ]]; then
   return 1
 fi
 
+# gmp HAS NO OPTION TO SKIP ITS MANUAL. IT DOES SHIP doc/gmp.info, BUT git DOES
+# NOT PRESERVE TIMESTAMPS, SO AFTER A CLONE gmp.texi IS OFTEN A FEW MILLISECONDS
+# NEWER THAN gmp.info AND make REGENERATES THE MANUAL. THAT NEEDS makeinfo,
+# WHICH IS NOT ALWAYS INSTALLED. POINTING MAKEINFO AT true SKIPS THE
+# REGENERATION AND LEAVES THE LIBRARY ITSELF UNAFFECTED.
+export MAKEINFO=true
+
 # ALWAYS CLEAN THE PREVIOUS BUILD
 make distclean 2>/dev/null 1>/dev/null
 
@@ -39,9 +46,11 @@ ABI=standard emconfigure env \
   --disable-maintainer-mode \
   --host="${HOST}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 
-emmake make -j$(get_cpu_count) 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+# MAKEINFO IS ALSO PASSED ON THE COMMAND LINE SO IT OVERRIDES THE VALUE BAKED
+# INTO THE GENERATED Makefiles IN EVERY RECURSIVE SUBMAKE
+emmake make -j$(get_cpu_count) MAKEINFO=true 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 
-emmake make install 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+emmake make install MAKEINFO=true 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 
 # CREATE PACKAGE CONFIG MANUALLY
 create_gmp_package_config "6.3.0" || return 1

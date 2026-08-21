@@ -21,6 +21,7 @@
 #define FFMPEG_KIT_CHAPTER_H
 
 #include "json/Value.h"
+#include <cstdint>
 #include <iostream>
 #include <memory>
 #include <string>

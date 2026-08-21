@@ -22,6 +22,7 @@
 
 #include "Chapter.h"
 #include "StreamInformation.h"
+#include <cstdint>
 #include <memory>
 #include <vector>
 
