@@ -9,6 +9,7 @@ source "${SCRIPT_DIR}"/scripts/variable.sh
 source "${SCRIPT_DIR}"/scripts/function-${FFMPEG_KIT_BUILD_TYPE}.sh
 source "${SCRIPT_DIR}"/scripts/help-${FFMPEG_KIT_BUILD_TYPE}.sh
 disabled_libraries=()
+disabled_libraries_with_deps=()
 
 # SET DEFAULT SETTINGS
 enable_default_web_architectures
@@ -18,7 +19,7 @@ echo -e "INFO: Build options: $*\n" 1>>"${BASEDIR}"/build.log 2>&1
 # SET DEFAULT BUILD OPTIONS
 export GPL_ENABLED="no"
 DISPLAY_HELP=""
-BUILD_FULL=""
+ENABLE_ALL_LIBRARIES=""
 BUILD_TYPE_ID=""
 BUILD_VERSION=$(git describe --tags --always 2>>"${BASEDIR}"/build.log)
 export FFMPEG_KIT_WEB_PTHREADS="${FFMPEG_KIT_WEB_PTHREADS:-1}"
@@ -35,11 +36,6 @@ while [ ! $# -eq 0 ]; do
   -v | --version)
     display_version
     exit 0
-    ;;
-  --skip-*)
-    SKIP_LIBRARY="${1#--skip-}"
-
-    skip_library "${SKIP_LIBRARY}"
     ;;
   --no-output-redirection)
     no_output_redirection
@@ -80,51 +76,6 @@ while [ ! $# -eq 0 ]; do
     JOB_COUNT="${1#--jobs=}"
     export BUILD_JOBS="${JOB_COUNT}"
     ;;
-  --reconf-*)
-    CONF_LIBRARY="${1#--reconf-}"
-
-    reconf_library "${CONF_LIBRARY}"
-    ;;
-  --rebuild-*)
-    BUILD_LIBRARY="${1#--rebuild-}"
-
-    rebuild_library "${BUILD_LIBRARY}"
-    ;;
-  --redownload-*)
-    DOWNLOAD_LIBRARY="${1#--redownload-}"
-
-    redownload_library "${DOWNLOAD_LIBRARY}"
-    ;;
-  --full)
-    BUILD_FULL="1"
-    ;;
-  --enable-gpl)
-    export GPL_ENABLED="yes"
-    ;;
-  --enable-custom-library-*)
-    CUSTOM_LIBRARY_OPTION_KEY="${1#--enable-custom-}"
-    CUSTOM_LIBRARY_OPTION_KEY="${CUSTOM_LIBRARY_OPTION_KEY%%=*}"
-    CUSTOM_LIBRARY_OPTION_VALUE="${1##*=}"
-
-    echo -e "INFO: Custom library options detected: ${CUSTOM_LIBRARY_OPTION_KEY} ${CUSTOM_LIBRARY_OPTION_VALUE}\n" 1>>"${BASEDIR}"/build.log 2>&1
-
-    generate_custom_library_environment_variables "${CUSTOM_LIBRARY_OPTION_KEY}" "${CUSTOM_LIBRARY_OPTION_VALUE}"
-    ;;
-  --enable-*)
-    ENABLED_LIBRARY="${1#--enable-}"
-
-    enable_library "${ENABLED_LIBRARY}"
-    ;;
-  --disable-lib-*)
-    DISABLED_LIB="${1#--disable-lib-}"
-
-    disabled_libraries+=("${DISABLED_LIB}")
-    ;;
-  --disable-*)
-    DISABLED_ARCH="${1#--disable-}"
-
-    disable_arch "${DISABLED_ARCH}"
-    ;;
   --package-name=*)
     PACKAGE_NAME="${1#--package-name=}"
 
@@ -142,17 +93,8 @@ while [ ! $# -eq 0 ]; do
     EXTRA_LDFLAGS="${1#--extra-ldflags=}"
     export EXTRA_LDFLAGS="${EXTRA_LDFLAGS}"
     ;;
-  --version-*)
-    CUSTOM_VERSION_KEY="${1#--version-}"
-    CUSTOM_VERSION_KEY="${CUSTOM_VERSION_KEY%%=*}"
-    CUSTOM_VERSION_VALUE="${1##*=}"
-
-    echo -e "INFO: Custom version detected: ${CUSTOM_VERSION_KEY} ${CUSTOM_VERSION_VALUE}\n" 1>>"${BASEDIR}"/build.log 2>&1
-
-    generate_custom_version_environment_variables "${CUSTOM_VERSION_KEY}" "${CUSTOM_VERSION_VALUE}"
-    ;;
   *)
-    print_unknown_option "$1"
+    process_common_build_option "$1" || print_unknown_option "$1"
     ;;
   esac
   shift
@@ -163,22 +105,19 @@ if [[ -z ${BUILD_VERSION} ]]; then
   exit 1
 fi
 
-# PROCESS FULL OPTION AS LAST OPTION
-if [[ -n ${BUILD_FULL} ]]; then
-  for library in {0..98}; do
-    if [ "${GPL_ENABLED}" == "yes" ]; then
-      enable_library "$(get_library_name $library)" 1
-    else
-      if [[ $(is_gpl_licensed $library) -eq 1 ]]; then
-        enable_library "$(get_library_name $library)" 1
-      fi
-    fi
-  done
+# PROCESS ENABLE_ALL_LIBRARIES OPTION AS LAST OPTION
+if [[ -n ${ENABLE_ALL_LIBRARIES} ]]; then
+  enable_all_libraries
 fi
 
-# DISABLE SPECIFIED LIBRARIES
-for disabled_library in ${disabled_libraries[@]}; do
+# DISABLE SPECIFIED LIBRARIES AND THEIR DEPENDENCIES
+for disabled_library in "${disabled_libraries_with_deps[@]}"; do
   set_library "${disabled_library}" 0
+done
+
+# DISABLE SPECIFIED LIBRARIES ONLY
+for disabled_library in "${disabled_libraries[@]}"; do
+  disable_library "${disabled_library}"
 done
 
 # IF HELP DISPLAYED EXIT
@@ -216,7 +155,7 @@ done
 
 # VALIDATE PTHREAD FLAGS
 if [[ ${FFMPEG_KIT_WEB_PTHREADS} != "1" && ${SKIP_ffmpeg_kit:-0} != "1" ]]; then
-  echo -e "\n(*) The current web ffmpeg-kit wrapper build requires Emscripten pthreads. Use --enable-pthreads or add --skip-ffmpeg-kit for an FFmpeg-core-only build.\n"
+  echo -e "\n(*) The current web ffmpeg-kit wrapper build requires Emscripten pthreads. Use --enable-pthreads.\n"
   exit 1
 fi
 

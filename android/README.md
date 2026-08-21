@@ -45,12 +45,12 @@ Android builds require the following tools.
 
 #### 2.2 Options
 
-Use `--enable-<library name>` flag to support additional external or system libraries and
-`--disable-<architecture name>` to disable architectures you don't want to build. Use `--enable-gpl` to allow
+Use `--enable-lib-<library name>` flag to support additional external or system libraries and
+`--disable-arch-<architecture name>` to disable architectures you don't want to build. Use `--enable-gpl` to allow
 GPL-licensed libraries. Use `--prefab` to add a Prefab payload to the generated AAR for native/CMake consumers.
 
 ```
-./nix-android.sh -p android-r27d --enable-fontconfig --disable-arm-v7a-neon
+./nix-android.sh -p android-r27d --enable-lib-fontconfig --disable-arch-arm-v7a-neon
 ```
 
 Run `--help` to see all available build options.

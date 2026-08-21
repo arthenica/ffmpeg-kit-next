@@ -11,7 +11,7 @@ display_help() {
   fi
 
   echo -e "\n'$COMMAND' builds FFmpegKit for visionOS platform. By default two architectures (arm64, arm64-simulator) \
-are enabled without any external libraries. Options can be used to disable architectures and/or enable \
+are enabled without any external libraries. Options can be used to select architectures and/or enable \
 external libraries. Please note that GPL libraries (external libraries with GPL license) need --enable-gpl flag to be \
 set explicitly. When compilation ends, libraries are created under the prebuilt folder.\n"
   echo -e "Usage: ./$COMMAND ${PROFILE_USAGE}[OPTION]...\n"
@@ -22,16 +22,17 @@ set explicitly. When compilation ends, libraries are created under the prebuilt 
 
   echo -e "Architectures:"
 
-  echo -e "  --disable-arm64\t\tdo not build arm64 architecture [yes]"
-  echo -e "  --disable-arm64-simulator\tdo not build arm64-simulator architecture [yes]\n"
+  echo -e "  --arch=ARCH[,ARCH...]\t\tbuild only the listed architectures [default]"
+  echo -e "  --disable-arch-arm64\t\tdo not build arm64 architecture [yes]"
+  echo -e "  --disable-arch-arm64-simulator\tdo not build arm64-simulator architecture [yes]\n"
 
   echo -e "Libraries:"
-  echo -e "  --full\t\t\tenables all non-GPL external libraries"
-  echo -e "  --enable-visionos-audiotoolbox\tbuild with built-in Apple AudioToolbox support [no]"
-  echo -e "  --enable-visionos-bzip2\t\tbuild with built-in bzip2 support [no]"
-  echo -e "  --enable-visionos-videotoolbox\tbuild with built-in Apple VideoToolbox support [no]"
-  echo -e "  --enable-visionos-zlib\t\tbuild with built-in zlib [no]"
-  echo -e "  --enable-visionos-libiconv\tbuild with built-in libiconv [no]"
+  echo -e "  --enable-lib-all\t\tenable all libraries allowed by the selected license policy"
+  echo -e "  --enable-lib-visionos-audiotoolbox\tbuild with built-in Apple AudioToolbox support [no]"
+  echo -e "  --enable-lib-visionos-bzip2\tbuild with built-in bzip2 support [no]"
+  echo -e "  --enable-lib-visionos-videotoolbox\tbuild with built-in Apple VideoToolbox support [no]"
+  echo -e "  --enable-lib-visionos-zlib\tbuild with built-in zlib [no]"
+  echo -e "  --enable-lib-visionos-libiconv\tbuild with built-in libiconv [no]"
 
   display_help_common_libraries
   display_help_gpl_libraries

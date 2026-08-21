@@ -51,11 +51,11 @@ Web builds require the following tools.
 enabled in the native build. For example, `mp3` encoding needs `lame` or `shine`, `h264` needs `x264`, and
 `vp8`/`vp9` needs `libvpx`.
 
-Use the `--enable-<library name>` flag to support additional external or system libraries. Use `--enable-gpl` to
+Use the `--enable-lib-<library name>` flag to support additional external or system libraries. Use `--enable-gpl` to
 allow GPL-licensed libraries.
 
 ```sh
-./nix-web.sh -p web-wasm32-emscripten --enable-fontconfig --enable-freetype
+./nix-web.sh -p web-wasm32-emscripten --enable-lib-fontconfig --enable-lib-freetype
 ```
 
 Run `--help` to see all available build options.

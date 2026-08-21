@@ -102,17 +102,17 @@ Apple builds require the following tools.
 
 #### 2.2 Options
 
-Use `--enable-<library name>` flag to support additional external or system libraries and
-`--disable-<architecture name>` to disable architectures you don't want to build.
+Use `--enable-lib-<library name>` flag to support additional external or system libraries and
+`--disable-arch-<architecture name>` to disable architectures you don't want to build.
 
 ```
-./nix-ios.sh -p xcode26 --enable-fontconfig --disable-arm64e
+./nix-ios.sh -p xcode26 --enable-lib-fontconfig --disable-arch-arm64e
 
-./nix-macos.sh -p xcode26 --enable-freetype --enable-macos-avfoundation --disable-arm64
+./nix-macos.sh -p xcode26 --enable-lib-freetype --enable-lib-macos-avfoundation --disable-arch-arm64
 
-./nix-tvos.sh -p xcode26 --enable-dav1d --enable-libvpx --disable-arm64-simulator
+./nix-tvos.sh -p xcode26 --enable-lib-dav1d --enable-lib-libvpx --disable-arch-arm64-simulator
 
-./nix-visionos.sh -p xcode26 --enable-visionos-videotoolbox --enable-visionos-avfoundation --disable-arm64-simulator
+./nix-visionos.sh -p xcode26 --enable-lib-visionos-videotoolbox --enable-lib-visionos-audiotoolbox --disable-arch-arm64-simulator
 ```
 
 Run `--help` to see all available build options.

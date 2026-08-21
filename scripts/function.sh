@@ -726,6 +726,15 @@ generate_custom_library_environment_variables() {
   echo -e "INFO: Custom library env variable generated: ${CUSTOM_KEY}=${CUSTOM_VALUE}\n" 1>>"${BASEDIR}"/build.log 2>&1
 }
 
+set_custom_library_option() {
+  local CUSTOM_LIBRARY_OPTION_KEY="$1"
+  local CUSTOM_LIBRARY_OPTION_VALUE="$2"
+
+  echo -e "INFO: Custom library options detected: ${CUSTOM_LIBRARY_OPTION_KEY} ${CUSTOM_LIBRARY_OPTION_VALUE}\n" 1>>"${BASEDIR}"/build.log 2>&1
+
+  generate_custom_library_environment_variables "${CUSTOM_LIBRARY_OPTION_KEY}" "${CUSTOM_LIBRARY_OPTION_VALUE}"
+}
+
 skip_library() {
   SKIP_VARIABLE=$(echo "SKIP_$1" | sed "s/\-/\_/g")
 
@@ -752,6 +761,11 @@ get_help_command() {
   else
     echo "$0"
   fi
+}
+
+print_deprecated_option() {
+  echo -e "\n(*) Deprecated option \"$1\". Use \"$2\" instead.\n"
+  echo -e "WARNING: Deprecated option \"$1\". Use \"$2\" instead.\n" 1>>"${BASEDIR}"/build.log 2>&1
 }
 
 enable_debug() {
@@ -991,77 +1005,86 @@ display_help_licensing() {
 }
 
 display_help_common_libraries() {
-  echo -e "  --enable-chromaprint\t\tbuild with chromaprint [no]"
-  echo -e "  --enable-dav1d\t\tbuild with dav1d [no]"
-  echo -e "  --enable-fontconfig\t\tbuild with fontconfig [no]"
-  echo -e "  --enable-freetype\t\tbuild with freetype [no]"
-  echo -e "  --enable-fribidi\t\tbuild with fribidi [no]"
-  echo -e "  --enable-gmp\t\t\tbuild with gmp [no]"
-  echo -e "  --enable-gnutls\t\tbuild with gnutls [no]"
-  echo -e "  --enable-harfbuzz\t\tbuild with harfbuzz [no]"
-  echo -e "  --enable-kvazaar\t\tbuild with kvazaar [no]"
-  echo -e "  --enable-lame\t\t\tbuild with lame [no]"
-  echo -e "  --enable-libaom\t\tbuild with libaom [no]"
-  echo -e "  --enable-libass\t\tbuild with libass [no]"
-  echo -e "  --enable-libjxl\t\tbuild with libjxl [no]"
-  echo -e "  --enable-liblc3\t\tbuild with liblc3 [no]"
-  echo -e "  --enable-libsvtav1\t\tbuild with libsvtav1 [no]"
+  echo -e "  --enable-lib-chromaprint\tbuild with chromaprint [no]"
+  echo -e "  --enable-lib-dav1d\t\tbuild with dav1d [no]"
+  echo -e "  --enable-lib-fontconfig\tbuild with fontconfig [no]"
+  echo -e "  --enable-lib-freetype\t\tbuild with freetype [no]"
+  echo -e "  --enable-lib-fribidi\t\tbuild with fribidi [no]"
+  echo -e "  --enable-lib-gmp\t\tbuild with gmp [no]"
+  echo -e "  --enable-lib-gnutls\t\tbuild with gnutls [no]"
+  echo -e "  --enable-lib-harfbuzz\t\tbuild with harfbuzz [no]"
+  echo -e "  --enable-lib-kvazaar\t\tbuild with kvazaar [no]"
+  echo -e "  --enable-lib-lame\t\tbuild with lame [no]"
+  echo -e "  --enable-lib-libaom\t\tbuild with libaom [no]"
+  echo -e "  --enable-lib-libass\t\tbuild with libass [no]"
+  echo -e "  --enable-lib-libjxl\t\tbuild with libjxl [no]"
+  echo -e "  --enable-lib-liblc3\t\tbuild with liblc3 [no]"
+  echo -e "  --enable-lib-libsvtav1\tbuild with libsvtav1 [no]"
 
   case ${FFMPEG_KIT_BUILD_TYPE} in
   android | windows)
-    echo -e "  --enable-libiconv\t\tbuild with libiconv [no]"
+    echo -e "  --enable-lib-libiconv\t\tbuild with libiconv [no]"
     ;;
   esac
 
-  echo -e "  --enable-libilbc\t\tbuild with libilbc [no]"
+  echo -e "  --enable-lib-libilbc\t\tbuild with libilbc [no]"
   case ${FFMPEG_KIT_BUILD_TYPE} in
   web | windows)
-    echo -e "  --enable-libsamplerate\tbuild with libsamplerate [no]"
-    echo -e "  --enable-libsndfile\t\tbuild with libsndfile [no]"
+    echo -e "  --enable-lib-libsamplerate\tbuild with libsamplerate [no]"
+    echo -e "  --enable-lib-libsndfile\tbuild with libsndfile [no]"
     ;;
   esac
-  echo -e "  --enable-libtheora\t\tbuild with libtheora [no]"
-  echo -e "  --enable-libvorbis\t\tbuild with libvorbis [no]"
-  echo -e "  --enable-libvpx\t\tbuild with libvpx [no]"
-  echo -e "  --enable-libwebp\t\tbuild with libwebp [no]"
-  echo -e "  --enable-libxml2\t\tbuild with libxml2 [no]"
-  echo -e "  --enable-opencore-amr\t\tbuild with opencore-amr [no]"
-  echo -e "  --enable-openh264\t\tbuild with openh264 [no]"
-  echo -e "  --enable-openssl\t\tbuild with openssl [no]"
-  echo -e "  --enable-opus\t\t\tbuild with opus [no]"
-  echo -e "  --enable-sdl\t\t\tbuild with sdl [no]"
-  echo -e "  --enable-shine\t\tbuild with shine [no]"
-  echo -e "  --enable-snappy\t\tbuild with snappy [no]"
-  echo -e "  --enable-soxr\t\t\tbuild with soxr [no]"
-  echo -e "  --enable-speex\t\tbuild with speex [no]"
-  echo -e "  --enable-srt\t\t\tbuild with srt [no]"
-  echo -e "  --enable-tesseract\t\tbuild with tesseract [no]"
-  echo -e "  --enable-twolame\t\tbuild with twolame [no]"
-  echo -e "  --enable-vo-amrwbenc\t\tbuild with vo-amrwbenc [no]"
-  echo -e "  --enable-vvenc\t\tbuild with vvenc [no]"
-  echo -e "  --enable-zimg\t\t\tbuild with zimg [no]\n"
+  echo -e "  --enable-lib-libtheora\tbuild with libtheora [no]"
+  echo -e "  --enable-lib-libvorbis\tbuild with libvorbis [no]"
+  echo -e "  --enable-lib-libvpx\t\tbuild with libvpx [no]"
+  echo -e "  --enable-lib-libwebp\t\tbuild with libwebp [no]"
+  echo -e "  --enable-lib-libxml2\t\tbuild with libxml2 [no]"
+  echo -e "  --enable-lib-opencore-amr\tbuild with opencore-amr [no]"
+  echo -e "  --enable-lib-openh264\t\tbuild with openh264 [no]"
+  echo -e "  --enable-lib-openssl\t\tbuild with openssl [no]"
+  echo -e "  --enable-lib-opus\t\tbuild with opus [no]"
+  echo -e "  --enable-lib-sdl\t\tbuild with sdl [no]"
+  echo -e "  --enable-lib-shine\t\tbuild with shine [no]"
+  echo -e "  --enable-lib-snappy\t\tbuild with snappy [no]"
+  echo -e "  --enable-lib-soxr\t\tbuild with soxr [no]"
+  echo -e "  --enable-lib-speex\t\tbuild with speex [no]"
+  echo -e "  --enable-lib-srt\t\tbuild with srt [no]"
+  echo -e "  --enable-lib-tesseract\tbuild with tesseract [no]"
+  echo -e "  --enable-lib-twolame\t\tbuild with twolame [no]"
+  echo -e "  --enable-lib-vo-amrwbenc\tbuild with vo-amrwbenc [no]"
+  echo -e "  --enable-lib-vvenc\t\tbuild with vvenc [no]"
+
+  case ${FFMPEG_KIT_BUILD_TYPE} in
+  windows)
+    echo -e "  --enable-lib-zimg\t\tbuild with zimg [no]"
+    echo -e "  --enable-lib-zlib\t\tbuild with zlib [no]\n"
+    ;;
+  *)
+    echo -e "  --enable-lib-zimg\t\tbuild with zimg [no]\n"
+    ;;
+  esac
 }
 
 display_help_gpl_libraries() {
   echo -e "GPL libraries:"
-  echo -e "  --enable-libvidstab\t\tbuild with libvidstab [no]"
-  echo -e "  --enable-rubberband\t\tbuild with rubber band [no]"
-  echo -e "  --enable-x264\t\t\tbuild with x264 [no]"
-  echo -e "  --enable-x265\t\t\tbuild with x265 [no]"
-  echo -e "  --enable-xvidcore\t\tbuild with xvidcore [no]\n"
+  echo -e "  --enable-lib-libvidstab\tbuild with libvidstab [no]"
+  echo -e "  --enable-lib-rubberband\tbuild with rubber band [no]"
+  echo -e "  --enable-lib-x264\t\tbuild with x264 [no]"
+  echo -e "  --enable-lib-x265\t\tbuild with x265 [no]"
+  echo -e "  --enable-lib-xvidcore\t\tbuild with xvidcore [no]\n"
 }
 
 display_help_custom_libraries() {
   echo -e "Custom libraries:"
-  echo -e "  --enable-custom-library-[n]-name=value\t\t\tname of the custom library []"
-  echo -e "  --enable-custom-library-[n]-repo=value\t\t\tgit repository of the source code []"
-  echo -e "  --enable-custom-library-[n]-repo-commit=value\t\t\tgit commit to download the source code from []"
-  echo -e "  --enable-custom-library-[n]-repo-tag=value\t\t\tgit tag to download the source code from []"
-  echo -e "  --enable-custom-library-[n]-package-config-file-name=value\tpackage config file installed by the build script []"
-  echo -e "  --enable-custom-library-[n]-ffmpeg-enable-flag=value\t\tlibrary name used in ffmpeg configure script to enable the library []"
-  echo -e "  --enable-custom-library-[n]-license-file=value\t\tlicence file path relative to the library source folder []"
+  echo -e "  --enable-lib-custom-[n]-name=value\t\t\tname of the custom library []"
+  echo -e "  --enable-lib-custom-[n]-repo=value\t\t\tgit repository of the source code []"
+  echo -e "  --enable-lib-custom-[n]-repo-commit=value\t\tgit commit to download the source code from []"
+  echo -e "  --enable-lib-custom-[n]-repo-tag=value\t\tgit tag to download the source code from []"
+  echo -e "  --enable-lib-custom-[n]-package-config-file-name=value\tpackage config file installed by the build script []"
+  echo -e "  --enable-lib-custom-[n]-ffmpeg-enable-flag=value\tlibrary name used in ffmpeg configure script to enable the library []"
+  echo -e "  --enable-lib-custom-[n]-license-file=value\t\tlicence file path relative to the library source folder []"
   if [ ${FFMPEG_KIT_BUILD_TYPE} == "android" ]; then
-    echo -e "  --enable-custom-library-[n]-uses-cpp\t\t\t\tflag to specify that the library uses libc++ []\n"
+    echo -e "  --enable-lib-custom-[n]-uses-cpp\t\t\tflag to specify that the library uses libc++ []\n"
   else
     echo ""
   fi
@@ -1069,10 +1092,12 @@ display_help_custom_libraries() {
 
 display_help_advanced_options() {
   echo -e "Advanced options:"
-  echo -e "  --reconf-LIBRARY\t\trun autoreconf before building LIBRARY [no]"
-  echo -e "  --redownload-LIBRARY\t\tdownload LIBRARY even if it is detected as already downloaded [no]"
-  echo -e "  --rebuild-LIBRARY\t\tbuild LIBRARY even if it is detected as already built [no]"
-  echo -e "  --version-LIBRARY=n\t\toverride default LIBRARY version []"
+  echo -e "  --disable-lib-LIBRARY\t\tdisable LIBRARY without disabling its dependencies [no]"
+  echo -e "  --disable-lib-with-deps-LIBRARY\tdisable LIBRARY and its dependencies [no]"
+  echo -e "  --reconf-lib-LIBRARY\t\trun autoreconf before building LIBRARY [no]"
+  echo -e "  --redownload-lib-LIBRARY\tdownload LIBRARY even if it is detected as already downloaded [no]"
+  echo -e "  --rebuild-lib-LIBRARY\t\tbuild LIBRARY even if it is detected as already built [no]"
+  echo -e "  --lib-version-LIBRARY=n\toverride default LIBRARY version []"
   if [ -n "$1" ]; then
     echo -e "$1"
   fi
@@ -1169,6 +1194,116 @@ redownload_library() {
   fi
 }
 
+set_library_version() {
+  local CUSTOM_VERSION_KEY="$1"
+  local CUSTOM_VERSION_VALUE="$2"
+
+  echo -e "INFO: Custom version detected: ${CUSTOM_VERSION_KEY} ${CUSTOM_VERSION_VALUE}\n" 1>>"${BASEDIR}"/build.log 2>&1
+
+  generate_custom_version_environment_variables "${CUSTOM_VERSION_KEY}" "${CUSTOM_VERSION_VALUE}"
+}
+
+process_common_build_option() {
+  case $1 in
+  --skip=*)
+    skip_library "${1#--skip=}"
+    ;;
+  --enable-lib-all)
+    ENABLE_ALL_LIBRARIES="1"
+    ;;
+  --enable-gpl)
+    export GPL_ENABLED="yes"
+    ;;
+  --enable-lib-custom-*)
+    local CUSTOM_LIBRARY_OPTION_KEY="library-${1#--enable-lib-custom-}"
+    CUSTOM_LIBRARY_OPTION_KEY="${CUSTOM_LIBRARY_OPTION_KEY%%=*}"
+    set_custom_library_option "${CUSTOM_LIBRARY_OPTION_KEY}" "${1##*=}"
+    ;;
+  --enable-lib-*)
+    enable_library "${1#--enable-lib-}"
+    ;;
+  --disable-lib-with-deps-*)
+    disabled_libraries_with_deps+=("${1#--disable-lib-with-deps-}")
+    ;;
+  --disable-lib-*)
+    disabled_libraries+=("${1#--disable-lib-}")
+    ;;
+  --disable-arch-*)
+    disable_arch "${1#--disable-arch-}"
+    ;;
+  --arch=*)
+    enable_architectures "${1#--arch=}"
+    ;;
+  --reconf-lib-*)
+    reconf_library "${1#--reconf-lib-}"
+    ;;
+  --rebuild-lib-*)
+    rebuild_library "${1#--rebuild-lib-}"
+    ;;
+  --redownload-lib-*)
+    redownload_library "${1#--redownload-lib-}"
+    ;;
+  --lib-version-*)
+    local CUSTOM_VERSION_KEY="${1#--lib-version-}"
+    CUSTOM_VERSION_KEY="${CUSTOM_VERSION_KEY%%=*}"
+    set_library_version "${CUSTOM_VERSION_KEY}" "${1##*=}"
+    ;;
+
+  # Deprecated aliases. Keep these cases isolated so removal is a small edit.
+  --skip-*)
+    local SKIP_LIBRARY="${1#--skip-}"
+    print_deprecated_option "$1" "--skip=${SKIP_LIBRARY}"
+    skip_library "${SKIP_LIBRARY}"
+    ;;
+  --full)
+    print_deprecated_option "$1" "--enable-lib-all"
+    ENABLE_ALL_LIBRARIES="1"
+    ;;
+  --enable-custom-library-*)
+    local CUSTOM_LIBRARY_OPTION_KEY="${1#--enable-custom-}"
+    CUSTOM_LIBRARY_OPTION_KEY="${CUSTOM_LIBRARY_OPTION_KEY%%=*}"
+    print_deprecated_option "$1" "--enable-lib-custom-${CUSTOM_LIBRARY_OPTION_KEY#library-}"
+    set_custom_library_option "${CUSTOM_LIBRARY_OPTION_KEY}" "${1##*=}"
+    ;;
+  --enable-*)
+    local ENABLED_LIBRARY="${1#--enable-}"
+    print_deprecated_option "$1" "--enable-lib-${ENABLED_LIBRARY}"
+    enable_library "${ENABLED_LIBRARY}"
+    ;;
+  --disable-*)
+    local DISABLED_ARCH="${1#--disable-}"
+    print_deprecated_option "$1" "--disable-arch-${DISABLED_ARCH}"
+    disable_arch "${DISABLED_ARCH}"
+    ;;
+  --reconf-*)
+    local CONF_LIBRARY="${1#--reconf-}"
+    print_deprecated_option "$1" "--reconf-lib-${CONF_LIBRARY}"
+    reconf_library "${CONF_LIBRARY}"
+    ;;
+  --rebuild-*)
+    local BUILD_LIBRARY="${1#--rebuild-}"
+    print_deprecated_option "$1" "--rebuild-lib-${BUILD_LIBRARY}"
+    rebuild_library "${BUILD_LIBRARY}"
+    ;;
+  --redownload-*)
+    local DOWNLOAD_LIBRARY="${1#--redownload-}"
+    print_deprecated_option "$1" "--redownload-lib-${DOWNLOAD_LIBRARY}"
+    redownload_library "${DOWNLOAD_LIBRARY}"
+    ;;
+  --version-*)
+    local CUSTOM_VERSION_KEY="${1#--version-}"
+    CUSTOM_VERSION_KEY="${CUSTOM_VERSION_KEY%%=*}"
+    print_deprecated_option "$1" "--lib-version-${CUSTOM_VERSION_KEY}=${1##*=}"
+    set_library_version "${CUSTOM_VERSION_KEY}" "${1##*=}"
+    ;;
+  *)
+    return 1
+    ;;
+  esac
+
+  return 0
+}
+
 #
 # 1. library name
 # 2. ignore unknown libraries
@@ -1182,6 +1317,27 @@ enable_library() {
       print_unknown_library "$1"
     fi
   fi
+}
+
+disable_library() {
+  if [ -n "$1" ]; then
+    local library_supported_on_platform=$(is_library_supported_on_platform "$1")
+    local library_index=$(from_library_name "$1")
+
+    if [[ $library_supported_on_platform == 0 ]] && [[ -n ${library_index} ]]; then
+      ENABLED_LIBRARIES[$library_index]=0
+    else
+      print_unknown_library "$1"
+    fi
+  fi
+}
+
+enable_all_libraries() {
+  for library in {0..98}; do
+    if [[ ${GPL_ENABLED} == "yes" ]] || [[ $(is_gpl_licensed "${library}") -eq 1 ]]; then
+      enable_library "$(get_library_name "${library}")" 1
+    fi
+  done
 }
 
 #
@@ -1603,6 +1759,40 @@ disable_arch() {
   else
     print_unknown_arch "$1"
   fi
+}
+
+enable_arch() {
+  local arch_supported_on_platform=$(is_arch_supported_on_platform "$1")
+  if [[ $arch_supported_on_platform == 1 ]]; then
+    set_arch "$1" 1
+  else
+    print_unknown_arch "$1"
+  fi
+}
+
+disable_all_architectures() {
+  for arch in {0..13}; do
+    ENABLED_ARCHITECTURES[$arch]=0
+  done
+}
+
+enable_architectures() {
+  local ARCH_LIST="$1"
+  local -a ARCH_ARRAY
+
+  if [[ -z ${ARCH_LIST} ]]; then
+    print_unknown_arch "${ARCH_LIST}"
+  fi
+
+  disable_all_architectures
+
+  IFS=',' read -r -a ARCH_ARRAY <<<"${ARCH_LIST}"
+  for arch in "${ARCH_ARRAY[@]}"; do
+    if [[ -z ${arch} ]]; then
+      print_unknown_arch "${ARCH_LIST}"
+    fi
+    enable_arch "${arch}"
+  done
 }
 
 set_arch() {

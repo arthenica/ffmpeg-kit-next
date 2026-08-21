@@ -50,12 +50,12 @@ Linux builds require the following tools.
 
 #### 2.2 Options
 
-Use `--enable-<library name>` flag to support additional external or system libraries and
-`--disable-<architecture name>` (`--disable-arm64`, `--disable-x86-64`) to skip the architecture. Use `--enable-gpl` to
+Use `--enable-lib-<library name>` flag to support additional external or system libraries and
+`--disable-arch-<architecture name>` (`--disable-arch-arm64`, `--disable-arch-x86-64`) to skip the architecture. Use `--enable-gpl` to
 allow GPL-licensed libraries.
 
 ```
-./nix-linux.sh -p default --enable-fontconfig
+./nix-linux.sh -p default --enable-lib-linux-fontconfig
 ```
 
 Run `--help` to see all available build options.

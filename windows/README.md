@@ -44,12 +44,12 @@ for details.
 
 #### 2.2 Options
 
-Use `--enable-<library name>` to build with an external library and `--full` to enable all of them.
-Use `--disable-arm64` / `--disable-x86-64` to skip an architecture. Use `--enable-gpl` to allow
+Use `--enable-lib-<library name>` to build with an external library and `--enable-lib-all` to enable all libraries allowed by the selected license policy.
+Use `--disable-arch-arm64` / `--disable-arch-x86-64` to disable an architecture. Use `--enable-gpl` to allow
 GPL-licensed libraries.
 
 ```
-./windows.sh --enable-openssl --enable-dav1d
+./windows.sh --enable-lib-openssl --enable-lib-dav1d
 ```
 
 The MinGW-w64 runtime can be linked statically into the DLL (default) or shipped as separate DLLs in
