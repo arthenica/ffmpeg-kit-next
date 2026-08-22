@@ -5,8 +5,12 @@
 
 CURRENT_DIR="`pwd`"
 
-gradle -b "${CURRENT_DIR}"/../../android/ffmpeg-kit-next-android-lib/build.gradle clean javaDocReleaseGeneration
+cd "${CURRENT_DIR}"/../../android || exit
+
+./gradlew -b ffmpeg-kit-next-android-lib/build.gradle dokkaJavadoc
 
 rm -rf "${CURRENT_DIR}"/../../docs/android/javadoc
 
-cp -r "${CURRENT_DIR}"/../../android/ffmpeg-kit-next-android-lib/build/intermediates/java_doc_dir/release "${CURRENT_DIR}"/../../docs/android/javadoc
+cp -r ffmpeg-kit-next-android-lib/build/dokka/javadoc "${CURRENT_DIR}"/../../docs/android/javadoc
+
+cd "${CURRENT_DIR}" || exit
