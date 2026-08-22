@@ -33,7 +33,7 @@ final application with SharedArrayBuffer-compatible COOP/COEP headers when ffmpe
   echo -e "Libraries:"
 
   echo -e "  --enable-lib-all\t\tenable all libraries allowed by the selected license policy"
-  echo -e "  --enable-lib-web-libiconv\tbuild with built-in libiconv [no]"
+  echo -e "  --enable-lib-web-iconv\tbuild with system iconv through libiconv compatibility [no]"
   echo -e "  --enable-lib-web-zlib\t\tbuild with built-in zlib [no]"
 
   display_help_common_libraries
