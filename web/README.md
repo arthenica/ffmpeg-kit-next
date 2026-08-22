@@ -17,7 +17,7 @@
 Web builds use the [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix). You must install it on a supported host first to build the binaries. Then run the
 `nix-web.sh` wrapper from the project root.
 
-NixOS is not required. The scripts require the Nix package manager on a supported host, and NixOS is not a supported Web build host.
+Install Nix on a supported host to build the project. Note that NixOS itself is not supported as a Web build host.
 
 Note that, `FFmpegKitNext` does not publish binaries and building it yourself is the only way to use it.
 
@@ -51,11 +51,11 @@ Web builds require the following tools.
 enabled in the native build. For example, `mp3` encoding needs `lame` or `shine`, `h264` needs `x264`, and
 `vp8`/`vp9` needs `libvpx`.
 
-Use the `--enable-<library name>` flag to support additional external or system libraries. Use `--enable-gpl` to
+Use the `--enable-lib-<library name>` flag to support additional external or system libraries. Use `--enable-gpl` to
 allow GPL-licensed libraries.
 
 ```sh
-./nix-web.sh -p web-wasm32-emscripten --enable-fontconfig --enable-freetype
+./nix-web.sh -p web-wasm32-emscripten --enable-lib-fontconfig --enable-lib-freetype
 ```
 
 Run `--help` to see all available build options.

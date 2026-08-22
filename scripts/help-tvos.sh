@@ -11,7 +11,7 @@ display_help() {
   fi
 
   echo -e "\n'$COMMAND' builds FFmpegKit for tvOS platform. By default three architectures (arm64, arm64-simulator \
-and x86-64) are enabled without any external libraries. Options can be used to disable architectures and/or enable \
+and x86-64) are enabled without any external libraries. Options can be used to select architectures and/or enable \
 external libraries. Please note that GPL libraries (external libraries with GPL license) need --enable-gpl flag to be \
 set explicitly. When compilation ends, libraries are created under the prebuilt folder.\n"
   echo -e "Usage: ./$COMMAND ${PROFILE_USAGE}[OPTION]...\n"
@@ -22,17 +22,18 @@ set explicitly. When compilation ends, libraries are created under the prebuilt 
 
   echo -e "Architectures:"
 
-  echo -e "  --disable-arm64\t\tdo not build arm64 architecture [yes]"
-  echo -e "  --disable-arm64-simulator\tdo not build arm64-simulator architecture [yes]"
-  echo -e "  --disable-x86-64\t\tdo not build x86-64 architecture [yes]\n"
+  echo -e "  --arch=ARCH[,ARCH...]\t\tbuild only the listed architectures [default]"
+  echo -e "  --disable-arch-arm64\t\tdo not build arm64 architecture [yes]"
+  echo -e "  --disable-arch-arm64-simulator\tdo not build arm64-simulator architecture [yes]"
+  echo -e "  --disable-arch-x86-64\tdo not build x86-64 architecture [yes]\n"
 
   echo -e "Libraries:"
-  echo -e "  --full\t\t\tenables all non-GPL external libraries"
-  echo -e "  --enable-tvos-audiotoolbox\tbuild with built-in Apple AudioToolbox support [no]"
-  echo -e "  --enable-tvos-bzip2\t\tbuild with built-in bzip2 support [no]"
-  echo -e "  --enable-tvos-videotoolbox\tbuild with built-in Apple VideoToolbox support [no]"
-  echo -e "  --enable-tvos-zlib\t\tbuild with built-in zlib [no]"
-  echo -e "  --enable-tvos-libiconv\tbuild with built-in libiconv [no]"
+  echo -e "  --enable-lib-all\t\tenable all libraries allowed by the selected license policy"
+  echo -e "  --enable-lib-tvos-audiotoolbox\tbuild with built-in Apple AudioToolbox support [no]"
+  echo -e "  --enable-lib-tvos-bzip2\tbuild with built-in bzip2 support [no]"
+  echo -e "  --enable-lib-tvos-videotoolbox\tbuild with built-in Apple VideoToolbox support [no]"
+  echo -e "  --enable-lib-tvos-zlib\tbuild with built-in zlib [no]"
+  echo -e "  --enable-lib-tvos-libiconv\tbuild with built-in libiconv [no]"
 
   display_help_common_libraries
   display_help_gpl_libraries

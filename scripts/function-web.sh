@@ -719,6 +719,7 @@ create_web_main_module() {
   local MAIN_MODULE_FLAGS=()
   local REQUIRED_LIBRARY
   local WEB_LINKAGE_MODE
+  local ZLIB_PORT_FLAGS=()
 
   WEB_LINKAGE_MODE="$(get_web_linkage_mode)"
 
@@ -774,6 +775,11 @@ create_web_main_module() {
     read -r -a FFMPEG_EXTERNAL_LDFLAGS_ARRAY <<<"${FFMPEG_EXTERNAL_LDFLAGS}"
   fi
   FFMPEG_LIBRARY_SEARCH_FLAGS="$(get_web_bundle_library_search_flags)"
+  if [[ ${ENABLED_LIBRARIES[LIBRARY_SYSTEM_ZLIB]} -eq 1 ]]; then
+    # Emscripten ports cannot be linked into side modules. If FFmpeg or one of
+    # its external libraries enabled zlib, link the port into the main module.
+    ZLIB_PORT_FLAGS=(-sUSE_ZLIB=1)
+  fi
 
   "${CXX}" \
     $(get_ldflags ffmpeg-kit-wasm) \
@@ -796,7 +802,7 @@ create_web_main_module() {
     -sEXPORTED_RUNTIME_METHODS="${EXPORTED_RUNTIME_METHODS}" \
     -sENVIRONMENT=web,worker \
     -sWASM_BIGINT=1 \
-    -sUSE_ZLIB=1 \
+    "${ZLIB_PORT_FLAGS[@]}" \
     -lembind \
     -lworkerfs.js \
     -o "${FFMPEG_KIT_MAIN_MODULE_OUTPUT_DIRECTORY}/libffmpegkit.js" \
@@ -807,6 +813,31 @@ create_web_main_module() {
 
   echo -e "\nINFO: Created libffmpegkit.js and libffmpegkit.wasm ${WEB_LINKAGE_MODE} main module\n" 1>>"${BASEDIR}"/build.log 2>&1
 
+}
+
+copy_web_runtime_license() {
+  local LICENSE_NAME="$1"
+  local LICENSE_DIRECTORY="$2"
+  local LICENSE_FILE="${BASEDIR}/tools/license/LICENSE.${LICENSE_NAME}"
+
+  if [[ ! -f "${LICENSE_FILE}" ]]; then
+    echo -e "ERROR: Missing web runtime license file ${LICENSE_FILE}\n" 1>>"${BASEDIR}"/build.log 2>&1
+    return 1
+  fi
+
+  cp "${LICENSE_FILE}" "${LICENSE_DIRECTORY}/LICENSE.${LICENSE_NAME}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+  echo -e "DEBUG: Copied the ${LICENSE_NAME} license file successfully\n" 1>>"${BASEDIR}"/build.log 2>&1
+}
+
+copy_web_runtime_licenses() {
+  local LICENSE_DIRECTORY="$1"
+
+  copy_web_runtime_license "EMSCRIPTEN" "${LICENSE_DIRECTORY}" || return 1
+  copy_web_runtime_license "MUSL" "${LICENSE_DIRECTORY}" || return 1
+
+  if [[ ${ENABLED_LIBRARIES[LIBRARY_SYSTEM_ZLIB]} -eq 1 ]]; then
+    copy_web_runtime_license "ZLIB" "${LICENSE_DIRECTORY}" || return 1
+  fi
 }
 
 create_web_bundle() {
@@ -852,6 +883,8 @@ create_web_bundle() {
 
   # COPY EXTERNAL LIBRARY LICENSES INTO licenses/ AS LICENSE.<LIB> (matches the Apple bundle)
   initialize_folder "${FFMPEG_KIT_BUNDLE_LICENSES_DIRECTORY}" || return 1
+  copy_web_runtime_licenses "${FFMPEG_KIT_BUNDLE_LICENSES_DIRECTORY}" || return 1
+
   for library in $(get_common_library_indexes); do
     if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
       local ENABLED_LIBRARY_NAME="$(get_library_name ${library})"

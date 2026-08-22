@@ -119,7 +119,7 @@ extern __thread AVDictionary *swr_opts;
 extern __thread AVDictionary *format_opts, *codec_opts;
 extern __thread int hide_banner;
 
-#if 0 && HAVE_COMMANDLINETOARGVW && defined(_WIN32)
+#if HAVE_COMMANDLINETOARGVW && defined(_WIN32)
 /* Cached UTF-8 command line, saved/restored by the FFmpegKit context. */
 extern __thread char **win32_argv_utf8;
 extern __thread int win32_argc;

@@ -243,7 +243,7 @@ static const OptionDef *find_option(const OptionDef *po, const char *name)
 /* _WIN32 means using the windows libc - cygwin doesn't define that
  * by default. HAVE_COMMANDLINETOARGVW is true on cygwin, while
  * it doesn't provide the actual command line via GetCommandLineW(). */
-#if 0 && HAVE_COMMANDLINETOARGVW && defined(_WIN32)
+#if HAVE_COMMANDLINETOARGVW && defined(_WIN32)
 #include <shellapi.h>
 /* Will be leaked on exit */
 /* Exposed (non-static, __thread) so the FFmpegKit context can save/restore

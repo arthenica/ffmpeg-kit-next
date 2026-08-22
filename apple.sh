@@ -157,7 +157,6 @@ echo -e "INFO: Build options: $*\n" 1>>"${BASEDIR}"/build.log 2>&1
 # SET DEFAULT BUILD OPTIONS
 DISPLAY_HELP=""
 BUILD_TYPE_ID=""
-BUILD_FULL=""
 FFMPEG_KIT_XCF_BUILD=""
 FFMPEG_KIT_SPM_BUILD=""
 BUILD_FORCE=""
@@ -205,9 +204,15 @@ while [ ! $# -eq 0 ]; do
 
     export VISIONOS_MIN_VERSION=${TARGET}
     ;;
-  --disable-*)
-    DISABLED_ARCH_VARIANT=$(echo $1 | sed -e 's/^--[A-Za-z]*-//g')
+  --disable-arch-*)
+    DISABLED_ARCH_VARIANT="${1#--disable-arch-}"
 
+    disable_arch_variant "${DISABLED_ARCH_VARIANT}"
+    ;;
+  --disable-*)
+    DISABLED_ARCH_VARIANT="${1#--disable-}"
+
+    print_deprecated_option "$1" "--disable-arch-${DISABLED_ARCH_VARIANT}"
     disable_arch_variant "${DISABLED_ARCH_VARIANT}"
     ;;
   --spm)

@@ -19,7 +19,7 @@
     `vid.stab`, `x264`, `x265`, `xvidcore`
 
   - `zlib` and `MediaCodec` Android system libraries
-  - `bzip2`, `iconv`, `libuuid`, `zlib` system libraries and `AudioToolbox`, `VideoToolbox`, `AVFoundation` system frameworks on iOS/iPadOS
+  - `bzip2`, `libiconv`, `libuuid`, `zlib` system libraries and `AudioToolbox`, `VideoToolbox`, `AVFoundation` system frameworks on iOS/iPadOS
 
 - Includes Typescript definitions
 - Licensed under `LGPL 3.0` by default, `GPL v3.0` if GPL licensed libraries are enabled
