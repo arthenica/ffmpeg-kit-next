@@ -33,7 +33,7 @@
 #import <ffmpegkit/FFmpegKitStreamOutput.h>
 
 static NSString *const PLATFORM_NAME = @"ios";
-static NSString *const LIBRARY_VERSION = @"8.1.1";
+static NSString *const LIBRARY_VERSION = @"9.0.0";
 
 // LOG CLASS
 static NSString *const KEY_LOG_SESSION_ID = @"sessionId";

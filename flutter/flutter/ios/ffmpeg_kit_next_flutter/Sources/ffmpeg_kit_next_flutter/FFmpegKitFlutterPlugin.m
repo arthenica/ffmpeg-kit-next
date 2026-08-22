@@ -26,7 +26,7 @@
 #import <ffmpegkit/FFmpegKitStreamOutput.h>
 
 static NSString *const PLATFORM_NAME = @"ios";
-static NSString *const LIBRARY_VERSION = @"8.1.1";
+static NSString *const LIBRARY_VERSION = @"9.0.0";
 
 static NSString *const METHOD_CHANNEL = @"flutter.arthenica.com/ffmpeg_kit";
 static NSString *const EVENT_CHANNEL = @"flutter.arthenica.com/ffmpeg_kit_event";
