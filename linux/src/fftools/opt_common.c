@@ -7,7 +7,7 @@
  * Copyright (c) 2023-2024 ARTHENICA LTD
  *
  * This modified file is part of FFmpegKitNext.
- * It is derived from FFmpeg's fftools/opt_common.c at tag n8.1.2.
+ * It is derived from FFmpeg's fftools/opt_common.c at tag n9.0.1.
  *
  * The original FFmpeg source is licensed under the GNU Lesser General
  * Public License version 2.1 or later. FFmpegKitNext distributes this
@@ -32,6 +32,12 @@
  * Modification history:
  *
  * ffmpeg-kit changes by Taner Sener
+ *
+ * 08.2026
+ * --------------------------------------------------------
+ * - FFmpeg 9.0.1 changes migrated
+ * - FFmpegKitNext integration updates preserved, including wrapper API,
+ *   callbacks, cancellation and thread/session-local execution where applicable
  *
  * 07.2026
  * --------------------------------------------------------
@@ -117,6 +123,11 @@ enum show_muxdemuxers {
     SHOW_DEFAULT,
     SHOW_DEMUXERS,
     SHOW_MUXERS,
+};
+
+enum show_codec {
+    SHOW_DECODER,
+    SHOW_ENCODER,
 };
 
 __thread FILE *report_file;
@@ -247,14 +258,14 @@ static void print_program_info(int flags, int level)
 {
     const char *indent = flags & INDENT? "  " : "";
 
-    av_log(NULL, level, "%s version " FFMPEG_VERSION, program_name);
+    av_log(NULL, level, "%s version %s", program_name, FFMPEG_VERSION);
     if (flags & SHOW_COPYRIGHT)
         av_log(NULL, level, " Copyright (c) %d-%d the FFmpeg developers",
                program_birth_year, CONFIG_THIS_YEAR);
     av_log(NULL, level, "\n");
     av_log(NULL, level, "%sbuilt with %s\n", indent, CC_IDENT);
 
-    av_log(NULL, level, "%sconfiguration: " FFMPEG_CONFIGURATION "\n", indent);
+    av_log(NULL, level, "%sconfiguration: %s\n", indent, FFMPEG_CONFIGURATION);
 }
 
 static void print_buildconf(int flags, int level)
@@ -370,6 +381,12 @@ static void print_codec(const AVCodec *c)
         av_log(NULL, AV_LOG_STDERR, "hardware ");
     if (c->capabilities & AV_CODEC_CAP_HYBRID)
         av_log(NULL, AV_LOG_STDERR, "hybrid ");
+    if (c->capabilities & AV_CODEC_CAP_ENCODER_REORDERED_OPAQUE)
+        av_log(NULL, AV_LOG_STDERR, "reorderedopaque ");
+    if (c->capabilities & AV_CODEC_CAP_ENCODER_FLUSH)
+        av_log(NULL, AV_LOG_STDERR, "flush ");
+    if (c->capabilities & AV_CODEC_CAP_ENCODER_RECON_FRAME)
+        av_log(NULL, AV_LOG_STDERR, "reconframe ");
     if (!c->capabilities)
         av_log(NULL, AV_LOG_STDERR, "none");
     av_log(NULL, AV_LOG_STDERR, "\n");
@@ -643,9 +660,9 @@ int show_help_common(void *optctx, const char *opt, const char *arg,
     if (!*topic) {
         show_help_default(topic, par);
     } else if (!strcmp(topic, "decoder")) {
-        show_help_codec(par, 0);
+        show_help_codec(par, SHOW_DECODER);
     } else if (!strcmp(topic, "encoder")) {
-        show_help_codec(par, 1);
+        show_help_codec(par, SHOW_ENCODER);
     } else if (!strcmp(topic, "demuxer")) {
         show_help_demuxer(par);
     } else if (!strcmp(topic, "muxer")) {
@@ -760,16 +777,16 @@ int show_codecs(void *optctx, const char *opt, const char *arg)
 
         /* print decoders/encoders when there's more than one or their
          * names are different from codec name */
-        while ((codec = next_codec_for_id(desc->id, &iter, 0))) {
+        while ((codec = next_codec_for_id(desc->id, &iter, SHOW_DECODER))) {
             if (strcmp(codec->name, desc->name)) {
-                print_codecs_for_id(desc->id, 0);
+                print_codecs_for_id(desc->id, SHOW_DECODER);
                 break;
             }
         }
         iter = NULL;
-        while ((codec = next_codec_for_id(desc->id, &iter, 1))) {
+        while ((codec = next_codec_for_id(desc->id, &iter, SHOW_ENCODER))) {
             if (strcmp(codec->name, desc->name)) {
-                print_codecs_for_id(desc->id, 1);
+                print_codecs_for_id(desc->id, SHOW_ENCODER);
                 break;
             }
         }
@@ -826,12 +843,12 @@ static int print_codecs(int encoder)
 
 int show_decoders(void *optctx, const char *opt, const char *arg)
 {
-    return print_codecs(0);
+    return print_codecs(SHOW_DECODER);
 }
 
 int show_encoders(void *optctx, const char *opt, const char *arg)
 {
-    return print_codecs(1);
+    return print_codecs(SHOW_ENCODER);
 }
 
 int show_bsfs(void *optctx, const char *opt, const char *arg)
@@ -928,7 +945,7 @@ static int show_formats_devices(void *optctx, const char *opt, const char *arg, 
         const char *name      = NULL;
         const char *long_name = NULL;
 
-        if (muxdemuxers !=SHOW_DEMUXERS) {
+        if (muxdemuxers != SHOW_DEMUXERS) {
             ofmt_opaque = NULL;
             while ((ofmt = av_muxer_iterate(&ofmt_opaque))) {
                 is_dev = is_device(ofmt->priv_class);
