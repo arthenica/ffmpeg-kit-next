@@ -26,7 +26,7 @@
 #import <ffmpegkit/FFmpegKitStreamOutput.h>
 
 static NSString *const PLATFORM_NAME = @"macos";
-static NSString *const LIBRARY_VERSION = @"8.1.1";
+static NSString *const LIBRARY_VERSION = @"9.0.0";
 
 static NSString *const METHOD_CHANNEL = @"flutter.arthenica.com/ffmpeg_kit";
 static NSString *const EVENT_CHANNEL = @"flutter.arthenica.com/ffmpeg_kit_event";
@@ -897,7 +897,10 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
 }
 
 - (void)isLTSBuild:(FlutterResult)result {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   result([NSNumber numberWithBool:([FFmpegKitConfig isLTSBuild] == 1)]);
+#pragma clang diagnostic pop
 }
 
 - (void)getBuildDate:(FlutterResult)result {

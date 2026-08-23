@@ -6,7 +6,7 @@
  * Copyright (c) 2026 Taner Sener
  *
  * This modified file is part of FFmpegKitNext.
- * It is derived from FFmpeg's fftools/graph/graphprint.c at tag n8.1.2.
+ * It is derived from FFmpeg's fftools/graph/graphprint.c at tag n9.0.1.
  *
  * The original FFmpeg source is licensed under the GNU Lesser General
  * Public License version 2.1 or later. FFmpegKitNext distributes this
@@ -31,6 +31,12 @@
  * Modification history:
  *
  * ffmpeg-kit changes by Taner Sener
+ *
+ * 08.2026
+ * --------------------------------------------------------
+ * - FFmpeg 9.0.1 changes migrated
+ * - FFmpegKitNext integration updates preserved, including wrapper API,
+ *   callbacks, cancellation and thread/session-local execution where applicable
  *
  * 07.2026
  * --------------------------------------------------------
@@ -162,7 +168,7 @@ typedef struct GraphPrintContext {
 #define print_q(k, v, s)        avtext_print_rational(tfc, k, v, s)
 #define print_str(k, v)         avtext_print_string(tfc, k, v, 0)
 #define print_str_opt(k, v)     avtext_print_string(tfc, k, v, gpc->opt_flags)
-#define print_val(k, v, u)      avtext_print_unit_integer(tfc, k, v, u)
+#define print_val(k, v, u)      avtext_print_unit_integer(tfc, k, v, AV_TEXTFORMAT_VALUE_FMT_INT, u)
 
 #define print_fmt(k, f, ...) do {              \
     av_bprint_clear(&gpc->pbuf);                    \

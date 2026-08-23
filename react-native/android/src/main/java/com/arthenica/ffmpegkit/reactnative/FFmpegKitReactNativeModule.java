@@ -84,7 +84,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class FFmpegKitReactNativeModule extends NativeFFmpegKitReactNativeModuleSpec {
 
   public static final String LIBRARY_NAME = "ffmpeg-kit-react-native";
-  public static final String LIBRARY_VERSION = "8.1.1";
+  public static final String LIBRARY_VERSION = "9.0.0";
   public static final String PLATFORM_NAME = "android";
 
   // LOG CLASS

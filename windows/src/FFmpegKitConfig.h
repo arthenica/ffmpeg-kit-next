@@ -167,7 +167,7 @@ class StringMapArray {
  */
 class FFmpegKitConfig {
   public:
-    static constexpr const char *FFmpegKitVersion = "8.1.1";
+    static constexpr const char *FFmpegKitVersion = "9.0.0";
     static constexpr const char *FFmpegKitNamedPipePrefix = "fk_pipe_";
 
     /**
