@@ -30,7 +30,7 @@
 
 // FFmpegKitNext web package version, reported by FFmpegKitConfig.getVersion().
 // Keep in sync with web/package.json and web/package.dist.json.
-export const FFMPEG_KIT_VERSION = '8.1.1';
+export const FFMPEG_KIT_VERSION = '9.0.0';
 
 export const SessionState = Object.freeze({
     CREATED: 0,

@@ -59,7 +59,7 @@
 #include <json/Value.h>
 
 #define FFMPEG_KIT_PLATFORM_NAME "linux"
-#define FFMPEG_KIT_LIBRARY_VERSION "8.1.1"
+#define FFMPEG_KIT_LIBRARY_VERSION "9.0.0"
 
 static const char* kMethodChannelName = "flutter.arthenica.com/ffmpeg_kit";
 static const char* kEventChannelName = "flutter.arthenica.com/ffmpeg_kit_event";
@@ -597,7 +597,10 @@ static FlMethodResponse* handle_method_call(FfmpegKitNextFlutterPlugin* self,
   } else if (g_strcmp0(m, "getFFmpegVersion") == 0) {
     return resp_string(ffmpegkit::FFmpegKitConfig::getFFmpegVersion().c_str());
   } else if (g_strcmp0(m, "isLTSBuild") == 0) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     return resp_bool(ffmpegkit::FFmpegKitConfig::isLTSBuild());
+#pragma GCC diagnostic pop
   } else if (g_strcmp0(m, "getBuildDate") == 0) {
     return resp_string(ffmpegkit::FFmpegKitConfig::getBuildDate().c_str());
   } else if (g_strcmp0(m, "getPackageName") == 0) {

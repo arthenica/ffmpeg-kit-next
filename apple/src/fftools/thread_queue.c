@@ -6,7 +6,7 @@
  * Copyright (c) 2026 Taner Sener
  *
  * This modified file is part of FFmpegKitNext.
- * It is derived from FFmpeg's fftools/thread_queue.c at tag n8.1.2.
+ * It is derived from FFmpeg's fftools/thread_queue.c at tag n9.0.1.
  *
  * The original FFmpeg source is licensed under the GNU Lesser General
  * Public License version 2.1 or later. FFmpegKitNext distributes this
@@ -31,6 +31,12 @@
  * Modification history:
  *
  * ffmpeg-kit changes by Taner Sener
+ *
+ * 08.2026
+ * --------------------------------------------------------
+ * - FFmpeg 9.0.1 changes migrated
+ * - FFmpegKitNext integration updates preserved, including wrapper API,
+ *   callbacks, cancellation and thread/session-local execution where applicable
  *
  * 07.2026
  * --------------------------------------------------------
@@ -231,7 +237,7 @@ static int receive_locked(ThreadQueue *tq, int *stream_idx,
     return nb_finished == tq->nb_streams ? AVERROR_EOF : AVERROR(EAGAIN);
 }
 
-int tq_receive(ThreadQueue *tq, int *stream_idx, void *data)
+int tq_receive(ThreadQueue *tq, int *stream_idx, void *data, int flags)
 {
     int ret;
 
@@ -248,7 +254,7 @@ int tq_receive(ThreadQueue *tq, int *stream_idx, void *data)
         if (can_read != av_container_fifo_can_read(tq->fifo))
             pthread_cond_broadcast(&tq->cond);
 
-        if (ret == AVERROR(EAGAIN)) {
+        if (ret == AVERROR(EAGAIN) && !(flags & THREAD_QUEUE_FLAG_NO_BLOCK)) {
             pthread_cond_wait(&tq->cond, &tq->lock);
             continue;
         }

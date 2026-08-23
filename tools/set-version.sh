@@ -5,7 +5,7 @@
 
 set -eu
 
-ALL_PLATFORMS="android apple linux web flutter react-native"
+ALL_PLATFORMS="android apple linux windows web flutter react-native"
 SELECTED_PLATFORMS=""
 NEW_VERSION=""
 ANDROID_VERSION_CODE=""
@@ -23,7 +23,7 @@ Usage:
 Options:
   -v, --version VERSION              Version to set, for example 6.1.3.
   -p, --platform PLATFORM            Platform to update. May be repeated or comma-separated.
-                                     Supported: android, apple, linux, web, flutter, react-native.
+                                     Supported: android, apple, linux, windows, web, flutter, react-native.
                                      Defaults to all platforms.
   --all                              Update all platforms.
   --android-version-code CODE        Override Android library versionCode.
@@ -53,7 +53,7 @@ add_platforms() {
       all)
         SELECTED_PLATFORMS="$ALL_PLATFORMS"
         ;;
-      android | apple | linux | web | flutter | react-native)
+      android | apple | linux | windows | web | flutter | react-native)
         case " $SELECTED_PLATFORMS " in
           *" $platform "*) ;;
           *) SELECTED_PLATFORMS="${SELECTED_PLATFORMS}${SELECTED_PLATFORMS:+ }${platform}" ;;
@@ -208,6 +208,10 @@ extract_linux_version() {
   extract_first "${BASEDIR}/linux/src/FFmpegKitConfig.h" 's/.*FFmpegKitVersion = "\([^"]*\)";.*/\1/p'
 }
 
+extract_windows_version() {
+  extract_first "${BASEDIR}/windows/src/FFmpegKitConfig.h" 's/.*FFmpegKitVersion = "\([^"]*\)";.*/\1/p'
+}
+
 extract_web_version() {
   extract_first "${BASEDIR}/web/package.json" 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)",.*/\1/p'
 }
@@ -252,6 +256,10 @@ update_web_configure_ac() {
   replace_in_file "$1" "Web configure.ac version" 'BEGIN { $count = 0 } $count += s/^(# ffmpeg-kit-next web )[^\r\n]+( configure\.ac)$/${1}$ENV{NEW_VERSION}${2}/mg; $count += s/(AC_INIT\(\[ffmpeg-kit-next\], \[)[^]]+(\], \[https:\/\/github\.com\/arthenica\/ffmpeg-kit-next\/issues\/new\]\))/${1}$ENV{NEW_VERSION}${2}/mg; END { exit($count >= 2 ? 0 : 3) }'
 }
 
+update_windows_configure_ac() {
+  replace_in_file "$1" "Windows configure.ac version" 'BEGIN { $count = 0 } $count += s/^(# ffmpeg-kit-next )[^\r\n]+( configure\.ac \(windows\))$/${1}$ENV{NEW_VERSION}${2}/mg; $count += s/(AC_INIT\(\[ffmpeg-kit-next\], \[)[^]]+(\], \[https:\/\/github\.com\/arthenica\/ffmpeg-kit-next\/issues\/new\]\))/${1}$ENV{NEW_VERSION}${2}/mg; END { exit($count >= 2 ? 0 : 3) }'
+}
+
 update_android() {
   update_doxyfile "${BASEDIR}/android/ffmpeg-kit-next-android-lib/Doxyfile"
   replace_in_file "${BASEDIR}/android/ffmpeg-kit-next-android-lib/build.gradle" "Android Gradle version" 'BEGIN { $count = 0 } $count += s/(versionCode[ \t]+)[0-9]+/${1}$ENV{ANDROID_VERSION_CODE}/g; $count += s/(versionName[ \t]+")[^"]+(")/${1}$ENV{NEW_VERSION}${2}/g; END { exit($count >= 2 ? 0 : 3) }'
@@ -269,6 +277,13 @@ update_linux() {
   update_doxyfile "${BASEDIR}/linux/Doxyfile"
   update_configure_ac "${BASEDIR}/linux/configure.ac"
   replace_in_file "${BASEDIR}/linux/src/FFmpegKitConfig.h" "Linux FFmpegKitVersion" 'BEGIN { $count = 0 } $count += s/(static constexpr const char \*FFmpegKitVersion = ")[^"]+(";)/${1}$ENV{NEW_VERSION}${2}/g; END { exit($count ? 0 : 3) }'
+}
+
+update_windows() {
+  update_doxyfile "${BASEDIR}/windows/Doxyfile"
+  update_windows_configure_ac "${BASEDIR}/windows/configure.ac"
+  replace_in_file "${BASEDIR}/windows/src/FFmpegKitConfig.h" "Windows FFmpegKitVersion" 'BEGIN { $count = 0 } $count += s/(static constexpr const char \*FFmpegKitVersion = ")[^"]+(";)/${1}$ENV{NEW_VERSION}${2}/g; END { exit($count ? 0 : 3) }'
+  replace_in_file "${BASEDIR}/windows/src/internal/FFmpegKitConfig.h" "Windows internal FFmpegKitVersion" 'BEGIN { $count = 0 } $count += s/(static constexpr const char \*FFmpegKitVersion = ")[^"]+(";)/${1}$ENV{NEW_VERSION}${2}/g; END { exit($count ? 0 : 3) }'
 }
 
 update_web() {
@@ -321,6 +336,12 @@ if is_selected linux; then
   OLD_LINUX_VERSION=$(extract_linux_version)
   update_linux
   printf '%-13s version     %s -> %s\n' "linux" "$OLD_LINUX_VERSION" "$(extract_linux_version)"
+fi
+
+if is_selected windows; then
+  OLD_WINDOWS_VERSION=$(extract_windows_version)
+  update_windows
+  printf '%-13s version     %s -> %s\n' "windows" "$OLD_WINDOWS_VERSION" "$(extract_windows_version)"
 fi
 
 if is_selected web; then
