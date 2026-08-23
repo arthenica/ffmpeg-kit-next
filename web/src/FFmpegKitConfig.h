@@ -46,7 +46,7 @@ namespace ffmpegkit {
 class FFmpegKitConfig {
   public:
     /** Global library version */
-    static constexpr const char *FFmpegKitVersion = "8.1.1";
+    static constexpr const char *FFmpegKitVersion = "9.0.0";
 
     /**
      * Prefix of named pipes created by ffmpeg-kit.

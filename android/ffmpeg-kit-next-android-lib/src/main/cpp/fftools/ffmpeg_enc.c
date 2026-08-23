@@ -7,7 +7,7 @@
  * Copyright (c) 2023-2024 ARTHENICA LTD
  *
  * This modified file is part of FFmpegKitNext.
- * It is derived from FFmpeg's fftools/ffmpeg_enc.c at tag n8.1.2.
+ * It is derived from FFmpeg's fftools/ffmpeg_enc.c at tag n9.0.1.
  *
  * The original FFmpeg source is licensed under the GNU Lesser General
  * Public License version 2.1 or later. FFmpegKitNext distributes this
@@ -32,6 +32,12 @@
  * Modification history:
  *
  * ffmpeg-kit changes by Taner Sener
+ *
+ * 08.2026
+ * --------------------------------------------------------
+ * - FFmpeg 9.0.1 changes migrated
+ * - FFmpegKitNext integration updates preserved, including wrapper API,
+ *   callbacks, cancellation and thread/session-local execution where applicable
  *
  * 07.2026
  * --------------------------------------------------------
@@ -262,6 +268,9 @@ int enc_open(void *opaque, const AVFrame *frame)
                    frame->ch_layout.nb_channels > 0);
         enc_ctx->sample_fmt     = frame->format;
         enc_ctx->sample_rate    = frame->sample_rate;
+        if (!enc_ctx->frame_size && (!(enc->capabilities & AV_CODEC_CAP_VARIABLE_FRAME_SIZE) ||
+                                      (enc_ctx->flags2 & AV_CODEC_FLAG2_FIXED_FRAME_SIZE)))
+            enc_ctx->frame_size = frame->nb_samples;
         ret = av_channel_layout_copy(&enc_ctx->ch_layout, &frame->ch_layout);
         if (ret < 0)
             return ret;
@@ -315,17 +324,8 @@ int enc_open(void *opaque, const AVFrame *frame)
         }
 
         if (enc_ctx->flags & (AV_CODEC_FLAG_INTERLACED_DCT | AV_CODEC_FLAG_INTERLACED_ME) ||
-            (frame->flags & AV_FRAME_FLAG_INTERLACED)
-#if FFMPEG_OPT_TOP
-            || ost->top_field_first >= 0
-#endif
-            ) {
-            int top_field_first =
-#if FFMPEG_OPT_TOP
-                ost->top_field_first >= 0 ?
-                ost->top_field_first :
-#endif
-                !!(frame->flags & AV_FRAME_FLAG_TOP_FIELD_FIRST);
+            (frame->flags & AV_FRAME_FLAG_INTERLACED)) {
+            int top_field_first = !!(frame->flags & AV_FRAME_FLAG_TOP_FIELD_FIRST);
 
             if (enc->id == AV_CODEC_ID_MJPEG)
                 enc_ctx->field_order = top_field_first ? AV_FIELD_TT : AV_FIELD_BB;
@@ -837,13 +837,6 @@ static int frame_encode(OutputStream *ost, AVFrame *frame, AVPacket *pkt)
         if (type == AVMEDIA_TYPE_VIDEO) {
             frame->quality   = e->enc_ctx->global_quality;
             frame->pict_type = forced_kf_apply(e, &ost->kf, frame);
-
-#if FFMPEG_OPT_TOP
-            if (ost->top_field_first >= 0) {
-                frame->flags &= ~AV_FRAME_FLAG_TOP_FIELD_FIRST;
-                frame->flags |= AV_FRAME_FLAG_TOP_FIELD_FIRST * (!!ost->top_field_first);
-            }
-#endif
         } else {
             if (!(e->enc_ctx->codec->capabilities & AV_CODEC_CAP_PARAM_CHANGE) &&
                 e->enc_ctx->ch_layout.nb_channels != frame->ch_layout.nb_channels) {

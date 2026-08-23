@@ -1924,7 +1924,7 @@ class FFmpegKitFactory {
   }
 
   static getVersion() {
-    return "8.1.1";
+    return "9.0.0";
   }
 
   static getLogRedirectionStrategy(sessionId) {

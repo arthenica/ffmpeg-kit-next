@@ -117,7 +117,6 @@ FFmpegContext *saveFFmpegContext(void *arg) {
     context->vstats_filename = vstats_filename;
     context->dts_delta_threshold = dts_delta_threshold;
     context->dts_error_threshold = dts_error_threshold;
-    context->video_sync_method = video_sync_method;
     context->frame_drop_threshold = frame_drop_threshold;
     context->do_benchmark = do_benchmark;
     context->do_benchmark_all = do_benchmark_all;
@@ -213,7 +212,6 @@ void *loadFFmpegContext(FFmpegContext *context) {
     vstats_filename = context->vstats_filename;
     dts_delta_threshold = context->dts_delta_threshold;
     dts_error_threshold = context->dts_error_threshold;
-    video_sync_method = context->video_sync_method;
     frame_drop_threshold = context->frame_drop_threshold;
     do_benchmark = context->do_benchmark;
     do_benchmark_all = context->do_benchmark_all;

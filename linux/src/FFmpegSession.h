@@ -111,7 +111,7 @@ class FFmpegSession : public AbstractSession {
     /**
      * Returns all statistics entries generated for this session. If there are
      * asynchronous messages that are not delivered yet, this method waits for
-     * them until AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit
+     * them until DefaultTimeoutForAsynchronousMessagesInTransmit
      * expires.
      *
      * @return list of statistics entries generated for this session

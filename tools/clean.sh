@@ -24,3 +24,8 @@ rm -rf ../react-native/ios/Frameworks
 rm -rf ../flutter/flutter/android/libs-maven
 rm -rf ../flutter/flutter/ios/ffmpeg_kit_next_flutter/Frameworks
 rm -rf ../flutter/flutter/macos/ffmpeg_kit_next_flutter/Frameworks
+
+rm -rf ../docs/android
+rm -rf ../docs/apple
+rm -rf ../docs/linux
+rm -rf ../docs/windows

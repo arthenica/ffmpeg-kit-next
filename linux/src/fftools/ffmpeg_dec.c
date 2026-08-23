@@ -7,7 +7,7 @@
  * Copyright (c) 2023-2024 ARTHENICA LTD
  *
  * This modified file is part of FFmpegKitNext.
- * It is derived from FFmpeg's fftools/ffmpeg_dec.c at tag n8.1.2.
+ * It is derived from FFmpeg's fftools/ffmpeg_dec.c at tag n9.0.1.
  *
  * The original FFmpeg source is licensed under the GNU Lesser General
  * Public License version 2.1 or later. FFmpegKitNext distributes this
@@ -32,6 +32,12 @@
  * Modification history:
  *
  * ffmpeg-kit changes by Taner Sener
+ *
+ * 08.2026
+ * --------------------------------------------------------
+ * - FFmpeg 9.0.1 changes migrated
+ * - FFmpegKitNext integration updates preserved, including wrapper API,
+ *   callbacks, cancellation and thread/session-local execution where applicable
  *
  * 07.2026
  * --------------------------------------------------------
@@ -425,13 +431,6 @@ fail:
 static int video_frame_process(DecoderPriv *dp, AVFrame *frame,
                                unsigned *outputs_mask)
 {
-#if FFMPEG_OPT_TOP
-    if (dp->flags & DECODER_FLAG_TOP_FIELD_FIRST) {
-        av_log(dp, AV_LOG_WARNING, "-top is deprecated, use the setfield filter instead\n");
-        frame->flags |= AV_FRAME_FLAG_TOP_FIELD_FIRST;
-    }
-#endif
-
     if (frame->format == dp->hwaccel_pix_fmt) {
         int err = hwaccel_retrieve_data(dp->dec_ctx, frame);
         if (err < 0)

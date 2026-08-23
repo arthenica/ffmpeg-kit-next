@@ -6,7 +6,7 @@
  * Copyright (c) 2026 Taner Sener
  *
  * This modified file is part of FFmpegKitNext.
- * It is derived from FFmpeg's fftools/thread_queue.h at tag n8.1.2.
+ * It is derived from FFmpeg's fftools/thread_queue.h at tag n9.0.1.
  *
  * The original FFmpeg source is licensed under the GNU Lesser General
  * Public License version 2.1 or later. FFmpegKitNext distributes this
@@ -31,6 +31,12 @@
  * Modification history:
  *
  * ffmpeg-kit changes by Taner Sener
+ *
+ * 08.2026
+ * --------------------------------------------------------
+ * - FFmpeg 9.0.1 changes migrated
+ * - FFmpegKitNext integration updates preserved, including wrapper API,
+ *   callbacks, cancellation and thread/session-local execution where applicable
  *
  * 07.2026
  * --------------------------------------------------------
@@ -60,6 +66,12 @@
 enum ThreadQueueType {
     THREAD_QUEUE_FRAMES,
     THREAD_QUEUE_PACKETS,
+};
+
+enum ThreadQueueFlags {
+    /* When set, tq_receive() will return AVERROR(EAGAIN) instead of blocking
+     * when the queue is empty or choked. */
+    THREAD_QUEUE_FLAG_NO_BLOCK = (1 << 0),
 };
 
 typedef struct ThreadQueue ThreadQueue;
@@ -110,6 +122,8 @@ void tq_choke(ThreadQueue *tq, int choked);
  *                   written here
  * @param data the data item will be written here on success using the
  *             callback provided to tq_alloc()
+ * @param flags combination of THREAD_QUEUE_FLAG_*
+ *
  * @return
  * - 0 a data item was successfully read; *stream_idx contains a non-negative
  *   stream index
@@ -117,7 +131,8 @@ void tq_choke(ThreadQueue *tq, int choked);
  *   side has marked the given stream as finished. This will happen at most once
  *   for each stream. When *stream_idx is -1, all streams are done.
  */
-int tq_receive(ThreadQueue *tq, int *stream_idx, void *data);
+int tq_receive(ThreadQueue *tq, int *stream_idx, void *data, int flags);
+
 /**
  * Mark the given stream finished from the receiving side.
  */
