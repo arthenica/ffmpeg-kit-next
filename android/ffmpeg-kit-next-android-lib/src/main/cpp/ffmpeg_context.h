@@ -113,7 +113,6 @@ typedef struct FFmpegContext {
     char *vstats_filename;
     float dts_delta_threshold;
     float dts_error_threshold;
-    enum VideoSyncMethod video_sync_method;
     float frame_drop_threshold;
     int do_benchmark;
     int do_benchmark_all;

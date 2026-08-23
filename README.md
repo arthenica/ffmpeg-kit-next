@@ -129,6 +129,7 @@ the same `FFmpeg` release branch.
 
 |    Platforms     |                                 FFmpegKit Version                                 | FFmpeg Version | Release Date |
 |:----------------:|:---------------------------------------------------------------------------------:|:--------------:|:------------:|
+|  Android<br>Flutter<br>iOS / iPadOS<br>Linux<br>macOS<br>React Native<br>tvOS<br>visionOS<br>Web<br>Windows      |   [9.0.0](https://github.com/arthenica/ffmpeg-kit-next/releases/tag/v9.0.0)    |      9.0.1       | Aug 24, 2026 |
 |  Windows      |   [8.1.1](https://github.com/arthenica/ffmpeg-kit-next/releases/tag/v8.1.1.windows)    |      8.1.2       | Aug 21, 2026 |
 |  Android<br>Flutter<br>iOS / iPadOS<br>Linux<br>macOS<br>React Native<br>tvOS<br>visionOS<br>Web      |   [8.1.1](https://github.com/arthenica/ffmpeg-kit-next/releases/tag/v8.1.1)    |      8.1.2       | Jul 28, 2026 |
 |  Android<br>Flutter<br>iOS / iPadOS<br>Linux<br>macOS<br>React Native<br>tvOS      |   [8.1.0](https://github.com/arthenica/ffmpeg-kit-next/releases/tag/v8.1.0)    |      8.1.2       | Jul 02, 2026 |

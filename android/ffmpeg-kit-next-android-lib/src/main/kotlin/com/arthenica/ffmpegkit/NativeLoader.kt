@@ -80,7 +80,7 @@ open class NativeLoader {
 
         @JvmStatic
         internal fun loadVersion(): String {
-            val version = "8.1.1"
+            val version = "9.0.0"
 
             return if (isTestModeDisabled()) {
                 FFmpegKitConfig.getVersion()

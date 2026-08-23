@@ -38,5 +38,12 @@ emmake make -j$(get_cpu_count) 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 
 emmake make install 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 
+# DELETE ENCODER/DECODER SPECIFIC ARCHIVES SINCE WE DONT NEED THEM
+# THEY BOTH INCLUDE COMMON SYMBOLS AND CAUSE DUPLICATE SYMBOL ERRORS IN FFMPEG
+rm -f "${LIB_INSTALL_BASE}/${LIB_NAME}"/lib/libtheoraenc.*
+rm -f "${LIB_INSTALL_BASE}/${LIB_NAME}"/lib/libtheoradec.*
+rm -f "${LIB_INSTALL_BASE}/${LIB_NAME}"/lib/pkgconfig/theoradec.pc
+rm -f "${LIB_INSTALL_BASE}/${LIB_NAME}"/lib/pkgconfig/theoraenc.pc
+
 # MANUALLY COPY PKG-CONFIG FILES
-cp theora.pc theoradec.pc theoraenc.pc "${INSTALL_PKG_CONFIG_DIR}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+cp theora.pc "${INSTALL_PKG_CONFIG_DIR}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
