@@ -897,7 +897,10 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
 }
 
 - (void)isLTSBuild:(FlutterResult)result {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   result([NSNumber numberWithBool:([FFmpegKitConfig isLTSBuild] == 1)]);
+#pragma clang diagnostic pop
 }
 
 - (void)getBuildDate:(FlutterResult)result {

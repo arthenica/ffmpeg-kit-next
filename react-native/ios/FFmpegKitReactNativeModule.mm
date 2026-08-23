@@ -396,7 +396,10 @@ RCT_EXPORT_METHOD(getFFmpegVersion:(RCTPromiseResolveBlock)resolve reject:(RCTPr
 }
 
 RCT_EXPORT_METHOD(isLTSBuild:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     resolve([NSNumber numberWithInt:[FFmpegKitConfig isLTSBuild]]);
+#pragma clang diagnostic pop
 }
 
 RCT_EXPORT_METHOD(getBuildDate:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
