@@ -1,0 +1,71 @@
+# Manually started build of linux.sh.
+#
+# A single architecture is built per job. Compiling every architecture of a
+# platform in one job overruns the six hour GitHub Actions job limit, so each
+# job pins one architecture with --arch and the runner image is chosen to match
+# it: linux.sh compiles natively, therefore x86-64 needs an x86-64 runner.
+#
+# Host packages come from the Linux Prerequisites wiki page (the "Requirements
+# Without Nix" list plus the optional system libraries, which --enable-lib-all
+# needs because the --enable-lib-linux-* options resolve through pkg-config).
+# gnutls is left out on purpose: the build disables it with
+# --disable-lib-linux-gnutls.
+
+name: linux build scripts
+
+on:
+  # TEMPORARY - REMOVE BEFORE MERGING TO main.
+  # workflow_dispatch only becomes available once the file is on the default
+  # branch, so this lets the workflow be exercised from development-github-actions
+  # first. The path filter is this file alone, so pushing one workflow does not
+  # start the other seven.
+  push:
+    branches: [ development-github-actions ]
+    paths:
+      - '.github/workflows/linux-build-scripts.yml'
+  workflow_dispatch:
+    inputs:
+      extra-options:
+        description: 'extra options appended to the linux.sh command line'
+        required: false
+        default: ''
+
+jobs:
+  build-on-ubuntu-2404-x86-64:
+    name: linux x86-64 on ubuntu-24.04
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            autoconf automake libtool pkg-config gettext autopoint \
+            cmake bison meson ninja-build nasm yasm gperf ragel texinfo autogen \
+            groff gtk-doc-tools libtasn1-6-dev tcl doxygen \
+            clang llvm lld gcc g++ make patch file findutils gawk rsync \
+            python3 perl ruby curl wget git zip unzip xz-utils tar gzip sed grep diffutils
+      - name: optional system libraries
+        run: |
+          sudo apt-get install -y --no-install-recommends \
+            libasound2-dev libass-dev libfontconfig1-dev libfreetype-dev libfribidi-dev \
+            libgmp-dev libharfbuzz-dev libmp3lame-dev libopencore-amrnb-dev libopencore-amrwb-dev \
+            libopus-dev librubberband-dev libsdl2-dev libshine-dev libsnappy-dev libsoxr-dev \
+            libspeex-dev libtesseract-dev libtheora-dev libtwolame-dev libv4l-dev libva-dev \
+            libvidstab-dev libvo-amrwbenc-dev libvorbis-dev libvpx-dev libwebp-dev libx265-dev \
+            libxml2-dev libxvidcore-dev ocl-icd-opencl-dev opencl-headers zlib1g-dev
+      - name: run the build script
+        env:
+          EXTRA_OPTIONS: ${{ inputs.extra-options }}
+        run: ./linux.sh --arch=x86-64 --enable-lib-all --enable-gpl --disable-lib-linux-gnutls ${EXTRA_OPTIONS}
+      - name: print build logs
+        if: ${{ always() }}
+        run: cat build.log
+      - name: print ffbuild logs
+        if: ${{ failure() }}
+        run: '[[ -f ./src/ffmpeg/ffbuild/config.log ]] && tail -50 ./src/ffmpeg/ffbuild/config.log'

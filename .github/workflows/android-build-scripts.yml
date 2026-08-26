@@ -1,0 +1,143 @@
+# Manually started build of android.sh.
+#
+# A single architecture is built per job. Compiling every architecture of a
+# platform in one job overruns the six hour GitHub Actions job limit, so each
+# job pins arm64-v8a with --arch.
+#
+# Toolchain versions and host packages come from the Android Prerequisites wiki
+# page ("Requirements Without Nix").
+
+name: android build scripts
+
+on:
+  # TEMPORARY - REMOVE BEFORE MERGING TO main.
+  # workflow_dispatch only becomes available once the file is on the default
+  # branch, so this lets the workflow be exercised from development-github-actions
+  # first. The path filter is this file alone, so pushing one workflow does not
+  # start the other seven.
+  push:
+    branches: [ development-github-actions ]
+    paths:
+      - '.github/workflows/android-build-scripts.yml'
+  workflow_dispatch:
+    inputs:
+      extra-options:
+        description: 'extra options appended to the android.sh command line'
+        required: false
+        default: ''
+
+env:
+  ANDROID_PLATFORM_VERSION: '34'
+  ANDROID_BUILD_TOOLS_VERSION: '35.0.0'
+  ANDROID_NDK_VERSION: '27.3.13750724'
+  ANDROID_CMAKE_VERSION: '3.22.1'
+
+jobs:
+  build-on-ubuntu-2404-arm64-v8a:
+    name: android arm64-v8a on ubuntu-24.04
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: set up temurin jdk 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - name: prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            autoconf automake libtool pkg-config gettext autopoint \
+            cmake bison meson ninja-build nasm yasm gperf ragel texinfo autogen \
+            groff gtk-doc-tools libtasn1-6-dev tcl doxygen \
+            gcc g++ make patch file findutils gawk rsync \
+            python3 perl ruby curl wget git zip unzip xz-utils tar gzip sed grep diffutils
+      - name: set up android sdk and ndk
+        run: |
+          set -e
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          SDK_MANAGER="${SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "${SDK_MANAGER}" --licenses >/dev/null
+          "${SDK_MANAGER}" --install \
+            "platform-tools" \
+            "platforms;android-${ANDROID_PLATFORM_VERSION}" \
+            "build-tools;${ANDROID_BUILD_TOOLS_VERSION}" \
+            "ndk;${ANDROID_NDK_VERSION}" \
+            "cmake;${ANDROID_CMAKE_VERSION}"
+          {
+            echo "ANDROID_SDK_ROOT=${SDK_ROOT}"
+            echo "ANDROID_HOME=${SDK_ROOT}"
+            echo "ANDROID_NDK_ROOT=${SDK_ROOT}/ndk/${ANDROID_NDK_VERSION}"
+          } >> "$GITHUB_ENV"
+      - name: run the build script
+        env:
+          EXTRA_OPTIONS: ${{ inputs.extra-options }}
+        run: ./android.sh --arch=arm64-v8a --enable-lib-all --enable-gpl --disable-lib-gnutls ${EXTRA_OPTIONS}
+      - name: print build logs
+        if: ${{ always() }}
+        run: cat build.log
+      - name: print ffbuild logs
+        if: ${{ failure() }}
+        run: '[[ -f ./src/ffmpeg/ffbuild/config.log ]] && tail -50 ./src/ffmpeg/ffbuild/config.log'
+
+  build-on-macos-26-arm64-v8a:
+    name: android arm64-v8a on macos-26
+    runs-on: macos-26
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: set up temurin jdk 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - name: prerequisites
+        run: |
+          brew install autoconf automake libtool pkg-config gettext \
+            cmake bison meson ninja nasm yasm gperf ragel texinfo autogen \
+            gtk-doc libtasn1 doxygen wget
+      - name: configure host tool paths
+        run: |
+          {
+            echo "$(brew --prefix gettext)/bin"
+            echo "$(brew --prefix bison)/bin"
+            echo "$(brew --prefix texinfo)/bin"
+          } >> "$GITHUB_PATH"
+          echo "ACLOCAL_PATH=$(brew --prefix gettext)/share/aclocal:$(brew --prefix)/share/aclocal" >> "$GITHUB_ENV"
+      - name: set up android sdk and ndk
+        run: |
+          set -e
+          brew install --cask android-commandlinetools
+          SDK_ROOT="$(brew --prefix)/share/android-commandlinetools"
+          SDK_MANAGER="${SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "${SDK_MANAGER}" --licenses >/dev/null
+          "${SDK_MANAGER}" --install \
+            "platform-tools" \
+            "platforms;android-${ANDROID_PLATFORM_VERSION}" \
+            "build-tools;${ANDROID_BUILD_TOOLS_VERSION}" \
+            "ndk;${ANDROID_NDK_VERSION}" \
+            "cmake;${ANDROID_CMAKE_VERSION}"
+          {
+            echo "ANDROID_SDK_ROOT=${SDK_ROOT}"
+            echo "ANDROID_HOME=${SDK_ROOT}"
+            echo "ANDROID_NDK_ROOT=${SDK_ROOT}/ndk/${ANDROID_NDK_VERSION}"
+          } >> "$GITHUB_ENV"
+      - name: run the build script
+        env:
+          EXTRA_OPTIONS: ${{ inputs.extra-options }}
+        run: ./android.sh --arch=arm64-v8a --enable-lib-all --enable-gpl --disable-lib-gnutls ${EXTRA_OPTIONS}
+      - name: print build logs
+        if: ${{ always() }}
+        run: cat build.log
+      - name: print ffbuild logs
+        if: ${{ failure() }}
+        run: '[[ -f ./src/ffmpeg/ffbuild/config.log ]] && tail -50 ./src/ffmpeg/ffbuild/config.log'

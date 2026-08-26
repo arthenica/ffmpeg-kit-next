@@ -1,0 +1,72 @@
+# Manually started build of windows.sh.
+#
+# A single architecture is built per job. Compiling every architecture of a
+# platform in one job overruns the six hour GitHub Actions job limit, so the job
+# pins arm64 with --arch. windows.sh compiles natively, so arm64 needs the
+# arm64 runner image and the CLANGARM64 MSYS2 environment, which provides the
+# aarch64-w64-mingw32-clang toolchain.
+#
+# Nix has no native Windows toolchain, so there is no nix-windows.sh: the
+# compiler and host tools come from MSYS2. Packages come from the Windows
+# Prerequisites wiki page. The ${MINGW_PACKAGE_PREFIX}- builds of cmake, meson
+# and ninja are installed through pacboy's :p suffix so they target Windows
+# natively; the remaining tools only run on the build machine, so their plain
+# MSYS2 packages are used. nasm is not installed - it is only used for x86-64
+# assembly optimizations.
+
+name: windows build scripts
+
+on:
+  # TEMPORARY - REMOVE BEFORE MERGING TO main.
+  # workflow_dispatch only becomes available once the file is on the default
+  # branch, so this lets the workflow be exercised from development-github-actions
+  # first. The path filter is this file alone, so pushing one workflow does not
+  # start the other seven.
+  push:
+    branches: [ development-github-actions ]
+    paths:
+      - '.github/workflows/windows-build-scripts.yml'
+  workflow_dispatch:
+    inputs:
+      extra-options:
+        description: 'extra options appended to the windows.sh command line'
+        required: false
+        default: ''
+
+jobs:
+  build-on-windows-11-arm-arm64:
+    name: windows arm64 on windows-11-arm
+    runs-on: windows-11-arm
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: set up msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANGARM64
+          update: true
+          install: >-
+            make autoconf-wrapper automake-wrapper libtool patch diffutils
+            git curl wget rsync pkgconf zip unzip tar xz gzip
+            gperf bison gettext-devel texinfo python perl ruby
+          pacboy: >-
+            clang:p lld:p llvm:p pkgconf:p cmake:p meson:p ninja:p
+      - name: print the selected toolchain
+        run: |
+          echo "MSYSTEM=${MSYSTEM}"
+          echo "MINGW_PACKAGE_PREFIX=${MINGW_PACKAGE_PREFIX}"
+          clang --version
+      - name: run the build script
+        env:
+          EXTRA_OPTIONS: ${{ inputs.extra-options }}
+        run: ./windows.sh --arch=arm64 --enable-lib-all --enable-gpl --disable-lib-gnutls ${EXTRA_OPTIONS}
+      - name: print build logs
+        if: ${{ always() }}
+        run: cat build.log
+      - name: print ffbuild logs
+        if: ${{ failure() }}
+        run: '[[ -f ./src/ffmpeg/ffbuild/config.log ]] && tail -50 ./src/ffmpeg/ffbuild/config.log'
