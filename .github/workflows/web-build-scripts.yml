@@ -24,9 +24,9 @@ on:
   workflow_dispatch:
     inputs:
       emscripten-version:
-        description: 'emsdk version to install and activate'
+        description: 'emsdk version to install and activate (project targets the nixpkgs-pinned Emscripten)'
         required: false
-        default: 'latest'
+        default: '5.0.6'
       extra-options:
         description: 'extra options appended to the web.sh command line'
         required: false
@@ -50,14 +50,15 @@ jobs:
             autoconf automake libtool pkg-config gettext autopoint autogen \
             cmake bison meson ninja-build texinfo \
             make patch file findutils gawk rsync \
-            python3 perl ruby curl wget git zip unzip xz-utils tar gzip sed grep diffutils
+            python3 perl ruby curl wget git zip unzip xz-utils tar gzip sed grep diffutils \
+            bash which
       - name: set up emscripten
         env:
           EMSCRIPTEN_VERSION: ${{ inputs.emscripten-version }}
         run: |
           git clone --depth 1 https://github.com/emscripten-core/emsdk.git "$HOME/emsdk"
-          "$HOME/emsdk/emsdk" install "${EMSCRIPTEN_VERSION:-latest}"
-          "$HOME/emsdk/emsdk" activate "${EMSCRIPTEN_VERSION:-latest}"
+          "$HOME/emsdk/emsdk" install "${EMSCRIPTEN_VERSION:-5.0.6}"
+          "$HOME/emsdk/emsdk" activate "${EMSCRIPTEN_VERSION:-5.0.6}"
       - name: run the build script
         env:
           EXTRA_OPTIONS: ${{ inputs.extra-options }}
@@ -102,8 +103,8 @@ jobs:
           EMSCRIPTEN_VERSION: ${{ inputs.emscripten-version }}
         run: |
           git clone --depth 1 https://github.com/emscripten-core/emsdk.git "$HOME/emsdk"
-          "$HOME/emsdk/emsdk" install "${EMSCRIPTEN_VERSION:-latest}"
-          "$HOME/emsdk/emsdk" activate "${EMSCRIPTEN_VERSION:-latest}"
+          "$HOME/emsdk/emsdk" install "${EMSCRIPTEN_VERSION:-5.0.6}"
+          "$HOME/emsdk/emsdk" activate "${EMSCRIPTEN_VERSION:-5.0.6}"
       - name: run the build script
         env:
           EXTRA_OPTIONS: ${{ inputs.extra-options }}

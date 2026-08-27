@@ -43,7 +43,7 @@ jobs:
         run: |
           brew install autoconf automake libtool pkg-config gettext \
             cmake bison meson ninja nasm yasm gperf ragel texinfo autogen \
-            gtk-doc libtasn1 doxygen wget gnu-sed
+            gtk-doc libtasn1 doxygen wget gnu-sed xz
       - name: configure host tool paths
         run: |
           {

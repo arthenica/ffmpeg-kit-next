@@ -49,7 +49,8 @@ jobs:
             cmake bison meson ninja-build nasm yasm gperf ragel texinfo autogen \
             groff gtk-doc-tools libtasn1-6-dev tcl doxygen \
             clang llvm lld gcc g++ make patch file findutils gawk rsync \
-            python3 perl ruby curl wget git zip unzip xz-utils tar gzip sed grep diffutils
+            python3 perl ruby curl wget git zip unzip xz-utils tar gzip sed grep diffutils \
+            bash which
       - name: optional system libraries
         run: |
           sudo apt-get install -y --no-install-recommends \
