@@ -6,10 +6,15 @@
 # xcframework packaging path with --xcframework.
 #
 # Host packages come from the tvOS Prerequisites wiki page ("Requirements
-# Without Nix"). Xcode and the tvOS SDK come from the runner image; the wiki
-# requires Xcode 26.0 or later, which is what the macos-26 image provides.
+# Without Nix").
+#
+# Xcode is PINNED via the XCODE_VERSION env below rather than taking the runner
+# image default, which changes without notice when GitHub rolls a new image.
 
 name: tvos build scripts
+
+env:
+  XCODE_VERSION: '26.6'
 
 on:
   push:
@@ -57,6 +62,10 @@ on:
       - '.github/workflows/tvos-build-scripts.yml'
   workflow_dispatch:
     inputs:
+      xcode-version:
+        description: 'override the pinned Xcode version (blank = use XCODE_VERSION)'
+        required: false
+        default: ''
       extra-options:
         description: 'extra options appended to the tvos.sh command line'
         required: false
@@ -89,8 +98,27 @@ jobs:
             echo "ACLOCAL_PATH=$(brew --prefix gettext)/share/aclocal:$(brew --prefix)/share/aclocal"
             echo "SED=$(brew --prefix gnu-sed)/bin/gsed"
           } >> "$GITHUB_ENV"
+      - name: select xcode
+        env:
+          XCODE_VERSION_OVERRIDE: ${{ inputs.xcode-version }}
+        run: |
+          VERSION="${XCODE_VERSION_OVERRIDE:-$XCODE_VERSION}"
+          APP="/Applications/Xcode_${VERSION}.app"
+          if [[ ! -d "${APP}" ]]; then
+            echo "ERROR: Xcode ${VERSION} is not installed on this runner image."
+            echo "       Expected ${APP}"
+            echo "Xcode versions available on this image:"
+            ls -d /Applications/Xcode*.app 2>/dev/null || echo "  none found"
+            exit 1
+          fi
+          # DEVELOPER_DIR pins every later step; ~/.xcode.for.ffmpeg.kit.sh is the
+          # project's own hook, sourced by tvos.sh, so the pin holds either way.
+          echo "DEVELOPER_DIR=${APP}/Contents/Developer" >> "$GITHUB_ENV"
+          echo "export DEVELOPER_DIR=${APP}/Contents/Developer" > ~/.xcode.for.ffmpeg.kit.sh
       - name: print the selected xcode
-        run: xcodebuild -version
+        run: |
+          xcodebuild -version
+          echo "appletvos SDK: $(xcrun --sdk appletvos --show-sdk-version)"
       - name: run the build script
         env:
           EXTRA_OPTIONS: ${{ inputs.extra-options }}
