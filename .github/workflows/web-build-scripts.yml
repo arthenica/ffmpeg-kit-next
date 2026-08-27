@@ -1,0 +1,146 @@
+# Manually started build of web.sh.
+#
+# A single architecture is built per job. Compiling every architecture of a
+# platform in one job overruns the six hour GitHub Actions job limit, so each
+# job pins wasm32 with --arch. wasm32-unknown-emscripten is the target web.sh
+# derives from that architecture.
+#
+# Host packages come from the Web Prerequisites wiki page ("Requirements Without
+# Nix"). Emscripten is installed through emsdk, which also supplies the node
+# build emcc runs on.
+
+name: web build scripts
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'web/**'
+      - 'web.sh'
+      - 'nix-web.sh'
+      - 'scripts/web/**'
+      - 'scripts/function-web.sh'
+      - 'scripts/help-web.sh'
+      - 'scripts/main-web.sh'
+      - 'scripts/run-web.sh'
+      - 'scripts/function.sh'
+      - 'scripts/variable.sh'
+      - 'scripts/source.sh'
+      - 'tools/**'
+      - '.github/workflows/web-build-scripts.yml'
+  pull_request:
+    branches:
+      - main
+      - development
+    paths:
+      - 'web/**'
+      - 'web.sh'
+      - 'nix-web.sh'
+      - 'scripts/web/**'
+      - 'scripts/function-web.sh'
+      - 'scripts/help-web.sh'
+      - 'scripts/main-web.sh'
+      - 'scripts/run-web.sh'
+      - 'scripts/function.sh'
+      - 'scripts/variable.sh'
+      - 'scripts/source.sh'
+      - 'tools/**'
+      - '.github/workflows/web-build-scripts.yml'
+  workflow_dispatch:
+    inputs:
+      emscripten-version:
+        description: 'emsdk version to install and activate (project targets the nixpkgs-pinned Emscripten)'
+        required: false
+        default: '5.0.6'
+      extra-options:
+        description: 'extra options appended to the web.sh command line'
+        required: false
+        default: ''
+
+jobs:
+  build-on-ubuntu-2404-wasm32:
+    name: web wasm32 on ubuntu-24.04
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            autoconf automake libtool pkg-config gettext autopoint autogen \
+            cmake bison meson ninja-build texinfo gperf ragel \
+            make patch file findutils gawk rsync \
+            python3 perl ruby curl wget git zip unzip xz-utils tar gzip sed grep diffutils \
+            bash which
+      - name: set up emscripten
+        env:
+          EMSCRIPTEN_VERSION: ${{ inputs.emscripten-version }}
+        run: |
+          git clone --depth 1 https://github.com/emscripten-core/emsdk.git "$HOME/emsdk"
+          "$HOME/emsdk/emsdk" install "${EMSCRIPTEN_VERSION:-5.0.6}"
+          "$HOME/emsdk/emsdk" activate "${EMSCRIPTEN_VERSION:-5.0.6}"
+      - name: run the build script
+        env:
+          EXTRA_OPTIONS: ${{ inputs.extra-options }}
+        run: |
+          source "$HOME/emsdk/emsdk_env.sh"
+          emcc --version
+          ./web.sh --arch=wasm32 --enable-lib-all --enable-gpl --disable-lib-gnutls ${EXTRA_OPTIONS}
+      - name: print build logs
+        if: ${{ always() }}
+        run: cat build.log
+      - name: print ffbuild logs
+        if: ${{ failure() }}
+        run: '[[ -f ./src/ffmpeg/ffbuild/config.log ]] && tail -50 ./src/ffmpeg/ffbuild/config.log'
+
+  build-on-macos-26-wasm32:
+    name: web wasm32 on macos-26
+    runs-on: macos-26
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: prerequisites
+        run: |
+          brew install autoconf automake libtool pkg-config gettext \
+            cmake bison meson ninja texinfo gperf ragel wget gnu-sed
+      - name: configure host tool paths
+        run: |
+          {
+            echo "$(brew --prefix gettext)/bin"
+            echo "$(brew --prefix bison)/bin"
+            echo "$(brew --prefix texinfo)/bin"
+          } >> "$GITHUB_PATH"
+          {
+            echo "ACLOCAL_PATH=$(brew --prefix gettext)/share/aclocal:$(brew --prefix)/share/aclocal"
+            echo "SED=$(brew --prefix gnu-sed)/bin/gsed"
+          } >> "$GITHUB_ENV"
+      - name: set up emscripten
+        env:
+          EMSCRIPTEN_VERSION: ${{ inputs.emscripten-version }}
+        run: |
+          git clone --depth 1 https://github.com/emscripten-core/emsdk.git "$HOME/emsdk"
+          "$HOME/emsdk/emsdk" install "${EMSCRIPTEN_VERSION:-5.0.6}"
+          "$HOME/emsdk/emsdk" activate "${EMSCRIPTEN_VERSION:-5.0.6}"
+      - name: run the build script
+        env:
+          EXTRA_OPTIONS: ${{ inputs.extra-options }}
+        run: |
+          source "$HOME/emsdk/emsdk_env.sh"
+          emcc --version
+          ./web.sh --arch=wasm32 --enable-lib-all --enable-gpl --disable-lib-gnutls ${EXTRA_OPTIONS}
+      - name: print build logs
+        if: ${{ always() }}
+        run: cat build.log
+      - name: print ffbuild logs
+        if: ${{ failure() }}
+        run: '[[ -f ./src/ffmpeg/ffbuild/config.log ]] && tail -50 ./src/ffmpeg/ffbuild/config.log'

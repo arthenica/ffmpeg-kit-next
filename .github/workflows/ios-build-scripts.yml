@@ -1,0 +1,131 @@
+# Manually started build of ios.sh.
+#
+# A single architecture is built per job. Compiling every architecture of a
+# platform in one job overruns the six hour GitHub Actions job limit, so the job
+# pins the iOS device architecture with --arch=arm64 and still exercises the
+# xcframework packaging path with --xcframework.
+#
+# Host packages come from the iOS Prerequisites wiki page ("Requirements
+# Without Nix").
+#
+# Xcode is PINNED via the XCODE_VERSION env below rather than taking the runner
+# image default, which changes without notice when GitHub rolls a new image.
+
+name: ios build scripts
+
+env:
+  XCODE_VERSION: '26.6'
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apple/**'
+      - 'ios.sh'
+      - 'nix-ios.sh'
+      - 'apple.sh'
+      - 'nix-apple.sh'
+      - 'scripts/apple/**'
+      - 'scripts/function-ios.sh'
+      - 'scripts/function-apple.sh'
+      - 'scripts/help-ios.sh'
+      - 'scripts/help-apple.sh'
+      - 'scripts/main-ios.sh'
+      - 'scripts/run-apple.sh'
+      - 'scripts/function.sh'
+      - 'scripts/variable.sh'
+      - 'scripts/source.sh'
+      - 'tools/**'
+      - '.github/workflows/ios-build-scripts.yml'
+  pull_request:
+    branches:
+      - main
+      - development
+    paths:
+      - 'apple/**'
+      - 'ios.sh'
+      - 'nix-ios.sh'
+      - 'apple.sh'
+      - 'nix-apple.sh'
+      - 'scripts/apple/**'
+      - 'scripts/function-ios.sh'
+      - 'scripts/function-apple.sh'
+      - 'scripts/help-ios.sh'
+      - 'scripts/help-apple.sh'
+      - 'scripts/main-ios.sh'
+      - 'scripts/run-apple.sh'
+      - 'scripts/function.sh'
+      - 'scripts/variable.sh'
+      - 'scripts/source.sh'
+      - 'tools/**'
+      - '.github/workflows/ios-build-scripts.yml'
+  workflow_dispatch:
+    inputs:
+      xcode-version:
+        description: 'override the pinned Xcode version (blank = use XCODE_VERSION)'
+        required: false
+        default: ''
+      extra-options:
+        description: 'extra options appended to the ios.sh command line'
+        required: false
+        default: ''
+
+jobs:
+  build-on-macos-26-arm64:
+    name: ios arm64 on macos-26
+    runs-on: macos-26
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: prerequisites
+        run: |
+          brew install autoconf automake libtool pkg-config gettext \
+            cmake bison meson ninja nasm yasm gperf ragel texinfo autogen \
+            gtk-doc libtasn1 doxygen wget gnu-sed xz
+      - name: configure host tool paths
+        run: |
+          {
+            echo "$(brew --prefix gettext)/bin"
+            echo "$(brew --prefix bison)/bin"
+            echo "$(brew --prefix texinfo)/bin"
+          } >> "$GITHUB_PATH"
+          {
+            echo "ACLOCAL_PATH=$(brew --prefix gettext)/share/aclocal:$(brew --prefix)/share/aclocal"
+            echo "SED=$(brew --prefix gnu-sed)/bin/gsed"
+          } >> "$GITHUB_ENV"
+      - name: select xcode
+        env:
+          XCODE_VERSION_OVERRIDE: ${{ inputs.xcode-version }}
+        run: |
+          VERSION="${XCODE_VERSION_OVERRIDE:-$XCODE_VERSION}"
+          APP="/Applications/Xcode_${VERSION}.app"
+          if [[ ! -d "${APP}" ]]; then
+            echo "ERROR: Xcode ${VERSION} is not installed on this runner image."
+            echo "       Expected ${APP}"
+            echo "Xcode versions available on this image:"
+            ls -d /Applications/Xcode*.app 2>/dev/null || echo "  none found"
+            exit 1
+          fi
+          # DEVELOPER_DIR pins every later step; ~/.xcode.for.ffmpeg.kit.sh is the
+          # project's own hook, sourced by ios.sh, so the pin holds either way.
+          echo "DEVELOPER_DIR=${APP}/Contents/Developer" >> "$GITHUB_ENV"
+          echo "export DEVELOPER_DIR=${APP}/Contents/Developer" > ~/.xcode.for.ffmpeg.kit.sh
+      - name: print the selected xcode
+        run: |
+          xcodebuild -version
+          echo "iphoneos SDK: $(xcrun --sdk iphoneos --show-sdk-version)"
+      - name: run the build script
+        env:
+          EXTRA_OPTIONS: ${{ inputs.extra-options }}
+        run: ./ios.sh --arch=arm64 --xcframework --enable-lib-all --enable-gpl --disable-lib-gnutls ${EXTRA_OPTIONS}
+      - name: print build logs
+        if: ${{ always() }}
+        run: cat build.log
+      - name: print ffbuild logs
+        if: ${{ failure() }}
+        run: '[[ -f ./src/ffmpeg/ffbuild/config.log ]] && tail -50 ./src/ffmpeg/ffbuild/config.log'
