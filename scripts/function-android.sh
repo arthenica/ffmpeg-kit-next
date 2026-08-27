@@ -315,7 +315,7 @@ get_app_specific_cflags() {
     APP_FLAGS="-std=gnu99 -Wno-unused-function -DPIC"
     ;;
   xvidcore)
-    APP_FLAGS=""
+    APP_FLAGS="-std=gnu17"
     ;;
   *)
     APP_FLAGS="-std=c99 -Wno-unused-function"

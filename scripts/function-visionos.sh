@@ -127,7 +127,7 @@ get_app_specific_cflags() {
     APP_FLAGS="-std=c99 -Wno-unused-function -DOS_IOS"
     ;;
   libwebp | xvidcore)
-    APP_FLAGS="-fno-common -DPIC"
+    APP_FLAGS="-std=gnu17 -fno-common -DPIC"
     ;;
   openh264 | x265)
     APP_FLAGS="-Wno-unused-function"
