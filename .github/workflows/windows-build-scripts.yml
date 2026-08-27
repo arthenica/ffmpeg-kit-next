@@ -1,10 +1,10 @@
 # Manually started build of windows.sh.
 #
 # A single architecture is built per job. Compiling every architecture of a
-# platform in one job overruns the six hour GitHub Actions job limit, so the job
-# pins arm64 with --arch. windows.sh compiles natively, so arm64 needs the
-# arm64 runner image and the CLANGARM64 MSYS2 environment, which provides the
-# aarch64-w64-mingw32-clang toolchain.
+# platform in one job overruns the six hour GitHub Actions job limit, so the
+# job pins arm64 with --arch. windows.sh compiles natively, so arm64 needs
+# the arm64 runner image and the CLANGARM64 MSYS2 environment, which provides
+# the aarch64-w64-mingw32-clang toolchain.
 #
 # Nix has no native Windows toolchain, so there is no nix-windows.sh: the
 # compiler and host tools come from MSYS2. Packages come from the Windows
