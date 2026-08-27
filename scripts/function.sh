@@ -2468,6 +2468,11 @@ downloaded_library_sources() {
   done
 
   echo -e "ok"
+
+  if [[ $(validate_ffmpeg_source) -ne 0 ]]; then
+    trap - EXIT
+    exit 1
+  fi
 }
 
 #
@@ -2500,6 +2505,97 @@ download() {
   fi
 
   echo ${RC}
+}
+
+print_ffmpeg_source_mismatch_warning() {
+  local EXPECTED_SOURCE="$1"
+  local ACTUAL_SOURCE="$2"
+  local LOCAL_PATH="$3"
+
+  echo -e "\n(*) WARNING: Cached FFmpeg source mismatch: expected ${EXPECTED_SOURCE}; found ${ACTUAL_SOURCE} at ${LOCAL_PATH}. Run with --redownload-lib-ffmpeg to refresh the cached source.\n" >&2
+  echo -e "WARNING: Cached FFmpeg source mismatch. Expected ${EXPECTED_SOURCE}; found ${ACTUAL_SOURCE} at ${LOCAL_PATH}. Run with --redownload-lib-ffmpeg to refresh the cached source.\n" 1>>"${BASEDIR}"/build.log 2>&1
+}
+
+#
+# 1. local source path
+# 2. source id
+# 3. source type
+#
+ffmpeg_source_matches_expected() {
+  local LOCAL_PATH="$1"
+  local SOURCE_ID="$2"
+  local SOURCE_TYPE="$3"
+  local ACTUAL_COMMIT=""
+  local ACTUAL_SOURCE=""
+  local ACTUAL_TAG=""
+  local EXPECTED_COMMIT=""
+  local EXPECTED_SOURCE=""
+  local IS_GIT_SOURCE=""
+
+  IS_GIT_SOURCE=$(git -C "${LOCAL_PATH}" rev-parse --is-inside-work-tree 2>>"${BASEDIR}"/build.log)
+
+  if [[ "${IS_GIT_SOURCE}" != "true" ]]; then
+    print_ffmpeg_source_mismatch_warning "${SOURCE_TYPE} ${SOURCE_ID}" "a non-Git source directory" "${LOCAL_PATH}"
+    echo 1
+    return
+  fi
+
+  ACTUAL_COMMIT=$(git -C "${LOCAL_PATH}" rev-parse HEAD 2>>"${BASEDIR}"/build.log)
+
+  case ${SOURCE_TYPE} in
+  TAG)
+    EXPECTED_SOURCE="tag ${SOURCE_ID}"
+    ACTUAL_TAG=$(git -C "${LOCAL_PATH}" describe --tags --exact-match HEAD 2>>"${BASEDIR}"/build.log)
+
+    if [[ "${ACTUAL_TAG}" == "${SOURCE_ID}" ]]; then
+      echo 0
+      return
+    fi
+
+    EXPECTED_COMMIT=$(git -C "${LOCAL_PATH}" rev-parse -q --verify "refs/tags/${SOURCE_ID}^{commit}" 2>>"${BASEDIR}"/build.log)
+
+    if [[ -n ${EXPECTED_COMMIT} ]] && [[ "${ACTUAL_COMMIT}" == "${EXPECTED_COMMIT}" ]]; then
+      echo 0
+      return
+    fi
+
+    if [[ -n ${ACTUAL_TAG} ]]; then
+      ACTUAL_SOURCE="tag ${ACTUAL_TAG}"
+    else
+      ACTUAL_SOURCE="commit $(git -C "${LOCAL_PATH}" rev-parse --short HEAD 2>>"${BASEDIR}"/build.log)"
+    fi
+    ;;
+  COMMIT)
+    EXPECTED_SOURCE="commit ${SOURCE_ID}"
+
+    if [[ "${ACTUAL_COMMIT}" == "${SOURCE_ID}" ]] || [[ "${ACTUAL_COMMIT}" == "${SOURCE_ID}"* ]]; then
+      echo 0
+      return
+    fi
+
+    ACTUAL_SOURCE="commit $(git -C "${LOCAL_PATH}" rev-parse --short HEAD 2>>"${BASEDIR}"/build.log)"
+    ;;
+  *)
+    echo 0
+    return
+    ;;
+  esac
+
+  print_ffmpeg_source_mismatch_warning "${EXPECTED_SOURCE}" "${ACTUAL_SOURCE}" "${LOCAL_PATH}"
+  echo 1
+}
+
+validate_ffmpeg_source() {
+  local LIB_LOCAL_PATH="${BASEDIR}/src/ffmpeg"
+  local SOURCE_ID=""
+  local SOURCE_TYPE=""
+
+  echo -e "DEBUG: Validating FFmpeg source at ${LIB_LOCAL_PATH}\n" 1>>"${BASEDIR}"/build.log 2>&1
+
+  SOURCE_ID=$(get_library_source "ffmpeg" 2)
+  SOURCE_TYPE=$(get_library_source "ffmpeg" 3)
+
+  ffmpeg_source_matches_expected "${LIB_LOCAL_PATH}" "${SOURCE_ID}" "${SOURCE_TYPE}"
 }
 
 #

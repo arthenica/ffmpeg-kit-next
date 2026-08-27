@@ -3,7 +3,7 @@
 @@ -1153,6 +1153,12 @@
          else
              return NULL;
- 
+
 +#if defined(__EMSCRIPTEN__)
 +        /* FFmpegKit web dynamic builds link one static x265 archive. Do not try
 +         * to dlopen native multilib names like libx265_main12.so in the browser. */
@@ -12,11 +12,11 @@
 +
          const x265_api* api = NULL;
          int reqDepth = 0;
- 
+
 @@ -1242,6 +1248,13 @@
              return NULL;
          }
- 
+
 +#if defined(__EMSCRIPTEN__)
 +        /* FFmpegKit web dynamic builds link one static x265 archive. Do not try
 +         * to dlopen native multilib names like libx265_main12.so in the browser. */
