@@ -1,8 +1,6 @@
 --- src/x265/source/encoder/api.cpp
 +++ src/x265/source/encoder/api.cpp
-@@ -1151,8 +1151,14 @@ const x265_api* x265_api_get(int bitDepth)
-         else if (bitDepth == 8)
-             libname = "libx265_main" ext;
+@@ -1153,6 +1153,12 @@
          else
              return NULL;
  
@@ -15,12 +13,7 @@
          const x265_api* api = NULL;
          int reqDepth = 0;
  
-@@ -1238,10 +1244,17 @@ const x265_api* x265_api_query(int bitDepth, int apiVersion, int* err)
-         else if (bitDepth == 8)
-             libname = "libx265_main" ext;
-         else
-         {
-             if (err) *err = X265_API_QUERY_ERR_LIB_NOT_FOUND;
+@@ -1242,6 +1248,13 @@
              return NULL;
          }
  
@@ -34,3 +27,4 @@
          const x265_api* api = NULL;
          int reqDepth = 0;
          int e = X265_API_QUERY_ERR_LIB_NOT_FOUND;
+ 
