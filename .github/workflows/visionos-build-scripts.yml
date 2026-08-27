@@ -12,14 +12,48 @@
 name: visionos build scripts
 
 on:
-  # TEMPORARY - REMOVE BEFORE MERGING TO main.
-  # workflow_dispatch only becomes available once the file is on the default
-  # branch, so this lets the workflow be exercised from development-github-actions
-  # first. The path filter is this file alone, so pushing one workflow does not
-  # start the other seven.
   push:
-    branches: [ development-github-actions ]
+    branches:
+      - main
     paths:
+      - 'apple/**'
+      - 'visionos.sh'
+      - 'nix-visionos.sh'
+      - 'apple.sh'
+      - 'nix-apple.sh'
+      - 'scripts/apple/**'
+      - 'scripts/function-visionos.sh'
+      - 'scripts/function-apple.sh'
+      - 'scripts/help-visionos.sh'
+      - 'scripts/help-apple.sh'
+      - 'scripts/main-visionos.sh'
+      - 'scripts/run-apple.sh'
+      - 'scripts/function.sh'
+      - 'scripts/variable.sh'
+      - 'scripts/source.sh'
+      - 'tools/**'
+      - '.github/workflows/visionos-build-scripts.yml'
+  pull_request:
+    branches:
+      - main
+      - development
+    paths:
+      - 'apple/**'
+      - 'visionos.sh'
+      - 'nix-visionos.sh'
+      - 'apple.sh'
+      - 'nix-apple.sh'
+      - 'scripts/apple/**'
+      - 'scripts/function-visionos.sh'
+      - 'scripts/function-apple.sh'
+      - 'scripts/help-visionos.sh'
+      - 'scripts/help-apple.sh'
+      - 'scripts/main-visionos.sh'
+      - 'scripts/run-apple.sh'
+      - 'scripts/function.sh'
+      - 'scripts/variable.sh'
+      - 'scripts/source.sh'
+      - 'tools/**'
       - '.github/workflows/visionos-build-scripts.yml'
   workflow_dispatch:
     inputs:

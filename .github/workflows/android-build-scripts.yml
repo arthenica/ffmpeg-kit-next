@@ -10,14 +10,40 @@
 name: android build scripts
 
 on:
-  # TEMPORARY - REMOVE BEFORE MERGING TO main.
-  # workflow_dispatch only becomes available once the file is on the default
-  # branch, so this lets the workflow be exercised from development-github-actions
-  # first. The path filter is this file alone, so pushing one workflow does not
-  # start the other seven.
   push:
-    branches: [ development-github-actions ]
+    branches:
+      - main
     paths:
+      - 'android/**'
+      - 'android.sh'
+      - 'nix-android.sh'
+      - 'scripts/android/**'
+      - 'scripts/function-android.sh'
+      - 'scripts/help-android.sh'
+      - 'scripts/main-android.sh'
+      - 'scripts/run-android.sh'
+      - 'scripts/function.sh'
+      - 'scripts/variable.sh'
+      - 'scripts/source.sh'
+      - 'tools/**'
+      - '.github/workflows/android-build-scripts.yml'
+  pull_request:
+    branches:
+      - main
+      - development
+    paths:
+      - 'android/**'
+      - 'android.sh'
+      - 'nix-android.sh'
+      - 'scripts/android/**'
+      - 'scripts/function-android.sh'
+      - 'scripts/help-android.sh'
+      - 'scripts/main-android.sh'
+      - 'scripts/run-android.sh'
+      - 'scripts/function.sh'
+      - 'scripts/variable.sh'
+      - 'scripts/source.sh'
+      - 'tools/**'
       - '.github/workflows/android-build-scripts.yml'
   workflow_dispatch:
     inputs:
