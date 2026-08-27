@@ -62,7 +62,7 @@ jobs:
           set -e
           SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
           SDK_MANAGER="${SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
-          yes | "${SDK_MANAGER}" --licenses >/dev/null
+          yes 2>/dev/null | "${SDK_MANAGER}" --licenses >/dev/null || true
           "${SDK_MANAGER}" --install \
             "platform-tools" \
             "platforms;android-${ANDROID_PLATFORM_VERSION}" \
@@ -104,7 +104,7 @@ jobs:
         run: |
           brew install autoconf automake libtool pkg-config gettext \
             cmake bison meson ninja nasm yasm gperf ragel texinfo autogen \
-            gtk-doc libtasn1 doxygen wget
+            gtk-doc libtasn1 doxygen wget gnu-sed
       - name: configure host tool paths
         run: |
           {
@@ -112,14 +112,17 @@ jobs:
             echo "$(brew --prefix bison)/bin"
             echo "$(brew --prefix texinfo)/bin"
           } >> "$GITHUB_PATH"
-          echo "ACLOCAL_PATH=$(brew --prefix gettext)/share/aclocal:$(brew --prefix)/share/aclocal" >> "$GITHUB_ENV"
+          {
+            echo "ACLOCAL_PATH=$(brew --prefix gettext)/share/aclocal:$(brew --prefix)/share/aclocal"
+            echo "SED=$(brew --prefix gnu-sed)/bin/gsed"
+          } >> "$GITHUB_ENV"
       - name: set up android sdk and ndk
         run: |
           set -e
           brew install --cask android-commandlinetools
           SDK_ROOT="$(brew --prefix)/share/android-commandlinetools"
           SDK_MANAGER="${SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
-          yes | "${SDK_MANAGER}" --licenses >/dev/null
+          yes 2>/dev/null | "${SDK_MANAGER}" --licenses >/dev/null || true
           "${SDK_MANAGER}" --install \
             "platform-tools" \
             "platforms;android-${ANDROID_PLATFORM_VERSION}" \

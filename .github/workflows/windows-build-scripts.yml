@@ -52,7 +52,7 @@ jobs:
           install: >-
             make autoconf-wrapper automake-wrapper libtool patch diffutils
             git curl wget rsync pkgconf zip unzip tar xz gzip
-            gperf bison gettext-devel texinfo python perl ruby
+            gperf bison gettext-devel texinfo autogen python perl ruby
           pacboy: >-
             clang:p lld:p llvm:p pkgconf:p cmake:p meson:p ninja:p
       - name: print the selected toolchain
