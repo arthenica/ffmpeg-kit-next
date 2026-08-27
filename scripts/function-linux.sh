@@ -33,6 +33,14 @@ get_pkg_config_libdir() {
     PKG_CONFIG_LIBDIR_VALUE+=":${FFMPEG_KIT_NIX_PKG_CONFIG_LIBDIR}"
   fi
 
+  if [[ -z ${FFMPEG_KIT_SYSTEM_PKG_CONFIG_LIBDIR} ]] && [[ -z ${FFMPEG_KIT_NIX_PKG_CONFIG_LIBDIR} ]]; then
+    local HOST_PC_PATH
+    HOST_PC_PATH=$(pkg-config --variable pc_path pkg-config 2>>"${BASEDIR}"/build.log)
+    if [[ -n ${HOST_PC_PATH} ]]; then
+      PKG_CONFIG_LIBDIR_VALUE+=":${HOST_PC_PATH}"
+    fi
+  fi
+
   echo "${PKG_CONFIG_LIBDIR_VALUE}"
 }
 
