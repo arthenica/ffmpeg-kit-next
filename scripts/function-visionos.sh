@@ -207,7 +207,7 @@ get_cxxflags() {
     echo "-fno-rtti ${COMMON_CFLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
     ;;
   rubberband)
-    echo "-fno-rtti -Wno-c++11-narrowing ${COMMON_CFLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
+    echo "-fno-rtti -Wno-c++11-narrowing -include stddef.h ${COMMON_CFLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
     ;;
   libjxl)
     echo "-std=c++17 ${COMMON_CFLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
