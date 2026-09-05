@@ -1,0 +1,133 @@
+name: Build failure
+description: Report a local build, toolchain, packaging or CI failure.
+title: "[Build] "
+labels: ["build", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        FFmpegKitNext does not publish ready-to-use packages. Use this form for failures while building locally, creating generated artifacts or integrating locally generated packages.
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Before opening
+      options:
+        - label: I searched existing issues and discussions.
+          required: true
+        - label: I checked the relevant README and wiki build instructions for my platform.
+          required: true
+        - label: I included the full build command and the first failing error block.
+          required: true
+  - type: dropdown
+    id: workflow
+    attributes:
+      label: Build workflow
+      options:
+        - Nix build script
+        - Non-Nix build script
+        - Windows MSYS2 / MinGW-w64 build
+        - CI build
+        - Packaging generated artifacts
+        - Consuming generated artifacts in an app
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Target platform
+      multiple: true
+      options:
+        - Android
+        - iOS
+        - iPadOS
+        - macOS
+        - tvOS
+        - visionOS
+        - Flutter
+        - React Native
+        - Linux
+        - Web / WebAssembly
+        - Windows
+        - Multiple platforms
+    validations:
+      required: true
+  - type: input
+    id: source-version
+    attributes:
+      label: Source version
+      description: Provide the branch, release tag and commit SHA you built from.
+      placeholder: main at <commit SHA>, development at <commit SHA> or v9.0.0
+    validations:
+      required: true
+  - type: textarea
+    id: build-command
+    attributes:
+      label: Build command
+      description: Paste the exact command that fails, including profiles, enabled libraries, disabled architectures and packaging flags.
+      render: shell
+      placeholder: ./nix-android.sh -p android-r27d --enable-lib-fontconfig
+    validations:
+      required: true
+  - type: textarea
+    id: failure
+    attributes:
+      label: Failure details
+      description: Describe where the build fails and what you expected it to produce.
+      placeholder: The build fails while compiling/linking/packaging...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Build logs
+      description: Paste the first failing error block and nearby context. Avoid trimming out the compiler, linker, package manager or script command that failed.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: host-environment
+    attributes:
+      label: Host environment
+      description: Fill in every line that applies.
+      placeholder: |
+        Host OS and version:
+        CPU architecture:
+        Shell:
+        Nix version:
+        Xcode and Command Line Tools versions:
+        Android SDK / NDK / CMake versions:
+        Java version:
+        MSYS2 / MinGW-w64 details:
+        Emscripten version:
+        Docker or CI image:
+    validations:
+      required: true
+  - type: textarea
+    id: target-environment
+    attributes:
+      label: Target configuration
+      description: Describe the target, architectures, optional libraries, license mode and generated artifact format.
+      placeholder: |
+        Target OS / API / deployment version:
+        Target architecture(s):
+        Enabled external or system libraries:
+        GPL enabled:
+        Artifact format (.aar, framework, xcframework, Swift package, npm package, etc.):
+    validations:
+      required: true
+  - type: textarea
+    id: local-changes
+    attributes:
+      label: Local changes
+      description: List any local patches, environment overrides, cached sources or dependency substitutions used during the build.
+      placeholder: No local changes.
+    validations:
+      required: false
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add related issues, links to CI runs or details about the last known working version.
+    validations:
+      required: false
