@@ -1,0 +1,109 @@
+name: Feature request
+description: Propose a scoped improvement to FFmpegKitNext.
+title: "[Feature] "
+labels: ["enhancement", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for proposed improvements to build scripts, platform APIs, packaging, documentation structure, tooling or project behavior.
+
+        FFmpegKitNext generally does not accept requests to add new external FFmpeg libraries unless someone is prepared to contribute and maintain the required cross-compilation support.
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Before opening
+      options:
+        - label: I searched existing issues and discussions.
+          required: true
+        - label: This is not only a request for a new external FFmpeg library or I am prepared to contribute the build support.
+          required: true
+        - label: I considered whether the change should apply to all platforms because FFmpegKitNext keeps a unified API where possible.
+          required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      multiple: true
+      options:
+        - Build scripts
+        - Android API or packaging
+        - Apple API or packaging
+        - Flutter API or packaging
+        - React Native API or packaging
+        - Linux API or packaging
+        - Web API or packaging
+        - Windows API or packaging
+        - Documentation
+        - Test applications
+        - Release process
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Target platform
+      multiple: true
+      options:
+        - Android
+        - iOS
+        - iPadOS
+        - macOS
+        - tvOS
+        - visionOS
+        - Flutter
+        - React Native
+        - Linux
+        - Web / WebAssembly
+        - Windows
+        - All supported platforms
+        - Not platform-specific
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Explain the user or maintainer problem this feature would solve.
+      placeholder: I am trying to...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior, API, build option, documentation change or workflow you want.
+      placeholder: Add...
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Cross-platform impact
+      description: Explain whether the feature should apply to every platform or why it should stay platform-specific.
+      placeholder: This should apply to all platforms because...
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe workarounds, existing APIs, upstream FFmpeg options or implementation approaches you considered.
+    validations:
+      required: false
+  - type: textarea
+    id: contribution
+    attributes:
+      label: Contribution plan
+      description: Say whether you can help implement, test, document or maintain the change.
+      placeholder: I can open a PR / I can test on these platforms / I cannot contribute implementation.
+    validations:
+      required: false
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add links, examples, prior art, screenshots or related issues.
+    validations:
+      required: false

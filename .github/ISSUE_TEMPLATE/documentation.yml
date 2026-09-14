@@ -1,0 +1,94 @@
+name: Documentation issue
+description: Report missing, outdated, confusing or incorrect documentation.
+title: "[Docs] "
+labels: ["documentation", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for documentation problems in the README files, wiki, examples, comments or release notes.
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Before opening
+      options:
+        - label: I searched existing issues and discussions.
+          required: true
+        - label: I checked the relevant README or wiki page for the platform involved.
+          required: true
+  - type: dropdown
+    id: doc-type
+    attributes:
+      label: Documentation type
+      multiple: true
+      options:
+        - Missing information
+        - Incorrect information
+        - Outdated build instructions
+        - Confusing example
+        - Broken link
+        - API reference
+        - Release or version information
+        - License, patent or trademark information
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Related platform
+      multiple: true
+      options:
+        - Android
+        - iOS
+        - iPadOS
+        - macOS
+        - tvOS
+        - visionOS
+        - Flutter
+        - React Native
+        - Linux
+        - Web / WebAssembly
+        - Windows
+        - All supported platforms
+        - Not platform-specific
+    validations:
+      required: true
+  - type: textarea
+    id: location
+    attributes:
+      label: Documentation location
+      description: Link to the page or list the repository path and heading.
+      placeholder: README.md section 9, android/README.md section 2.1, wiki page URL, etc.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Explain what is missing, wrong, outdated or hard to follow.
+      placeholder: The page says...
+    validations:
+      required: true
+  - type: textarea
+    id: suggested-change
+    attributes:
+      label: Suggested change
+      description: Provide corrected wording, missing steps, expected command output or the example you expected to find.
+    validations:
+      required: false
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: Explain who is affected and what task is blocked or made harder by the documentation issue.
+      placeholder: This affects users building for...
+    validations:
+      required: false
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add screenshots, related issues, links to failing commands or references to upstream documentation.
+    validations:
+      required: false

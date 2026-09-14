@@ -1,5 +1,6 @@
 ## 9.0.0
 - Feature release based on native 9.0.0 (FFmpeg 9.0.1)
+- Fixes issues [#22](https://github.com/arthenica/ffmpeg-kit-next/issues/22) and [#36](https://github.com/arthenica/ffmpeg-kit-next/issues/36)
 
 ## 8.1.1
 - Documents iPadOS as a supported platform
