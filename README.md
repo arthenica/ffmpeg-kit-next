@@ -142,6 +142,8 @@ the same `FFmpeg` release branch.
 
 A more detailed documentation is available under [Wiki](https://github.com/arthenica/ffmpeg-kit-next/wiki).
 
+- [Video tutorials](https://github.com/arthenica/ffmpeg-kit-next/wiki/Video-Tutorials) are available for selected build workflows and project features.
+
 ### 14. Test Applications
 
 You can see how `FFmpegKitNext` is used inside an application by running test applications created under
