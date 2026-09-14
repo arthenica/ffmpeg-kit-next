@@ -156,6 +156,16 @@ class FFmpegKitConfig {
     }
   }
 
+  static Future<int?> writeBytesToPipe(Uint8List data, String pipePath) async {
+    try {
+      await init();
+      return _platform.ffmpegKitConfigWriteBytesToPipe(data, pipePath);
+    } on PlatformException catch (e, stack) {
+      print("Plugin writeBytesToPipe error: ${e.message}");
+      return Future.error("writeBytesToPipe failed.", stack);
+    }
+  }
+
   /// Returns the version of FFmpeg bundled within "FFmpegKit" library.
   static Future<String?> getFFmpegVersion() async {
     try {

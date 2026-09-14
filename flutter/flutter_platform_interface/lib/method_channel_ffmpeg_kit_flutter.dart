@@ -97,8 +97,7 @@ class MethodChannelFFmpegKit extends FFmpegKitPlatform {
   @override
   Future<bool> abstractSessionThereAreAsynchronousMessagesInTransmit(
           int? sessionId) async =>
-      _channel.invokeMethod<bool>(
-          'abstractSessionThereAreAsynchronousMessagesInTransmit',
+      _channel.invokeMethod<bool>('thereAreAsynchronousMessagesInTransmit',
           {'sessionId': sessionId}).then((bool? value) => value ?? false);
 
   // ArchDetect
@@ -157,6 +156,12 @@ class MethodChannelFFmpegKit extends FFmpegKitPlatform {
   Future<void> ffmpegKitConfigCloseFFmpegPipe(String ffmpegPipePath) async =>
       _channel.invokeMethod<void>(
           'closeFFmpegPipe', {'ffmpegPipePath': ffmpegPipePath});
+
+  @override
+  Future<int?> ffmpegKitConfigWriteBytesToPipe(
+          Uint8List data, String pipePath) async =>
+      _channel.invokeMethod<int>(
+          'writeBytesToPipe', {'data': data, 'pipe': pipePath});
 
   @override
   Future<String?> ffmpegKitConfigGetFFmpegVersion() async =>

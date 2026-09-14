@@ -1043,7 +1043,7 @@ static int transcode(Scheduler *sch)
     while (!sch_wait(sch, stats_period, &transcode_ts)) {
         int64_t cur_time= av_gettime_relative();
 
-        if (received_nb_signals)
+        if (received_nb_signals || cancelRequested(globalSessionId))
             break;
 
         /* if 'q' pressed, exits */

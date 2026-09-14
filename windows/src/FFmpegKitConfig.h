@@ -231,23 +231,11 @@ class FFmpegKitConfig {
         ffmpegkit::detail::checkError();
     }
 
-    /**
-     * <p>Named pipes are not supported on Windows. Always returns nullptr.
-     *
-     * @return nullptr
-     */
-    FFMPEGKIT_DEPRECATED("Named pipes are not supported on Windows")
     static std::shared_ptr<std::string> registerNewFFmpegPipe() {
         return ffmpegkit::detail::takeOptionalString(
             ffk_config_register_new_ffmpeg_pipe());
     }
 
-    /**
-     * <p>Named pipes are not supported on Windows. Does nothing.
-     *
-     * @param ffmpegPipePath pipe path
-     */
-    FFMPEGKIT_DEPRECATED("Named pipes are not supported on Windows")
     static void closeFFmpegPipe(const std::string &ffmpegPipePath) {
         ffk_config_close_ffmpeg_pipe(ffmpegPipePath.c_str());
     }

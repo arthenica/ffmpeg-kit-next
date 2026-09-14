@@ -995,6 +995,9 @@ static FlMethodResponse* handle_method_call(FfmpegKitNextFlutterPlugin* self,
     }).detach();
     return nullptr;
 
+  } else if (g_strcmp0(m, "writeBytesToPipe") == 0) {
+    return resp_error("NOT_SUPPORTED", "Writing byte chunks to FFmpeg pipes is only supported on Windows.");
+
     // -- Android-only methods -> NOT_SUPPORTED --------------------------------
   } else if (g_strcmp0(m, "selectDocument") == 0 ||
              g_strcmp0(m, "getSafParameter") == 0 ||

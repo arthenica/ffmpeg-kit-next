@@ -437,11 +437,10 @@ resolve_windows_tool() {
 set_toolchain_paths() {
   HOST=$(get_host)
 
-  # COMPILERS: PREFER TRIPLET-PREFIXED WRAPPERS (llvm-mingw clang or GNU
-  # MinGW-w64 gcc), THEN FALL BACK TO THE NATIVE MSYS2 COMPILER. THE BUILD IS
-  # NATIVE, SO THE HOST ENVIRONMENT ALREADY TARGETS ${ARCH}.
-  export CC=$(resolve_windows_tool "${HOST}-clang" "${HOST}-gcc" "clang" "gcc" "cc")
-  export CXX=$(resolve_windows_tool "${HOST}-clang++" "${HOST}-g++" "clang++" "g++" "c++")
+  # Prefer the shell's clang before GCC so compiler runtimes stay compatible
+  # with the DLLs built by the UCRT64 toolchain.
+  export CC=$(resolve_windows_tool "${HOST}-clang" "clang" "${HOST}-gcc" "gcc" "cc")
+  export CXX=$(resolve_windows_tool "${HOST}-clang++" "clang++" "${HOST}-g++" "g++" "c++")
 
   # FAIL EARLY WITH AN ACTIONABLE MESSAGE WHEN THE MinGW-w64 COMPILER FOR ${ARCH}
   # IS NOT ON PATH.
@@ -955,6 +954,11 @@ copy_mingw_runtime_licenses() {
     cp "${LICENSE_FILE}" "${LICENSE_DIRECTORY}/license_${TARGET_NAME}.txt" 2>>"${BASEDIR}"/build.log || return 1
     echo -e "DEBUG: Copied the license file of ${TARGET_NAME} successfully\n" 1>>"${BASEDIR}"/build.log 2>&1
   done
+
+  # GCC runtime distribution requires its license text in the bundle.
+  if [[ -d "${TOOLCHAIN_LICENSE_DIRECTORY}/gcc-libs" ]]; then
+    cp -R "${TOOLCHAIN_LICENSE_DIRECTORY}/gcc-libs" "${LICENSE_DIRECTORY}/gcc-runtime" 2>>"${BASEDIR}"/build.log || return 1
+  fi
 
   return 0
 }

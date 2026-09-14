@@ -27,6 +27,7 @@
  */
 
 #include "ffmpegkit_c.h"
+#include "internal/WindowsPipe.h"
 
 #include "internal/ArchDetect.h"
 #include "internal/Chapter.h"
@@ -1476,8 +1477,6 @@ void ffk_config_set_font_directory_list(const char *const *fontDirectories,
 
 char *ffk_config_register_new_ffmpeg_pipe(void) {
     return guard([&]() -> char * {
-        // Named pipes are not supported on Windows: the C++ method is a
-        // deprecated no-op that returns nullptr, and so is this one
         return duplicateString(
             internal::FFmpegKitConfig::registerNewFFmpegPipe());
     });
@@ -1487,6 +1486,25 @@ void ffk_config_close_ffmpeg_pipe(const char *ffmpegPipePath) {
     guard([&]() {
         internal::FFmpegKitConfig::closeFFmpegPipe(
             ffmpegPipePath == nullptr ? "" : ffmpegPipePath);
+    });
+}
+
+int ffk_config_write_to_pipe(const char *inputPath, const char *pipePath) {
+    return guard([&]() -> int {
+        if (inputPath == nullptr || pipePath == nullptr) {
+            throw std::invalid_argument("Input and pipe paths are required.");
+        }
+        return internal::WindowsPipeRegistry::Write(inputPath, pipePath);
+    });
+}
+
+int ffk_config_write_bytes_to_pipe(const uint8_t *data, const size_t length,
+                                   const char *pipePath) {
+    return guard([&]() -> int {
+        if (pipePath == nullptr) {
+            throw std::invalid_argument("Pipe path is required.");
+        }
+        return internal::WindowsPipeRegistry::WriteBytes(data, length, pipePath);
     });
 }
 

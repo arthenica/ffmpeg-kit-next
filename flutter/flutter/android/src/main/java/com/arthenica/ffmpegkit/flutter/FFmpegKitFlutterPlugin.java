@@ -589,6 +589,9 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
                     resultHandler.errorAsync(result, "INVALID_PIPE", "Invalid pipe value.");
                 }
                 break;
+            case "writeBytesToPipe":
+                resultHandler.errorAsync(result, "NOT_SUPPORTED", "Writing byte chunks to FFmpeg pipes is only supported on Windows.");
+                break;
             case "selectDocument":
                 final String title = call.argument("title");
                 final String type = call.argument("type");
