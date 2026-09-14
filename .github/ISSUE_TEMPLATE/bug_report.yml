@@ -1,0 +1,153 @@
+name: Bug report
+description: Report a reproducible FFmpegKitNext runtime, API or integration problem.
+title: "[Bug] "
+labels: ["bug", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for reproducible problems in FFmpegKitNext runtime behavior, platform APIs, generated artifacts or application integration.
+
+        For usage questions, please use Discussions. If the same FFmpeg or FFprobe command fails with desktop FFmpeg built from the same FFmpeg version, report it to the upstream FFmpeg tracker first.
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Before opening
+      options:
+        - label: I searched existing issues and discussions.
+          required: true
+        - label: For FFmpeg or FFprobe command failures, I tested desktop FFmpeg with the same FFmpeg version or this issue is not a command failure.
+          required: true
+        - label: I can reproduce this with a minimal command, sample app or synthetic media file.
+          required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      multiple: true
+      options:
+        - FFmpeg or FFprobe command execution
+        - FFmpegKitNext native API
+        - Flutter API
+        - React Native API
+        - Web JavaScript API
+        - Build artifacts or package integration
+        - Custom protocols (ffkitmem, ffkitstream, ffkitsaf)
+        - Sessions, logs, statistics or callbacks
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Target platform
+      multiple: true
+      options:
+        - Android
+        - iOS
+        - iPadOS
+        - macOS
+        - tvOS
+        - visionOS
+        - Flutter
+        - React Native
+        - Linux
+        - Web / WebAssembly
+        - Windows
+        - Multiple platforms
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: FFmpegKitNext version
+      description: Provide the release tag, commit SHA or generated artifact version.
+      placeholder: v9.0.0, v8.1.1.windows or commit SHA
+    validations:
+      required: true
+  - type: input
+    id: ffmpeg-version
+    attributes:
+      label: FFmpeg version
+      description: Provide the FFmpeg version used by the generated libraries, if known.
+      placeholder: 9.0.1
+    validations:
+      required: false
+  - type: textarea
+    id: current-behavior
+    attributes:
+      label: Current behavior
+      description: Describe what happens, including any error messages, crash symptoms, wrong output or callback behavior.
+      placeholder: The command/session/build artifact does...
+    validations:
+      required: true
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: Describe what should happen instead.
+      placeholder: I expected...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      description: List the smallest set of steps needed to reproduce the issue.
+      placeholder: |
+        1. Build or install...
+        2. Run...
+        3. Observe...
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Minimal FFmpegKit command
+      description: Include the exact FFmpegKit or FFprobeKit command, if the issue involves command execution.
+      render: shell
+      placeholder: FFmpegKit.execute("-i input.mp4 ... output.mp4")
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and stack traces
+      description: Paste the relevant logs. Include FFmpegKit logs, failStackTrace, build/runtime logs or browser console output as applicable.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Fill in every line that applies.
+      placeholder: |
+        Target OS and version:
+        Host OS and version:
+        Target architecture(s):
+        Build workflow and profile:
+        Xcode version:
+        Android SDK / NDK / CMake versions:
+        Nix version and profile:
+        MSYS2 / MinGW-w64 details:
+        Emscripten version:
+        Flutter doctor:
+        React Native info:
+        Browser and version:
+    validations:
+      required: true
+  - type: textarea
+    id: sample
+    attributes:
+      label: Minimal sample
+      description: Link to a minimal repository, attach a small test file or describe why a sample cannot be shared.
+    validations:
+      required: false
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add screenshots, related issues, suspected causes or any other context.
+    validations:
+      required: false

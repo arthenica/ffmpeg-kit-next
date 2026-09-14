@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions, usage help and setup support
+    url: https://github.com/arthenica/ffmpeg-kit-next/discussions
+    about: Ask usage questions or setup troubleshooting questions in Discussions before opening an issue.
+  - name: Upstream FFmpeg bug tracker
+    url: https://trac.ffmpeg.org/
+    about: Report issues that also reproduce with the same command on desktop FFmpeg.
