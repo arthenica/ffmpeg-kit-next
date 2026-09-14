@@ -486,6 +486,8 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
     } else {
       result([FlutterError errorWithCode:@"INVALID_PIPE" message:@"Invalid pipe value." details:nil]);
     }
+  } else if ([@"writeBytesToPipe" isEqualToString:call.method]) {
+    result([FlutterError errorWithCode:@"NOT_SUPPORTED" message:@"Writing byte chunks to FFmpeg pipes is only supported on Windows." details:nil]);
   } else if ([@"selectDocument" isEqualToString:call.method]) {
     [self selectDocument:result];
   } else if ([@"getSafParameter" isEqualToString:call.method]) {

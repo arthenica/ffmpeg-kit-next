@@ -43,23 +43,8 @@ export LDFLAGS="$(get_ldflags ${LIB_NAME}) -L${LIB_INSTALL_BASE}/ffmpeg/lib -lav
 
 cd "${BASEDIR}"/windows 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 
-# WORKAROUND: NEUTRALISE FFMPEG'S WINDOWS COMMAND-LINE OVERRIDE
-#
-# On Windows, fftools' prepare_app_arguments() discards the (argc, argv) handed to
-# ffmpeg_execute()/ffprobe_execute() and rebuilds the arguments from the host
-# process command line via GetCommandLineW(). In-process that is the host
-# application's command line, not FFmpegKit's, so every command runs as a bare
-# "ffmpeg" and prints the usage banner. Flipping the five Win32 guards to a
-# disabled '#if 0 && ...' makes prepare_app_arguments the same no-op it already is
-# on Linux, so the supplied UTF-8 argv is used directly. Idempotent: the '#if
-# HAVE_...' anchor is consumed, so re-running the build does not re-apply it.
-for SOURCE_FILE in \
-  "${BASEDIR}/windows/src/fftools/cmdutils.c" \
-  "${BASEDIR}/windows/src/fftools/cmdutils.h" \
-  "${BASEDIR}/windows/src/ffmpeg_context.c" \
-  "${BASEDIR}/windows/src/ffmpeg_context.h"; do
-  sed -i 's|#if HAVE_COMMANDLINETOARGVW && defined(_WIN32)|#if 0 \&\& HAVE_COMMANDLINETOARGVW \&\& defined(_WIN32)|g' "${SOURCE_FILE}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
-done
+EMBEDDED_FFMPEG_CONFIG="${LIB_INSTALL_BASE}/ffmpeg/include/config.h"
+sed -i 's|^#define HAVE_COMMANDLINETOARGVW 1$|#define HAVE_COMMANDLINETOARGVW 0|' "${EMBEDDED_FFMPEG_CONFIG}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 
 # ALWAYS BUILD SHARED LIBRARIES
 BUILD_LIBRARY_OPTIONS="--enable-shared --disable-static"

@@ -3,6 +3,7 @@ lib_LTLIBRARIES = libffmpegkit.la
 libffmpegkit_la_LIBADD = @FFMPEG_LIBS@ @WINDOWS_LIBS@
 
 EXTRA_DIST = \
+    internal/WindowsPipe.h \
     stdbit.h \
     fftools/resources/graph.css \
     fftools/resources/graph.html

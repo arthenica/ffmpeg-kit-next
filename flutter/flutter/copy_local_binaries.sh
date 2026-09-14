@@ -120,9 +120,30 @@ copy_linux() {
   echo "linux: copied bundle-linux -> linux/Frameworks/ffmpeg-kit-next/"
 }
 
+copy_windows() {
+  local src dest
+  src="${prebuilt_dir}/bundle-windows/ffmpeg-kit-next"
+  dest="${plugin_dir}/windows/Frameworks/ffmpeg-kit-next"
+  if [[ ! -d "${src}" ]]; then
+    echo "skip windows: no bundle-windows/ffmpeg-kit-next found in ${prebuilt_dir}" >&2
+    return 0
+  fi
+  if [[ ! -f "${src}/include/ffmpegkit_c.h" || ! -f "${src}/lib/ffmpegkit.lib" || ! -d "${src}/bin" ]]; then
+    echo "error: incomplete Windows bundle: ${src}" >&2
+    return 1
+  fi
+  mkdir -p "${dest}"
+  if [[ "$(realpath "${dest}")" != "${plugin_dir}/windows/Frameworks/ffmpeg-kit-next" ]]; then
+    echo "error: Windows bundle destination must not redirect outside this plugin" >&2
+    return 1
+  fi
+  rsync -a --delete "${src}/" "${dest}/"
+  echo "windows: copied bundle-windows -> windows/Frameworks/ffmpeg-kit-next/"
+}
+
 platforms=("$@")
 if ((${#platforms[@]} == 0)); then
-  platforms=(android ios macos linux)
+  platforms=(android ios macos linux windows)
 fi
 
 for platform in "${platforms[@]}"; do
@@ -131,8 +152,9 @@ for platform in "${platforms[@]}"; do
     ios)     copy_apple ios   'bundle-apple-xcframework-ios-*'   ios ;;
     macos)   copy_apple macos 'bundle-apple-xcframework-macos-*' macos ;;
     linux)   copy_linux ;;
+    windows) copy_windows ;;
     *)
-      echo "error: unknown platform '${platform}' (expected android, ios, macos or linux)" >&2
+      echo "error: unknown platform '${platform}' (expected android, ios, macos, linux or windows)" >&2
       exit 1
       ;;
   esac

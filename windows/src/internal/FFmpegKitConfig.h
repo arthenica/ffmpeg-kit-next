@@ -127,29 +127,9 @@ class FFmpegKitConfig {
         const std::list<std::string> &fontDirectoryList,
         const std::map<std::string, std::string> &fontNameMapping);
 
-    /**
-     * <p>Creates a new named pipe to use in <code>FFmpeg</code> operations.
-     *
-     * <p>Please note that creator is responsible of closing created pipes.
-     *
-     * <p>Deprecated on Windows: named pipes are not supported and this method
-     * always fails.
-     *
-     * @return the full path of the named pipe
-     */
-    __attribute__((deprecated("Named pipes are not supported on Windows")))
     static std::shared_ptr<std::string>
     registerNewFFmpegPipe();
 
-    /**
-     * <p>Closes a previously created <code>FFmpeg</code> pipe.
-     *
-     * <p>Deprecated on Windows: named pipes are not supported and this method
-     * does nothing.
-     *
-     * @param ffmpegPipePath full path of the FFmpeg pipe
-     */
-    __attribute__((deprecated("Named pipes are not supported on Windows")))
     static void
     closeFFmpegPipe(const std::string &ffmpegPipePath);
 

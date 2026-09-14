@@ -18,6 +18,7 @@
  */
 
 #include <pthread.h>
+#include "WindowsPipe.h"
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -1773,15 +1774,12 @@ void ffmpegkit::internal::FFmpegKitConfig::setFontDirectoryList(
 
 std::shared_ptr<std::string>
 ffmpegkit::internal::FFmpegKitConfig::registerNewFFmpegPipe() {
-    // Named pipes are not supported on Windows. The FFmpeg pipe family of
-    // methods is deprecated on this platform and always fails.
-    std::cout << "Named pipes are not supported on Windows." << std::endl;
-    return nullptr;
+    return std::make_shared<std::string>(WindowsPipeRegistry::Create());
 }
 
 void ffmpegkit::internal::FFmpegKitConfig::closeFFmpegPipe(
     const std::string &ffmpegPipePath) {
-    // Named pipes are not supported on Windows. See registerNewFFmpegPipe.
+    WindowsPipeRegistry::Close(ffmpegPipePath);
 }
 
 long ffmpegkit::internal::FFmpegKitConfig::registerFFmpegKitInputBuffer(

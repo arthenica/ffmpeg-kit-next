@@ -178,6 +178,12 @@ abstract class FFmpegKitPlatform extends PlatformInterface {
         'ffmpegKitConfigCloseFFmpegPipe() has not been implemented!');
   }
 
+  Future<int?> ffmpegKitConfigWriteBytesToPipe(
+      Uint8List data, String pipePath) async {
+    throw UnimplementedError(
+        'ffmpegKitConfigWriteBytesToPipe() has not been implemented!');
+  }
+
   Future<String?> ffmpegKitConfigGetFFmpegVersion() async {
     throw UnimplementedError(
         'ffmpegKitConfigGetFFmpegVersion() has not been implemented!');

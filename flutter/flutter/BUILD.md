@@ -16,6 +16,7 @@ with the desired external libraries:
 ./nix-ios.sh     -p <profile>   # produces prebuilt/bundle-apple-xcframework-ios-*/... (covers both iOS and iPadOS)
 ./nix-macos.sh   -p <profile>   # produces prebuilt/bundle-apple-xcframework-macos-*/...
 ./nix-linux.sh   -p <profile>   # produces prebuilt/bundle-linux/... (native host architecture only)
+./windows.sh --no-static-mingw-runtime # run in MSYS2 UCRT64; produces prebuilt/bundle-windows/ffmpeg-kit-next/
 ```
 
 Then copy the built artifacts into this plugin:
@@ -26,6 +27,7 @@ cd flutter/flutter
 # or copy selectively:
 ./copy_local_binaries.sh android ios
 ./copy_local_binaries.sh linux
+./copy_local_binaries.sh windows
 ```
 
 This places:
@@ -36,6 +38,7 @@ This places:
 | iOS/iPadOS     | `ios/ffmpeg_kit_next_flutter/Frameworks/*.xcframework`   | `ios/*.podspec` + `Package.swift`   |
 | macOS    | `macos/ffmpeg_kit_next_flutter/Frameworks/*.xcframework` | `macos/*.podspec` + `Package.swift` |
 | Linux    | `linux/Frameworks/ffmpeg-kit-next/{include,lib}`         | `linux/CMakeLists.txt`              |
+| Windows  | `windows/Frameworks/ffmpeg-kit-next/{include,lib,bin}`   | `windows/CMakeLists.txt`            |
 
 The copied binaries are ignored by git on purpose — every consumer rebuilds and
 copies them. Re-run `copy_local_binaries.sh` whenever you rebuild.
@@ -54,17 +57,42 @@ otherwise; both reference the same `Sources/` and `Frameworks/` trees.
 
 ## Consuming the plugin from an app
 
+### Windows x64
+
+Windows builds require MSYS2 UCRT64, Visual Studio's Desktop development with C++
+workload, and the Windows Flutter SDK. Complete the Windows build and copy steps
+in the one-time setup above before consuming the plugin.
+
+The default bundle is LGPL without optional external libraries. It is created
+at `prebuilt/bundle-windows/ffmpeg-kit-next` and copied to the git-ignored
+`flutter/flutter/windows/Frameworks/ffmpeg-kit-next` directory.
+
+The plugin copies its runtime DLLs beside the app executable. Distribute the
+entire Release directory together with the bundle licenses. Rebuild the bundle
+and repeat the copy step above whenever its native sources change.
+
+After adding the local dependency below, run `flutter build windows --debug` or
+`flutter build windows --release` from the consuming app.
+
+Use `writeToPipe` to copy a complete input file into a registered pipe. On
+Windows, use `writeBytesToPipe` to send raw byte chunks because Dart cannot
+open Win32 named-pipe paths with `File.openWrite()`. Close every registered
+pipe when writing is complete; closing it signals EOF to FFmpeg and cancels
+pending writes.
+
+### Local dependency
+
 In the app's `pubspec.yaml`, reference the plugin by path:
 
 ```yaml
 dependencies:
-  ffmpeg_kit_flutter:
+  ffmpeg_kit_next_flutter:
     path: /path/to/ffmpeg-kit-next/flutter/flutter
 ```
 
-The plugin depends on `ffmpeg_kit_next_flutter_platform_interface` (pure Dart, no
-native code). It resolves from pub.dev by default; to use the local copy too,
-add an override:
+The plugin already resolves `ffmpeg_kit_next_flutter_platform_interface` from
+the sibling repository directory. A consuming application can explicitly
+override that location when needed:
 
 ```yaml
 dependency_overrides:
