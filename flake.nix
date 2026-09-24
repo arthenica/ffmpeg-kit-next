@@ -161,6 +161,7 @@
 
       androidPackages = pkgs: with pkgs; commonPackages pkgs ++ [
         autogen
+        clang
         coreutils
         doxygen
         file
@@ -174,10 +175,6 @@
         ragel
         texinfo
         which
-      ] ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
-        clang
-      ] ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
-        gcc
       ];
 
       linuxToolchainPackages = pkgs: with pkgs; commonToolPackages pkgs ++ [
