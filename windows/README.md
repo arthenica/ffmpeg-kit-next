@@ -6,8 +6,9 @@
 ### 1. Features
 - Provides a `C++` API built with `c++11` and a `C` API
 - Usable from both `MinGW-w64` and `MSVC` / `clang-cl`
-- Includes `arm64`; `x86-64` is implemented but not yet tested
+- Includes `x86-64` and `arm64` architectures
 - Libraries are compiled natively, so only the architecture of the host machine is built
+- Built with the `CLANG64` (`x86-64`) or `CLANGARM64` (`arm64`) MSYS2 environment
 - Custom `FFmpegKit` protocols: `ffkitmem:` for finite in-memory input/output and `ffkitstream:` for memory-backed streaming input/output
 - Builds shared native libraries (`.dll`)
 
@@ -23,20 +24,30 @@ Note that, `FFmpegKitNext` does not publish binaries and building it yourself is
 ```
 
 This command compiles the native `FFmpeg` and `ffmpeg-kit` shared libraries together with the `C++`
-API for the architecture of the host machine. Building `arm64` libraries requires an `arm64` Windows
-host.
+API for the architecture of the host machine. Building `x86-64` libraries requires an `x86-64` Windows
+host, and building `arm64` libraries requires an `arm64` Windows host.
 
 The build downloads `FFmpeg` and `RapidJSON` when they are not already available locally.
 
 #### 2.1 Prerequisites
 
-Windows builds require an [MSYS2](https://www.msys2.org/) shell with the MinGW-w64 toolchain. On an
-`arm64` host, use the `CLANGARM64` environment and install the build tools:
+Windows builds require an [MSYS2](https://www.msys2.org/) shell with the CLANG64 or CLANGARM64
+environment. The MINGW64 and UCRT64 environments are not supported.
+
+On an `x86-64` host, use the `CLANG64` environment:
 
 ```bash
-pacman -S --needed ${MINGW_PACKAGE_PREFIX}-clang ${MINGW_PACKAGE_PREFIX}-pkgconf make autoconf \
-  automake libtool git curl rsync pkg-config gperf ${MINGW_PACKAGE_PREFIX}-meson \
-  ${MINGW_PACKAGE_PREFIX}-ninja gtk-doc autogen bison gettext-devel
+pacman -S --needed mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-pkgconf make autoconf \
+  automake libtool git curl rsync pkg-config gperf mingw-w64-clang-x86_64-meson \
+  mingw-w64-clang-x86_64-ninja gtk-doc autogen bison gettext-devel mingw-w64-clang-x86_64-nasm
+```
+
+On an `arm64` host, use the `CLANGARM64` environment:
+
+```bash
+pacman -S --needed mingw-w64-clang-aarch64-clang mingw-w64-clang-aarch64-pkgconf make autoconf \
+  automake libtool git curl rsync pkg-config gperf mingw-w64-clang-aarch64-meson \
+  mingw-w64-clang-aarch64-ninja gtk-doc autogen bison gettext-devel
 ```
 
 See [Windows Prerequisites](https://github.com/arthenica/ffmpeg-kit-next/wiki/Windows-Prerequisites)
@@ -45,7 +56,7 @@ for details.
 #### 2.2 Options
 
 Use `--enable-lib-<library name>` to build with an external library and `--enable-lib-all` to enable all libraries allowed by the selected license policy.
-Use `--disable-arch-arm64` / `--disable-arch-x86-64` to disable an architecture. Use `--enable-gpl` to allow
+Use `--disable-arch-x86-64` / `--disable-arch-arm64` to disable an architecture. Use `--enable-gpl` to allow
 GPL-licensed libraries.
 
 ```

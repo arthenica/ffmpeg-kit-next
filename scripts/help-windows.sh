@@ -3,12 +3,12 @@
 display_help() {
   local COMMAND=$(echo "$0" | sed -e 's/\.\///g')
 
-  echo -e "\n'$COMMAND' builds FFmpegKitNext for the Windows platform using the MinGW-w64 toolchain \
-under MSYS2. Windows libraries are compiled natively, therefore only the architecture of the host \
-machine (arm64 or x86-64) is built, without any external libraries enabled. Options can be used to \
-select architectures and/or enable external libraries. Please note that GPL libraries (external libraries with GPL license) need \
---enable-gpl flag to be set explicitly. arm64 (aarch64) is the primary target and requires an arm64 \
-host. When compilation ends, libraries are created under the prebuilt folder.\n"
+  echo -e "\n'$COMMAND' builds FFmpegKitNext for the Windows platform using the CLANG64 (x86-64) or \
+CLANGARM64 (arm64) MSYS2 environments. Windows libraries are compiled natively, therefore only the \
+architecture of the host machine is built, without any external libraries enabled. Options can be \
+used to enable external libraries. Please note that GPL libraries (external libraries with GPL \
+license) need --enable-gpl flag to be set explicitly. When compilation ends, libraries are created \
+under the prebuilt folder.\n"
   echo -e "Usage: ./$COMMAND [OPTION]...\n"
   echo -e "Specify environment variables as VARIABLE=VALUE to override default build options.\n"
 

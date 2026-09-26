@@ -116,6 +116,9 @@ if [[ -n ${DISPLAY_HELP} ]]; then
   exit 0
 fi
 
+# VALIDATE BUILD ENVIRONMENT
+validate_windows_build_environment || exit 1
+
 echo -e "\nBuilding ffmpeg-kit-next ${BUILD_TYPE_ID}library for Windows\n"
 echo -e -n "INFO: Building ffmpeg-kit-next ${BUILD_VERSION} ${BUILD_TYPE_ID}library for Windows: " 1>>"${BASEDIR}"/build.log 2>&1
 echo -e "$(date)\n" 1>>"${BASEDIR}"/build.log 2>&1
@@ -186,7 +189,7 @@ if [[ -n ${TARGET_ARCH_LIST[0]} ]]; then
 
   initialize_folder "${BASEDIR}/prebuilt/$(get_bundle_directory)"
 
-  create_windows_bundle
+  create_windows_bundle || exit 1
 
   echo -e "ok\n"
 fi
