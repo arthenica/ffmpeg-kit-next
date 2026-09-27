@@ -596,9 +596,12 @@ open class FFmpegKitConfig private constructor() {
          *
          * @param context application context
          * @return the full path of the named pipe
+         * @deprecated Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.
          */
         @JvmStatic
         @Nullable
+        @Suppress("DEPRECATION")
+        @Deprecated("Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.")
         fun registerNewFFmpegPipe(@NonNull context: Context): String? {
 
             // PIPES ARE CREATED UNDER THE PIPES DIRECTORY
@@ -650,8 +653,10 @@ open class FFmpegKitConfig private constructor() {
          * <p>Closes a previously created <code>FFmpeg</code> pipe.
          *
          * @param ffmpegPipePath full path of the FFmpeg pipe
+         * @deprecated Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.
          */
         @JvmStatic
+        @Deprecated("Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.")
         fun closeFFmpegPipe(@NonNull ffmpegPipePath: String) {
             val file = File(ffmpegPipePath)
             if (file.exists()) {

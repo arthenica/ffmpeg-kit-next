@@ -741,11 +741,17 @@ static FlMethodResponse* handle_method_call(FfmpegKitNextFlutterPlugin* self,
 
     // -- Pipes ----------------------------------------------------------------
   } else if (g_strcmp0(m, "registerNewFFmpegPipe") == 0) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     auto pipe = ffmpegkit::FFmpegKitConfig::registerNewFFmpegPipe();
+#pragma GCC diagnostic pop
     return resp_string(pipe ? pipe->c_str() : nullptr);
   } else if (g_strcmp0(m, "closeFFmpegPipe") == 0) {
     const gchar* pipe = get_string_argument(args, "ffmpegPipePath");
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     if (pipe != nullptr) ffmpegkit::FFmpegKitConfig::closeFFmpegPipe(pipe);
+#pragma GCC diagnostic pop
     return resp_null();
 
     // -- Environment / signals ------------------------------------------------

@@ -1168,6 +1168,7 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
         }
     }
 
+    @SuppressWarnings("deprecation")
     protected void registerNewFFmpegPipe(@NonNull final Result result) {
         if (context != null) {
             resultHandler.successAsync(result, FFmpegKitConfig.registerNewFFmpegPipe(context));
@@ -1177,6 +1178,7 @@ public class FFmpegKitFlutterPlugin implements FlutterPlugin, ActivityAware, Met
         }
     }
 
+    @SuppressWarnings("deprecation")
     protected void closeFFmpegPipe(@NonNull final String ffmpegPipePath, @NonNull final Result result) {
         FFmpegKitConfig.closeFFmpegPipe(ffmpegPipePath);
 
