@@ -382,11 +382,17 @@ RCT_EXPORT_METHOD(setFontDirectoryList:(NSArray*)fontDirectoryList fontNameMap:(
 }
 
 RCT_EXPORT_METHOD(registerNewFFmpegPipe:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     resolve([FFmpegKitConfig registerNewFFmpegPipe]);
+#pragma clang diagnostic pop
 }
 
 RCT_EXPORT_METHOD(closeFFmpegPipe:(NSString*)ffmpegPipePath resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     [FFmpegKitConfig closeFFmpegPipe:ffmpegPipePath];
+#pragma clang diagnostic pop
 
     resolve(nil);
 }

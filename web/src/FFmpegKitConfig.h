@@ -50,8 +50,11 @@ class FFmpegKitConfig {
 
     /**
      * Prefix of named pipes created by ffmpeg-kit.
+     *
+     * @deprecated Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.
      */
-    static constexpr const char *FFmpegKitNamedPipePrefix = "fk_pipe_";
+    static constexpr const char *FFmpegKitNamedPipePrefix
+        __attribute__((deprecated("Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead."))) = "fk_pipe_";
 
     /**
      * <p>Enables log and statistics redirection.

@@ -1,18 +1,5 @@
 #!/bin/bash
 
-# SET BUILD OPTIONS
-if [[ -z ${NETTLE_CC_FOR_BUILD} ]]; then
-  if [[ -x /usr/bin/cc ]]; then
-    NETTLE_CC_FOR_BUILD="/usr/bin/cc"
-  else
-    NETTLE_CC_FOR_BUILD="$(command -v cc || command -v clang || command -v gcc)"
-  fi
-fi
-if [[ -z ${NETTLE_CC_FOR_BUILD} ]]; then
-  echo -e "\nERROR: Native C compiler not found for Nettle build-time generators\n" 1>>"${BASEDIR}"/build.log 2>&1
-  return 1
-fi
-
 # ALWAYS CLEAN THE PREVIOUS BUILD
 make distclean 2>/dev/null 1>/dev/null
 
@@ -29,22 +16,9 @@ fi
 overwrite_file "${FFMPEG_KIT_TMPDIR}"/source/config/config.guess "${BASEDIR}"/src/"${LIB_NAME}"/config.guess 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 overwrite_file "${FFMPEG_KIT_TMPDIR}"/source/config/config.sub "${BASEDIR}"/src/"${LIB_NAME}"/config.sub 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 
-if [[ -z ${NETTLE_CC_FOR_BUILD} ]]; then
-  if [[ -x /usr/bin/cc ]]; then
-    NETTLE_CC_FOR_BUILD="/usr/bin/cc"
-  else
-    NETTLE_CC_FOR_BUILD="$(command -v cc || command -v clang || command -v gcc)"
-  fi
-fi
-if [[ -z ${NETTLE_CC_FOR_BUILD} ]]; then
-  echo -e "\nERROR: Native C compiler not found for Nettle build-time generators\n" 1>>"${BASEDIR}"/build.log 2>&1
-  return 1
-fi
-
 emconfigure env \
-  CC_FOR_BUILD="${NETTLE_CC_FOR_BUILD}" \
-  HOST_CC="${NETTLE_CC_FOR_BUILD}" \
-  CPP_FOR_BUILD="${NETTLE_CC_FOR_BUILD} -E" \
+  CC_FOR_BUILD="${HOST_CC}" \
+  CPP_FOR_BUILD="${HOST_CC} -E" \
   ./configure \
   --prefix="${LIB_INSTALL_PREFIX}" \
   --enable-pic \

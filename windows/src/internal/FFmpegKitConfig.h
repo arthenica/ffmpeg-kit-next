@@ -135,9 +135,10 @@ class FFmpegKitConfig {
      * <p>Deprecated on Windows: named pipes are not supported and this method
      * always fails.
      *
+     * @deprecated Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.
      * @return the full path of the named pipe
      */
-    __attribute__((deprecated("Named pipes are not supported on Windows")))
+    __attribute__((deprecated("Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.")))
     static std::shared_ptr<std::string>
     registerNewFFmpegPipe();
 
@@ -147,9 +148,10 @@ class FFmpegKitConfig {
      * <p>Deprecated on Windows: named pipes are not supported and this method
      * does nothing.
      *
+     * @deprecated Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.
      * @param ffmpegPipePath full path of the FFmpeg pipe
      */
-    __attribute__((deprecated("Named pipes are not supported on Windows")))
+    __attribute__((deprecated("Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.")))
     static void
     closeFFmpegPipe(const std::string &ffmpegPipePath);
 

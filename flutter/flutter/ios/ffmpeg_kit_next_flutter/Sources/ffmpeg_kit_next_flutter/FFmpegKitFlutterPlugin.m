@@ -883,11 +883,17 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
 }
 
 - (void)registerNewFFmpegPipe:(FlutterResult)result {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   result([FFmpegKitConfig registerNewFFmpegPipe]);
+#pragma clang diagnostic pop
 }
 
 - (void)closeFFmpegPipe:(NSString*)ffmpegPipePath result:(FlutterResult)result {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   [FFmpegKitConfig closeFFmpegPipe:ffmpegPipePath];
+#pragma clang diagnostic pop
 
   result(nil);
 }

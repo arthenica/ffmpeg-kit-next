@@ -168,6 +168,7 @@ class StringMapArray {
 class FFmpegKitConfig {
   public:
     static constexpr const char *FFmpegKitVersion = "9.0.0";
+    FFMPEGKIT_DEPRECATED("Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.")
     static constexpr const char *FFmpegKitNamedPipePrefix = "fk_pipe_";
 
     /**
@@ -234,9 +235,10 @@ class FFmpegKitConfig {
     /**
      * <p>Named pipes are not supported on Windows. Always returns nullptr.
      *
+     * @deprecated Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.
      * @return nullptr
      */
-    FFMPEGKIT_DEPRECATED("Named pipes are not supported on Windows")
+    FFMPEGKIT_DEPRECATED("Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.")
     static std::shared_ptr<std::string> registerNewFFmpegPipe() {
         return ffmpegkit::detail::takeOptionalString(
             ffk_config_register_new_ffmpeg_pipe());
@@ -245,9 +247,10 @@ class FFmpegKitConfig {
     /**
      * <p>Named pipes are not supported on Windows. Does nothing.
      *
+     * @deprecated Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.
      * @param ffmpegPipePath pipe path
      */
-    FFMPEGKIT_DEPRECATED("Named pipes are not supported on Windows")
+    FFMPEGKIT_DEPRECATED("Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.")
     static void closeFFmpegPipe(const std::string &ffmpegPipePath) {
         ffk_config_close_ffmpeg_pipe(ffmpegPipePath.c_str());
     }

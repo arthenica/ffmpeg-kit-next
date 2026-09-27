@@ -23,6 +23,16 @@ make distclean 2>/dev/null 1>/dev/null
 
 # REGENERATE BUILD FILES IF NECESSARY OR REQUESTED
 if [[ ! -f "${BASEDIR}"/src/"${LIB_NAME}"/configure ]] || [[ ${RECONF_libiconv} -eq 1 ]]; then
+
+  # AUTOMAKE COPIES ITS HELPER SCRIPTS FROM THE READ-ONLY NIX STORE AND autogen.sh
+  # LATER OVERWRITES THOSE COPIES WITH cp -p, WHICH FAILS ON ANY REGENERATION
+  chmod -R u+w "${BASEDIR}"/src/"${LIB_NAME}" || return 1
+
+  # Makefile.devel BUILDS AND RUNS THE genaliases HELPER WITH A HARD-CODED gcc.
+  # IT RUNS ON THE BUILD MACHINE, SO IT NEEDS HOST_CC, NOT THE ANDROID CC
+  git checkout "${BASEDIR}"/src/"${LIB_NAME}"/Makefile.devel 1>>"${BASEDIR}"/build.log 2>&1
+  ${SED_INLINE} "s|^CC = gcc -Wall|CC = ${HOST_CC} -Wall|g" "${BASEDIR}"/src/"${LIB_NAME}"/Makefile.devel || return 1
+
   ./autogen.sh || return 1
 fi
 
