@@ -10,16 +10,6 @@ if [[ -z ${ANDROID_NDK_ROOT} ]]; then
   exit 1
 fi
 
-if [[ -z ${HOST_CC} ]]; then
-  HOST_CC="$(command -v clang)"
-fi
-
-if [[ -z ${HOST_CC} ]]; then
-  echo -e "\n(*) clang not found. Install clang or set HOST_CC to a C compiler for the build machine\n"
-  exit 1
-fi
-export HOST_CC
-
 # LOAD INITIAL SETTINGS
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export BASEDIR="${SCRIPT_DIR}"

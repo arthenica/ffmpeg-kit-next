@@ -295,6 +295,10 @@ get_ldflags() {
 }
 
 set_toolchain_paths() {
+  # CROSS-COMPILING, SO TOOLS THAT RUN ON THE BUILD MACHINE NEED THEIR OWN
+  # COMPILER
+  set_host_cc "$(command -v clang)"
+
   if [ ! -f "${FFMPEG_KIT_TMPDIR}/gas-preprocessor.pl" ]; then
     DOWNLOAD_RESULT=$(download "https://github.com/arthenica/gas-preprocessor/raw/v20210917/gas-preprocessor.pl" "gas-preprocessor.pl" "exit")
     if [[ ${DOWNLOAD_RESULT} -ne 0 ]]; then

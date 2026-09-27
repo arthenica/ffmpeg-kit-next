@@ -184,7 +184,6 @@
         file
         findutils
         gawk
-        gcc
         gnumake
         gnugrep
         groff
@@ -202,6 +201,7 @@
 
       webToolchainPackages = pkgs: commonToolPackages pkgs ++ (with pkgs; [
         binaryen
+        clang
         coreutils
         emscripten
         file

@@ -75,7 +75,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             autoconf automake libtool pkg-config gettext autopoint autogen \
             cmake bison meson ninja-build texinfo gperf ragel \
-            make patch file findutils gawk rsync \
+            clang make patch file findutils gawk rsync \
             python3 perl ruby curl wget git zip unzip xz-utils tar gzip sed grep diffutils \
             bash which
       - name: set up emscripten

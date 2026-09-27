@@ -1,18 +1,5 @@
 #!/bin/bash
 
-# SET BUILD OPTIONS
-if [[ -z ${GMP_CC_FOR_BUILD} ]]; then
-  if [[ -x /usr/bin/cc ]]; then
-    GMP_CC_FOR_BUILD="/usr/bin/cc"
-  else
-    GMP_CC_FOR_BUILD="$(command -v cc || command -v clang || command -v gcc)"
-  fi
-fi
-if [[ -z ${GMP_CC_FOR_BUILD} ]]; then
-  echo -e "\nERROR: Native C compiler not found for GMP build-time generators\n" 1>>"${BASEDIR}"/build.log 2>&1
-  return 1
-fi
-
 # gmp HAS NO OPTION TO SKIP ITS MANUAL. IT DOES SHIP doc/gmp.info, BUT git DOES
 # NOT PRESERVE TIMESTAMPS, SO AFTER A CLONE gmp.texi IS OFTEN A FEW MILLISECONDS
 # NEWER THAN gmp.info AND make REGENERATES THE MANUAL. THAT NEEDS makeinfo,
@@ -33,9 +20,8 @@ overwrite_file "${FFMPEG_KIT_TMPDIR}"/source/config/config.guess "${BASEDIR}"/sr
 overwrite_file "${FFMPEG_KIT_TMPDIR}"/source/config/config.sub "${BASEDIR}"/src/"${LIB_NAME}"/config.sub 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 
 ABI=standard emconfigure env \
-  CC_FOR_BUILD="${GMP_CC_FOR_BUILD}" \
-  HOST_CC="${GMP_CC_FOR_BUILD}" \
-  CPP_FOR_BUILD="${GMP_CC_FOR_BUILD} -E" \
+  CC_FOR_BUILD="${HOST_CC}" \
+  CPP_FOR_BUILD="${HOST_CC} -E" \
   ./configure \
   --prefix="${LIB_INSTALL_PREFIX}" \
   --with-pic \

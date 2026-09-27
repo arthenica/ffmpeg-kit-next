@@ -713,6 +713,22 @@ get_host() {
   esac
 }
 
+# SETS HOST_CC, THE C COMPILER FOR TOOLS THAT RUN ON THE BUILD MACHINE, LIKE
+# FFmpeg's HOST PROGRAMS. A HOST_CC SET BY THE USER ALWAYS WINS.
+#
+# THE DEFAULT MUST BE THE SAME FOR EVERY CALL IN A RUN. ONCE EXPORTED, IT CANNOT
+# BE TOLD APART FROM A HOST_CC SET BY THE USER, SO LATER CALLS KEEP IT.
+#
+# 1. default compiler
+set_host_cc() {
+  export HOST_CC="${HOST_CC:-$1}"
+
+  if [[ -z ${HOST_CC} ]]; then
+    echo -e "\n(*) No C compiler found for the build machine. Install clang or set HOST_CC\n" 1>&2
+    exit 1
+  fi
+}
+
 #
 # 1. key
 # 2. value

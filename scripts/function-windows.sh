@@ -530,6 +530,10 @@ set_toolchain_paths() {
     exit 1
   fi
 
+  # THE BUILD IS NATIVE, SO THE C COMPILER ALSO BUILDS THE TOOLS THAT RUN ON THE
+  # BUILD MACHINE
+  set_host_cc "${CC}"
+
   # BINUTILS: CLANG64 AND CLANGARM64 SHIP LLVM BINUTILS IN ${MINGW_PREFIX}/bin.
   # TRY THERE FIRST, THEN FALL BACK TO PATH.
   export AR=$(resolve_environment_tool "ar")
