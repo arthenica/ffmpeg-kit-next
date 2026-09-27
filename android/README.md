@@ -84,7 +84,7 @@ Build it locally first, then consume the generated local Maven repository.
 repositories {
     // Local Maven repository produced by the build (match the API level you built).
     maven { url "<path-to-repo>/prebuilt/bundle-android-aar-24-maven" }
-    // Resolves smart-exception-java, a transitive dependency declared in the POM.
+    // Resolves smart-exception-java and kotlin-stdlib, transitive dependencies declared in the POM.
     mavenCentral()
 }
 

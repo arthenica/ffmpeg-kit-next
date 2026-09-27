@@ -394,6 +394,12 @@ if [[ -n ${ANDROID_ARCHITECTURES} ]]; then
       <version>0.2.1</version>
       <scope>runtime</scope>
     </dependency>
+    <dependency>
+      <groupId>org.jetbrains.kotlin</groupId>
+      <artifactId>kotlin-stdlib</artifactId>
+      <version>2.0.21</version>
+      <scope>runtime</scope>
+    </dependency>
   </dependencies>
 </project>
 EOF
