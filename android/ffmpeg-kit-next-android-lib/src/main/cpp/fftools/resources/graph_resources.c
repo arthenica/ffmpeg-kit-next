@@ -7,7 +7,7 @@
  *
  * This generated file is part of FFmpegKitNext.
  * It is generated from FFmpeg's fftools/resources/graph.css and
- * fftools/resources/graph.html at tag n9.0.1.
+ * fftools/resources/graph.html at tag n9.0.2.
  *
  * The original FFmpeg source is licensed under the GNU Lesser General
  * Public License version 2.1 or later. FFmpegKitNext distributes this
@@ -32,6 +32,10 @@
  * Modification history:
  *
  * ffmpeg-kit changes by Taner Sener
+ *
+ * 09.2026
+ * --------------------------------------------------------
+ * - FFmpeg 9.0.2 changes migrated
  *
  * 08.2026
  * --------------------------------------------------------

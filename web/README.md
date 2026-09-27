@@ -41,9 +41,10 @@ provides Emscripten (emsdk), CMake and the build tools.
 
 #### 2.1 Prerequisites
 
-Web builds require the following tools.
+Web build prerequisites depend on the workflow you choose.
 
-- **Nix package manager** — the `web-wasm32-emscripten` profile supplies the Emscripten and CMake.
+- **Nix workflow, recommended** — install the Nix package manager. The `web-wasm32-emscripten` profile supplies Emscripten, CMake, `clang` and the build tools.
+- **Non-Nix workflow** — install Emscripten, CMake, `clang` and the build tools yourself. See the [Building](https://github.com/arthenica/ffmpeg-kit-next/wiki/Building) wiki page for the non-Nix setup.
 
 #### 2.2 Build Variants and External Libraries
 

@@ -315,7 +315,7 @@ get_app_specific_cflags() {
     APP_FLAGS="-std=gnu99 -Wno-unused-function -DPIC"
     ;;
   xvidcore)
-    APP_FLAGS=""
+    APP_FLAGS="-std=gnu17"
     ;;
   *)
     APP_FLAGS="-std=c99 -Wno-unused-function"
@@ -1160,6 +1160,11 @@ android_ndk_cmake() {
 }
 
 set_toolchain_paths() {
+  # CROSS-COMPILING, SO TOOLS THAT RUN ON THE BUILD MACHINE NEED THEIR OWN
+  # COMPILER. RESOLVED BEFORE THE NDK IS ADDED TO PATH, SO THE NDK clang IS NEVER
+  # PICKED AS THE HOST COMPILER
+  set_host_cc "$(command -v clang)"
+
   export PATH="$PATH":"${ANDROID_TOOLCHAIN}"/bin
 
   HOST=$(get_host)

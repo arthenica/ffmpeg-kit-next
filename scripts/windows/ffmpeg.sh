@@ -516,7 +516,7 @@ fi
   --ar="${AR}" \
   --cc="${CC}" \
   --cxx="${CXX}" \
-  --host-cc="${CC}" \
+  --host-cc="${HOST_CC}" \
   --ranlib="${RANLIB}" \
   --strip="${STRIP}" \
   --nm="${NM}" \
