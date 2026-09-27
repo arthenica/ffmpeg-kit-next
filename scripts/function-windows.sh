@@ -22,49 +22,87 @@ export PKG_CONFIG_DONT_DEFINE_PREFIX=1
 # THERE IS NO CACHED GENERATOR TO CONFLICT WITH.
 export CMAKE_GENERATOR="Unix Makefiles"
 
-# WINDOWS LIBRARIES ARE BUILT WITH THE MinGW-w64 TOOLCHAIN UNDER MSYS2 AND ARE
-# COMPILED NATIVELY, SO ONLY THE ARCHITECTURE OF THE HOST MACHINE CAN BE BUILT.
-# arm64 (aarch64) IS THE PRIMARY TARGET AND REQUIRES AN arm64 WINDOWS HOST
-# (MSYS2 CLANGARM64); x86-64 REQUIRES AN x86-64 HOST.
+# WINDOWS LIBRARIES ARE BUILT WITH THE CLANG64 AND CLANGARM64 MSYS2
+# ENVIRONMENTS (WHICH USE clang + libc++ + lld + LLVM binutils). LIBRARIES
+# ARE COMPILED NATIVELY, SO ONLY THE ARCHITECTURE OF THE HOST MACHINE CAN BE
+# BUILT. arm64 REQUIRES CLANGARM64 ON AN arm64 HOST; x86-64 REQUIRES CLANG64
+# ON AN x86-64 HOST. THIS FUNCTION ENABLES THE DEFAULT ARCHITECTURE FOR THE
+# ACTIVE MSYSTEM. ANY OTHER MSYSTEM (OR UNSET) ENABLES NOTHING; THE GUARD
+# FUNCTION validate_windows_build_environment() WILL REPORT THE ERROR LATER.
 enable_default_windows_architectures() {
-  # Under MSYS2, `uname -m` reports the architecture of the MSYS2 runtime
-  # process, which on a Windows-on-ARM host is an emulated x86_64 process even
-  # inside the arm64-native CLANGARM64 environment. It does NOT describe the
-  # architecture the active MinGW toolchain targets. Prefer the MSYS2 variables
-  # that describe the MinGW target (MSYSTEM_CARCH / MINGW_CHOST) and only fall
-  # back to `uname -m` outside MSYS2.
-  local host_arch="${MSYSTEM_CARCH:-}"
+  case "${MSYSTEM}" in
+  CLANGARM64)
+    ENABLED_ARCHITECTURES[ARCH_ARM64]=1
+    ;;
+  CLANG64)
+    ENABLED_ARCHITECTURES[ARCH_X86_64]=1
+    ;;
+  esac
+}
 
-  # Derive from the MinGW target triplet when MSYSTEM_CARCH is not exported.
-  if [[ -z ${host_arch} && -n ${MINGW_CHOST} ]]; then
-    host_arch="${MINGW_CHOST%%-*}"
-  fi
+# VALIDATES THAT THE BUILD RUNS IN A SUPPORTED MSYS2 ENVIRONMENT (CLANG64 OR
+# CLANGARM64) AND THAT THE ENABLED ARCHITECTURES MATCH THE ACTIVE SHELL.
+#
+# CLANG64 AND CLANGARM64 ARE THE ONLY SUPPORTED MSYS2 ENVIRONMENTS BECAUSE THE
+# WINDOWS BUILD USES clang + libc++ + lld + LLVM binutils. OTHER ENVIRONMENTS
+# LIKE MINGW64 AND UCRT64 SHIP gcc AND libstdc++, WHICH WOULD PRODUCE MSYS2 DLL
+# DEPENDENCIES AND BREAK THE STATIC LIBC++ RUNTIME DESIGN.
+#
+# x86-64 ALSO REQUIRES nasm FOR THE x86 ASSEMBLY OF FFmpeg AND SEVERAL EXTERNAL
+# LIBRARIES (dav1d, x264, x265, libvpx, openh264). IT IS CHECKED HERE, ONCE,
+# BEFORE ANYTHING IS DOWNLOADED OR BUILT, SO THE LIBRARY SCRIPTS NEED NO CHECK
+# OF THEIR OWN.
+validate_windows_build_environment() {
+  # Check MSYSTEM is one of the supported values.
+  case "${MSYSTEM}" in
+  CLANG64 | CLANGARM64)
+    ;;
+  *)
+    local detected="${MSYSTEM:-unset}"
+    echo -e "\n(*) Unsupported MSYSTEM: ${detected}\n" 1>&2
+    # Both shells are listed rather than guessed: under MSYS2 `uname -m` reports
+    # x86_64 on an arm64 host too, because the MSYS2 runtime itself is emulated.
+    echo -e "    The Windows build requires the MSYS2 CLANG64 or CLANGARM64 shell:" 1>&2
+    echo -e "      x86-64 hosts: open MSYS2 CLANG64 and run" 1>&2
+    echo -e "        pacman -S mingw-w64-clang-x86_64-toolchain" 1>&2
+    echo -e "      arm64 hosts: open MSYS2 CLANGARM64 and run" 1>&2
+    echo -e "        pacman -S mingw-w64-clang-aarch64-toolchain\n" 1>&2
+    echo -e "ERROR: MSYSTEM=${detected} is not supported. Use CLANG64 or CLANGARM64\n" 1>>"${BASEDIR}"/build.log 2>&1
+    return 1
+    ;;
+  esac
 
-  # Fall back to the MSYSTEM name, which is the most reliably-set signal.
-  if [[ -z ${host_arch} && -n ${MSYSTEM} ]]; then
+  # If architectures were explicitly enabled, check they match the shell.
+  if [[ ${ENABLED_ARCHITECTURES[ARCH_X86_64]} -eq 1 || ${ENABLED_ARCHITECTURES[ARCH_ARM64]} -eq 1 ]]; then
     case "${MSYSTEM}" in
-    CLANGARM64)
-      host_arch="aarch64"
+    CLANG64)
+      if [[ ${ENABLED_ARCHITECTURES[ARCH_ARM64]} -eq 1 ]]; then
+        echo -e "\n(*) Architecture mismatch: CLANG64 (x86-64) shell cannot build arm64.\n" 1>&2
+        echo -e "ERROR: arm64 enabled in CLANG64 shell\n" 1>>"${BASEDIR}"/build.log 2>&1
+        return 1
+      fi
       ;;
-    MINGW64 | UCRT64 | CLANG64)
-      host_arch="x86_64"
+    CLANGARM64)
+      if [[ ${ENABLED_ARCHITECTURES[ARCH_X86_64]} -eq 1 ]]; then
+        echo -e "\n(*) Architecture mismatch: CLANGARM64 (arm64) shell cannot build x86-64.\n" 1>&2
+        echo -e "ERROR: x86-64 enabled in CLANGARM64 shell\n" 1>>"${BASEDIR}"/build.log 2>&1
+        return 1
+      fi
       ;;
     esac
   fi
 
-  # Outside MSYS2, `uname -m` is accurate.
-  if [[ -z ${host_arch} ]]; then
-    host_arch=$(uname -m)
+  # x86-64 requires nasm for FFmpeg's x86 assembly.
+  if [[ ${ENABLED_ARCHITECTURES[ARCH_X86_64]} -eq 1 ]]; then
+    if ! [ -x "$(command -v nasm)" ]; then
+      echo -e "\n(*) nasm command not found, required for x86-64 FFmpeg assembly.\n" 1>&2
+      echo -e "    Install it with: pacman -S \${MINGW_PACKAGE_PREFIX}-nasm\n" 1>&2
+      echo -e "ERROR: nasm not found on PATH\n" 1>>"${BASEDIR}"/build.log 2>&1
+      return 1
+    fi
   fi
 
-  case "${host_arch}" in
-  aarch64 | arm64)
-    ENABLED_ARCHITECTURES[ARCH_ARM64]=1
-    ;;
-  *)
-    ENABLED_ARCHITECTURES[ARCH_X86_64]=1
-    ;;
-  esac
+  return 0
 }
 
 set_default_min_windows_platform_version() {
@@ -371,7 +409,7 @@ verify_meson() {
   fi
 
   # msys PACKAGES INSTALL UNDER /usr/bin, MinGW PACKAGES UNDER THE ENVIRONMENT
-  # PREFIX (/clangarm64/bin, /mingw64/bin, /ucrt64/bin, ...).
+  # PREFIX (/clang64/bin, /clangarm64/bin).
   case "${MESON_PATH}" in
   /usr/bin/*)
     echo -e "\n(*) ${MESON_PATH} is the msys build of meson, which cannot configure a MinGW target." 1>&2
@@ -434,41 +472,76 @@ resolve_windows_tool() {
   done
 }
 
+# RESOLVES THE FIRST AVAILABLE TOOL FROM A LIST OF CANDIDATES, LOOKING IN THE
+# ACTIVE MSYS2 ENVIRONMENT (${MINGW_PREFIX}/bin, E.G. /clang64/bin) BEFORE
+# FALLING BACK TO THE PATH, AND PRINTS ITS ABSOLUTE PATH IN MSYS POSIX FORM
+# (/clang64/bin/clang.exe). PRINTS NOTHING WHEN NONE ARE FOUND.
+#
+# SEARCHING THE ENVIRONMENT FIRST KEEPS A TOOL FROM ANOTHER MinGW TOOLCHAIN
+# ON PATH FROM WINNING OVER THE ONE THE ACTIVE ENVIRONMENT SHIPS.
+resolve_environment_tool() {
+  local candidate
+
+  # An empty MINGW_PREFIX would search /bin, which is /usr/bin under MSYS2 and
+  # holds msys tools, not the environment's toolchain.
+  if [[ -n ${MINGW_PREFIX} ]]; then
+    for candidate in "$@"; do
+      # Try with .exe suffix in MINGW_PREFIX/bin
+      if [[ -f "${MINGW_PREFIX}/bin/${candidate}.exe" ]]; then
+        echo "${MINGW_PREFIX}/bin/${candidate}.exe"
+        return 0
+      fi
+      # Try without suffix in MINGW_PREFIX/bin
+      if [[ -f "${MINGW_PREFIX}/bin/${candidate}" ]]; then
+        echo "${MINGW_PREFIX}/bin/${candidate}"
+        return 0
+      fi
+    done
+  fi
+
+  # Fall back to PATH
+  resolve_windows_tool "$@"
+}
+
 set_toolchain_paths() {
   HOST=$(get_host)
 
-  # COMPILERS: PREFER TRIPLET-PREFIXED WRAPPERS (llvm-mingw clang or GNU
-  # MinGW-w64 gcc), THEN FALL BACK TO THE NATIVE MSYS2 COMPILER. THE BUILD IS
+  # COMPILERS: CLANG64 AND CLANGARM64 SHIP BOTH TRIPLET-PREFIXED AND PLAIN
+  # NAMES. TRY THE MINGW_PREFIX FIRST, THEN FALL BACK TO PATH. THE BUILD IS
   # NATIVE, SO THE HOST ENVIRONMENT ALREADY TARGETS ${ARCH}.
-  export CC=$(resolve_windows_tool "${HOST}-clang" "${HOST}-gcc" "clang" "gcc" "cc")
-  export CXX=$(resolve_windows_tool "${HOST}-clang++" "${HOST}-g++" "clang++" "g++" "c++")
+  export CC=$(resolve_environment_tool "${HOST}-clang" "clang")
+  export CXX=$(resolve_environment_tool "${HOST}-clang++" "clang++")
 
-  # FAIL EARLY WITH AN ACTIONABLE MESSAGE WHEN THE MinGW-w64 COMPILER FOR ${ARCH}
+  # FAIL EARLY WITH AN ACTIONABLE MESSAGE WHEN THE CLANG COMPILER FOR ${ARCH}
   # IS NOT ON PATH.
   if [[ -z ${CC} || -z ${CXX} ]]; then
     local pkg="mingw-w64-clang-aarch64-toolchain (CLANGARM64 shell)"
     case ${ARCH} in
     x86-64)
-      pkg="mingw-w64-x86_64-toolchain (MINGW64 shell) or mingw-w64-ucrt-x86_64-toolchain (UCRT64 shell)"
+      pkg="mingw-w64-clang-x86_64-toolchain (CLANG64 shell)"
       ;;
     esac
 
-    echo -e "\n(*) No MinGW-w64 compiler found on PATH for ${ARCH} (${HOST})." 1>&2
-    echo -e "    Looked for: ${HOST}-clang, ${HOST}-gcc, clang, gcc, cc" 1>&2
+    echo -e "\n(*) No clang compiler found for ${ARCH} (${HOST})." 1>&2
+    echo -e "    Looked for: ${HOST}-clang, clang (in ${MINGW_PREFIX}/bin and PATH)" 1>&2
     echo -e "    Install the toolchain from the matching MSYS2 shell, e.g.:" 1>&2
     echo -e "      pacman -S ${pkg}\n" 1>&2
     echo -e "ERROR: No C/C++ compiler resolved for ${ARCH}. CC='${CC}' CXX='${CXX}'\n" 1>>"${BASEDIR}"/build.log 2>&1
     exit 1
   fi
 
-  # BINUTILS: llvm-mingw SHIPS llvm-* WRAPPERS UNDER THE TRIPLET PREFIX, GNU
-  # MinGW-w64 SHIPS THE CLASSIC binutils NAMES.
-  export AR=$(resolve_windows_tool "${HOST}-ar" "ar" "llvm-ar")
-  export RANLIB=$(resolve_windows_tool "${HOST}-ranlib" "ranlib" "llvm-ranlib")
-  export STRIP=$(resolve_windows_tool "${HOST}-strip" "strip" "llvm-strip")
-  export NM=$(resolve_windows_tool "${HOST}-nm" "nm" "llvm-nm")
-  export DLLTOOL=$(resolve_windows_tool "${HOST}-dlltool" "dlltool" "llvm-dlltool")
-  export WINDRES=$(resolve_windows_tool "${HOST}-windres" "windres" "llvm-windres")
+  # THE BUILD IS NATIVE, SO THE C COMPILER ALSO BUILDS THE TOOLS THAT RUN ON THE
+  # BUILD MACHINE
+  set_host_cc "${CC}"
+
+  # BINUTILS: CLANG64 AND CLANGARM64 SHIP LLVM BINUTILS IN ${MINGW_PREFIX}/bin.
+  # TRY THERE FIRST, THEN FALL BACK TO PATH.
+  export AR=$(resolve_environment_tool "ar")
+  export RANLIB=$(resolve_environment_tool "ranlib")
+  export STRIP=$(resolve_environment_tool "strip")
+  export NM=$(resolve_environment_tool "nm")
+  export DLLTOOL=$(resolve_environment_tool "dlltool")
+  export WINDRES=$(resolve_environment_tool "windres")
 
   # arm64 ASSEMBLY IS GAS .S, ASSEMBLED BY THE C COMPILER. x86_64 ASSEMBLY IS
   # NASM, WHICH FFMPEG DETECTS ON ITS OWN.
@@ -508,7 +581,8 @@ seed_gettext_autotools_aux() {
 
   for candidate in \
     "${AUTOPOINT_PATH:+$(dirname "$(dirname "${AUTOPOINT_PATH}")")/share/gettext}" \
-    "/usr/share/gettext" "/mingw64/share/gettext" "/ucrt64/share/gettext" "/clang64/share/gettext" "/clangarm64/share/gettext"; do
+    "${MINGW_PREFIX:+${MINGW_PREFIX}/share/gettext}" \
+    "/usr/share/gettext"; do
     if [[ -n "${candidate}" ]] && [[ -f "${candidate}/config.rpath" ]]; then
       GETTEXT_DATADIR="${candidate}"
       break
@@ -737,7 +811,7 @@ Cflags: -I\${includedir}
 EOF
 }
 
-# THE MACHINE NAME lib.exe AND dlltool USE FOR THE TARGET ARCHITECTURE.
+# THE MACHINE NAME lib.exe USES FOR THE TARGET ARCHITECTURE.
 get_msvc_machine() {
   case ${ARCH} in
   arm64)
@@ -745,6 +819,20 @@ get_msvc_machine() {
     ;;
   x86-64)
     echo "x64"
+    ;;
+  esac
+}
+
+# THE MACHINE NAME dlltool USES FOR THE TARGET ARCHITECTURE. dlltool DIFFERS
+# FROM lib.exe: IT EXPECTS "i386:x86-64" FOR x86-64 AND "arm64" FOR arm64.
+# FFmpeg's configure (line 6215–6244) uses these exact names.
+get_dlltool_machine() {
+  case ${ARCH} in
+  arm64)
+    echo "arm64"
+    ;;
+  x86-64)
+    echo "i386:x86-64"
     ;;
   esac
 }
@@ -838,7 +926,9 @@ create_ffmpegkit_msvc_import_library() {
     ) 1>>"${BASEDIR}"/build.log 2>&1
   else
     echo -e "INFO: lib.exe not found, falling back to dlltool for ffmpegkit.lib\n" 1>>"${BASEDIR}"/build.log 2>&1
-    "${DLLTOOL}" -m "${MACHINE}" -d "${DEF_PATH}" -l "${LIB_PATH}" -D "${DLL_NAME}" 1>>"${BASEDIR}"/build.log 2>&1
+    local DLLTOOL_MACHINE
+    DLLTOOL_MACHINE=$(get_dlltool_machine)
+    "${DLLTOOL}" -m "${DLLTOOL_MACHINE}" -d "${DEF_PATH}" -l "${LIB_PATH}" -D "${DLL_NAME}" 1>>"${BASEDIR}"/build.log 2>&1
   fi
 
   if [[ ! -f ${LIB_PATH} ]]; then
@@ -858,10 +948,9 @@ create_ffmpegkit_msvc_import_library() {
 # WHICH IS THE DEFAULT.
 #
 # THE LIST IS DERIVED FROM WHAT THE BUILT DLLs ACTUALLY IMPORT RATHER THAN
-# HARDCODED, SO IT STAYS CORRECT ACROSS MSYS2 ENVIRONMENTS: CLANGARM64 AND
-# CLANG64 NEED libc++.dll, MINGW64 AND UCRT64 NEED libstdc++-6.dll AND
-# libgcc_s_seh-1.dll INSTEAD. SYSTEM DLLs (KERNEL32, THE api-ms-win-crt-* UCRT
-# FACADES, WHICH SHIP WITH WINDOWS) AND THE BUNDLE'S OWN DLLs ARE SKIPPED.
+# HARDCODED. THE CLANG64 AND CLANGARM64 ENVIRONMENTS USE libc++ AND optionally
+# libunwind. SYSTEM DLLs (KERNEL32, THE api-ms-win-crt-* UCRT FACADES, WHICH
+# SHIP WITH WINDOWS) AND THE BUNDLE'S OWN DLLs ARE SKIPPED.
 copy_mingw_runtime_libraries() {
   local BUNDLE_BIN_DIRECTORY="$1"
 
@@ -873,7 +962,7 @@ copy_mingw_runtime_libraries() {
   TOOLCHAIN_BIN_DIRECTORY=$(dirname "${CC}")
 
   local OBJDUMP_TOOL
-  OBJDUMP_TOOL=$(resolve_windows_tool "${HOST}-objdump" "objdump" "llvm-objdump")
+  OBJDUMP_TOOL=$(resolve_environment_tool "objdump")
   if [[ -z ${OBJDUMP_TOOL} ]]; then
     echo -e "\nERROR: objdump not found, cannot resolve the runtime dependencies of the bundle\n" 1>>"${BASEDIR}"/build.log 2>&1
     return 1

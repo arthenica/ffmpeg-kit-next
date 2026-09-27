@@ -132,15 +132,17 @@ typedef NS_ENUM(NSUInteger, Signal) {
  * <p>Please note that creator is responsible of closing created pipes.
  *
  * @return the full path of the named pipe
+ * @deprecated Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.
  */
-+ (NSString *)registerNewFFmpegPipe;
++ (NSString *)registerNewFFmpegPipe __attribute__((deprecated("Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.")));
 
 /**
  * <p>Closes a previously created <code>FFmpeg</code> pipe.
  *
  * @param ffmpegPipePath full path of the FFmpeg pipe
+ * @deprecated Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.
  */
-+ (void)closeFFmpegPipe:(NSString *)ffmpegPipePath;
++ (void)closeFFmpegPipe:(NSString *)ffmpegPipePath __attribute__((deprecated("Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.")));
 
 /**
  * <p>Returns the version of FFmpeg bundled within <code>FFmpegKit</code>

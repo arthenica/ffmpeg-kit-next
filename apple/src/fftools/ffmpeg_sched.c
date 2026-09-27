@@ -6,7 +6,7 @@
  * Copyright (c) 2026 Taner Sener
  *
  * This modified file is part of FFmpegKitNext.
- * It is derived from FFmpeg's fftools/ffmpeg_sched.c at tag n9.0.1.
+ * It is derived from FFmpeg's fftools/ffmpeg_sched.c at tag n9.0.2.
  *
  * The original FFmpeg source is licensed under the GNU Lesser General
  * Public License version 2.1 or later. FFmpegKitNext distributes this
@@ -31,6 +31,10 @@
  * Modification history:
  *
  * ffmpeg-kit changes by Taner Sener
+ *
+ * 09.2026
+ * --------------------------------------------------------
+ * - FFmpeg 9.0.2 changes migrated
  *
  * 08.2026
  * --------------------------------------------------------
@@ -69,7 +73,6 @@ void *loadFFmpegContext(FFmpegContext *context);
 #include "libavcodec/packet.h"
 
 #include "libavutil/avassert.h"
-#include "libavutil/container_fifo.h"
 #include "libavutil/error.h"
 #include "libavutil/fifo.h"
 #include "libavutil/frame.h"
@@ -124,7 +127,6 @@ typedef struct SchDec {
     unsigned         nb_outputs;
 
     SchTask             task;
-    SchWaiter           waiter;
     // Queue for receiving input packets, one stream.
     ThreadQueue        *queue;
 
@@ -134,9 +136,6 @@ typedef struct SchDec {
 
     // temporary storage used by sch_dec_send()
     AVFrame            *send_frame;
-
-    // internal queue of undecoded packets used by sch_dec_receive()
-    AVContainerFifo    *overflow;
 } SchDec;
 
 typedef struct SchSyncQueue {
@@ -596,7 +595,6 @@ void sch_free(Scheduler **psch)
         tq_free(&dec->queue);
 
         av_thread_message_queue_free(&dec->queue_end_ts);
-        av_container_fifo_free(&dec->overflow);
 
         for (unsigned j = 0; j < dec->nb_outputs; j++) {
             SchDecOutput *o = &dec->outputs[j];
@@ -608,8 +606,6 @@ void sch_free(Scheduler **psch)
         av_freep(&dec->outputs);
 
         av_frame_free(&dec->send_frame);
-
-        waiter_uninit(&dec->waiter);
     }
     av_freep(&sch->dec);
 
@@ -859,14 +855,6 @@ int sch_add_dec(Scheduler *sch, SchThreadFunc func, void *ctx, int send_end_ts)
         if (ret < 0)
             return ret;
     }
-
-    dec->overflow = av_container_fifo_alloc_avpacket(0);
-    if (!dec->overflow)
-        return AVERROR(ENOMEM);
-
-    ret = waiter_init(&dec->waiter);
-    if (ret < 0)
-        return ret;
 
     return idx;
 }
@@ -1364,9 +1352,8 @@ int sch_mux_sub_heartbeat_add(Scheduler *sch, unsigned mux_idx, unsigned stream_
 enum {
     UNCHOKE_DEMUX  = (1 << 0),
     UNCHOKE_FILTER = (1 << 1),
-    UNCHOKE_DECODE = (1 << 2),
 
-    UNCHOKE_ALL = UNCHOKE_DEMUX | UNCHOKE_FILTER | UNCHOKE_DECODE,
+    UNCHOKE_ALL = UNCHOKE_DEMUX | UNCHOKE_FILTER,
 };
 
 static void unchoke_for_stream(Scheduler *sch, SchedulerNode src, int flags);
@@ -1381,10 +1368,8 @@ static void unchoke_downstream(Scheduler *sch, SchedulerNode *dst)
     switch (dst->type) {
     case SCH_NODE_TYPE_DEC:
         dec = &sch->dec[dst->idx];
-        if (!dec->waiter.choked_next) {
-            for (int i = 0; i < dec->nb_outputs; i++)
-                unchoke_downstream(sch, dec->outputs[i].dst);
-        }
+        for (int i = 0; i < dec->nb_outputs; i++)
+            unchoke_downstream(sch, dec->outputs[i].dst);
         break;
     case SCH_NODE_TYPE_ENC:
         enc = &sch->enc[dst->idx];
@@ -1415,7 +1400,6 @@ static void unchoke_for_stream(Scheduler *sch, SchedulerNode src, int flags)
     while (1) {
         SchFilterGraph *fg;
         SchDemux *demux;
-        SchDec *dec;
         switch (src.type) {
         case SCH_NODE_TYPE_DEMUX:
             // fed directly by a demuxer (i.e. not through a filtergraph)
@@ -1429,11 +1413,7 @@ static void unchoke_for_stream(Scheduler *sch, SchedulerNode src, int flags)
             }
             return;
         case SCH_NODE_TYPE_DEC:
-            dec = &sch->dec[src.idx];
-            if (!(flags & UNCHOKE_DECODE))
-                return;
-            dec->waiter.choked_next = 0;
-            src = dec->src;
+            src = sch->dec[src.idx].src;
             continue;
         case SCH_NODE_TYPE_ENC:
             src = sch->enc[src.idx].src;
@@ -1512,7 +1492,6 @@ static void schedule_update_locked(Scheduler *sch)
 
     RESET_WAITER(demux);
     RESET_WAITER(filters);
-    RESET_WAITER(dec);
 
     // figure out the sources that are allowed to proceed
     for (unsigned i = 0; i < sch->nb_mux; i++) {
@@ -1523,11 +1502,8 @@ static void schedule_update_locked(Scheduler *sch)
 
             // unblock sources for output streams that are not finished
             // and not too far ahead of the trailing stream
-            if (ms->source_finished) {
-                // still allow decoders to drain
-                unchoke_for_stream(sch, ms->src, UNCHOKE_DECODE);
+            if (ms->source_finished)
                 continue;
-            }
             if (dts == AV_NOPTS_VALUE && ms->last_dts != AV_NOPTS_VALUE)
                 continue;
             if (dts != AV_NOPTS_VALUE && ms->last_dts - dts >= SCHEDULE_TOLERANCE)
@@ -1581,7 +1557,6 @@ static void schedule_update_locked(Scheduler *sch)
 
     UPDATE_WAITER(demux);
     UPDATE_WAITER(filters);
-    UPDATE_WAITER(dec);
 }
 
 enum {
@@ -2384,12 +2359,6 @@ int sch_dec_receive(Scheduler *sch, unsigned dec_idx, AVPacket *pkt)
     av_assert0(dec_idx < sch->nb_dec);
     dec = &sch->dec[dec_idx];
 
-retry:
-    // Pull a packet from the overflow FIFO while unchoked or expecting EOF ts
-    if (av_container_fifo_can_read(dec->overflow) &&
-        (!atomic_load(&dec->waiter.choked) || dec->expect_end_ts))
-        return av_container_fifo_read(dec->overflow, pkt, 0);
-
     // the decoder should have given us post-flush end timestamp in pkt
     if (dec->expect_end_ts) {
         Timestamp ts = (Timestamp){ .ts = pkt->pts, .tb = pkt->time_base };
@@ -2403,28 +2372,10 @@ retry:
     ret = tq_receive(dec->queue, &dummy, pkt, 0);
     av_assert0(dummy <= 0);
 
-    // drain packets from overflow queue before returning EOF
-    if (ret == AVERROR_EOF && av_container_fifo_can_read(dec->overflow)) {
-        int terminate = waiter_wait(sch, &dec->waiter);
-        if (terminate)
-            return ret;
-        return av_container_fifo_read(dec->overflow, pkt, 0);
-    } else if (ret < 0)
-        return ret;
-
     // got a flush packet, on the next call to this function the decoder
-    // should give us post-flush end timestamp (after draining overflow fifo)
-    if (!pkt->data && !pkt->side_data_elems && dec->queue_end_ts)
+    // will give us post-flush end timestamp
+    if (ret >= 0 && !pkt->data && !pkt->side_data_elems && dec->queue_end_ts)
         dec->expect_end_ts = 1;
-
-    // we got a packet, but we're currently choked or have existing overflow
-    // packets; so push it to the FIFO first
-    if (atomic_load(&dec->waiter.choked) || av_container_fifo_can_read(dec->overflow)) {
-        ret = av_container_fifo_write(dec->overflow, pkt, 0);
-        if (ret < 0)
-            return ret;
-        goto retry;
-    }
 
     return ret;
 }
@@ -2885,9 +2836,6 @@ int sch_stop(Scheduler *sch, int64_t *finish_ts)
             if (type)
                 choke_demux(sch, i, 0); // unfreeze to allow draining
         }
-
-    for (unsigned i = 0; i < sch->nb_dec; i++)
-        waiter_set(&sch->dec[i].waiter, 0); // unfreeze to allow draining
 
     pthread_mutex_unlock(&sch->schedule_lock);
 

@@ -511,9 +511,17 @@ FFK_API void ffk_config_set_font_directory_list(
     const char *const *mapping_keys, const char *const *mapping_values,
     size_t mapping_count);
 
-/** Named pipes are not supported on Windows. Always returns NULL. */
+/**
+ * Named pipes are not supported on Windows. Always returns NULL.
+ *
+ * @deprecated Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.
+ */
 FFK_API char *ffk_config_register_new_ffmpeg_pipe(void);
-/** Named pipes are not supported on Windows. No-op. */
+/**
+ * Named pipes are not supported on Windows. No-op.
+ *
+ * @deprecated Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.
+ */
 FFK_API void ffk_config_close_ffmpeg_pipe(const char *ffmpeg_pipe_path);
 
 FFK_API long ffk_config_register_ffmpegkit_input_buffer(const uint8_t *data,

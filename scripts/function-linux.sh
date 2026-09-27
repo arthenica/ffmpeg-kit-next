@@ -33,6 +33,14 @@ get_pkg_config_libdir() {
     PKG_CONFIG_LIBDIR_VALUE+=":${FFMPEG_KIT_NIX_PKG_CONFIG_LIBDIR}"
   fi
 
+  if [[ -z ${FFMPEG_KIT_SYSTEM_PKG_CONFIG_LIBDIR} ]] && [[ -z ${FFMPEG_KIT_NIX_PKG_CONFIG_LIBDIR} ]]; then
+    local HOST_PC_PATH
+    HOST_PC_PATH=$(pkg-config --variable pc_path pkg-config 2>>"${BASEDIR}"/build.log)
+    if [[ -n ${HOST_PC_PATH} ]]; then
+      PKG_CONFIG_LIBDIR_VALUE+=":${HOST_PC_PATH}"
+    fi
+  fi
+
   echo "${PKG_CONFIG_LIBDIR_VALUE}"
 }
 
@@ -516,6 +524,10 @@ set_toolchain_paths() {
   export RANLIB=$(command -v "llvm-ranlib$CLANG_POSTFIX")
   export STRIP=$(command -v "llvm-strip$CLANG_POSTFIX")
   export NM=$(command -v "llvm-nm$CLANG_POSTFIX")
+
+  # LINUX BUILDS ARE NATIVE, SO THE C COMPILER ALSO BUILDS THE TOOLS THAT RUN ON
+  # THE BUILD MACHINE
+  set_host_cc "${CC}"
 
   # ARM64 ASSEMBLY SOURCES ARE GAS .S FILES, WHICH THE C COMPILER ASSEMBLES.
   # LLVM-AS ONLY UNDERSTANDS LLVM IR, SO IT CANNOT BE USED HERE.

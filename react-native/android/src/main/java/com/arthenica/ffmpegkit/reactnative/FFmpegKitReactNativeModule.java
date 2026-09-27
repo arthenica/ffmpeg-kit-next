@@ -445,6 +445,7 @@ public class FFmpegKitReactNativeModule extends NativeFFmpegKitReactNativeModule
   }
 
   @ReactMethod
+  @SuppressWarnings("deprecation")
   public void registerNewFFmpegPipe(final Promise promise) {
     final ReactApplicationContext reactContext = getReactApplicationContext();
     if (reactContext != null) {
@@ -455,6 +456,7 @@ public class FFmpegKitReactNativeModule extends NativeFFmpegKitReactNativeModule
   }
 
   @ReactMethod
+  @SuppressWarnings("deprecation")
   public void closeFFmpegPipe(final String ffmpegPipePath, final Promise promise) {
     FFmpegKitConfig.closeFFmpegPipe(ffmpegPipePath);
 

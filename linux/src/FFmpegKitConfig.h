@@ -58,8 +58,11 @@ class FFmpegKitConfig {
 
     /**
      * Prefix of named pipes created by ffmpeg-kit.
+     *
+     * @deprecated Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.
      */
-    static constexpr const char *FFmpegKitNamedPipePrefix = "fk_pipe_";
+    static constexpr const char *FFmpegKitNamedPipePrefix
+        __attribute__((deprecated("Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead."))) = "fk_pipe_";
 
     /**
      * <p>Enables log and statistics redirection.
@@ -131,16 +134,20 @@ class FFmpegKitConfig {
      *
      * <p>Please note that creator is responsible of closing created pipes.
      *
+     * @deprecated Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.
      * @return the full path of the named pipe
      */
-    static std::shared_ptr<std::string> registerNewFFmpegPipe();
+    static std::shared_ptr<std::string> registerNewFFmpegPipe()
+        __attribute__((deprecated("Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.")));
 
     /**
      * <p>Closes a previously created <code>FFmpeg</code> pipe.
      *
+     * @deprecated Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.
      * @param ffmpegPipePath full path of the FFmpeg pipe
      */
-    static void closeFFmpegPipe(const std::string &ffmpegPipePath);
+    static void closeFFmpegPipe(const std::string &ffmpegPipePath)
+        __attribute__((deprecated("Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.")));
 
     static long registerFFmpegKitInputBuffer(const std::vector<uint8_t> &data);
 

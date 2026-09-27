@@ -622,6 +622,7 @@ ${SED_INLINE} 's/static atomic_int av_log_level/__thread atomic_int av_log_level
   --ar="${AR}" \
   --cc="${CC}" \
   --cxx="${CXX}" \
+  --host-cc="${HOST_CC}" \
   --as="${AS}" \
   --ranlib="${RANLIB}" \
   --strip="${STRIP}" \

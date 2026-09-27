@@ -407,6 +407,7 @@ emconfigure ./configure \
   --ar="${AR}" \
   --cc="${CC}" \
   --cxx="${CXX}" \
+  --host-cc="${HOST_CC}" \
   --dep-cc="${CC}" \
   --objcc="${CC}" \
   --ranlib="${RANLIB}" \

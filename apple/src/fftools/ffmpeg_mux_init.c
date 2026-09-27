@@ -7,7 +7,7 @@
  * Copyright (c) 2023-2024 ARTHENICA LTD
  *
  * This modified file is part of FFmpegKitNext.
- * It is derived from FFmpeg's fftools/ffmpeg_mux_init.c at tag n9.0.1.
+ * It is derived from FFmpeg's fftools/ffmpeg_mux_init.c at tag n9.0.2.
  *
  * The original FFmpeg source is licensed under the GNU Lesser General
  * Public License version 2.1 or later. FFmpegKitNext distributes this
@@ -32,6 +32,10 @@
  * Modification history:
  *
  * ffmpeg-kit changes by Taner Sener
+ *
+ * 09.2026
+ * --------------------------------------------------------
+ * - FFmpeg 9.0.2 changes migrated
  *
  * 08.2026
  * --------------------------------------------------------
@@ -1195,7 +1199,7 @@ static int ost_add(Muxer *mux, const OptionsContext *o, enum AVMediaType type,
     int threads_manual = 0;
     AVRational enc_tb = { 0, 0 };
     enum VideoSyncMethod vsync_method = VSYNC_AUTO;
-    const char *bsfs = NULL, *time_base = NULL, *codec_tag = NULL;
+    const char *bsfs = NULL, *time_base = NULL, *codec_tag = NULL, *manual_disp = NULL;
     char  *next;
     double qscale = -1;
 
@@ -1251,6 +1255,20 @@ static int ost_add(Muxer *mux, const OptionsContext *o, enum AVMediaType type,
     ost->kf.ref_pts = AV_NOPTS_VALUE;
     ms->par_in->codec_type   = type;
     st->codecpar->codec_type = type;
+
+    if (ost->type == AVMEDIA_TYPE_VIDEO) {
+        if (ost->ist)
+            ost->st->disposition = ost->ist->st->disposition;
+
+        opt_match_per_stream_str(ost, &o->disposition, oc, st, &manual_disp);
+        if (manual_disp) {
+            ret = av_opt_set(ost->st, "disposition", manual_disp, 0);
+            if (ret < 0)
+                return ret;
+        }
+
+        ost->st->disposition &= AV_DISPOSITION_ATTACHED_PIC;
+    }
 
     ret = choose_encoder(o, oc, ms, &enc);
     if (ret < 0) {
@@ -3100,6 +3118,11 @@ static int set_dispositions(Muxer *mux, const OptionsContext *o)
     if (!dispositions)
         return AVERROR(ENOMEM);
 
+    // reset any apic flag set for option stream-spec matching in ost_add
+    for (int i = 0; i < ctx->nb_streams; i++) {
+        of->streams[i]->st->disposition = 0;
+    }
+
     // first, copy the input dispositions
     for (int i = 0; i < ctx->nb_streams; i++) {
         OutputStream *ost = of->streams[i];
@@ -3346,6 +3369,11 @@ int of_open(const OptionsContext *o, const char *filename, Scheduler *sch)
         } else {
             recording_time = stop_time - start_time;
         }
+    }
+
+    if (recording_time != INT64_MAX && recording_time < 0) {
+        av_log(mux, AV_LOG_ERROR, "-t value must be non-negative; aborting.\n");
+        return AVERROR(EINVAL);
     }
 
     of->recording_time = recording_time;

@@ -7,7 +7,7 @@
  * Copyright (c) 2023-2024 ARTHENICA LTD
  *
  * This modified file is part of FFmpegKitNext.
- * It is derived from FFmpeg's fftools/ffmpeg_filter.c at tag n9.0.1.
+ * It is derived from FFmpeg's fftools/ffmpeg_filter.c at tag n9.0.2.
  *
  * The original FFmpeg source is licensed under the GNU Lesser General
  * Public License version 2.1 or later. FFmpegKitNext distributes this
@@ -32,6 +32,10 @@
  * Modification history:
  *
  * ffmpeg-kit changes by Taner Sener
+ *
+ * 09.2026
+ * --------------------------------------------------------
+ * - FFmpeg 9.0.2 changes migrated
  *
  * 08.2026
  * --------------------------------------------------------

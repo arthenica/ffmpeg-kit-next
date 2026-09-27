@@ -235,6 +235,10 @@ get_ldflags() {
 }
 
 set_toolchain_paths() {
+  # CROSS-COMPILING, SO TOOLS THAT RUN ON THE BUILD MACHINE NEED THEIR OWN
+  # COMPILER
+  set_host_cc "$(command -v clang)"
+
   export CC=$(command -v emcc)
   export CXX=$(command -v em++)
   export AS="${CC}"
