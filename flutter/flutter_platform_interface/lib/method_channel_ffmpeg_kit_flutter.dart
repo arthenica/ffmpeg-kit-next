@@ -97,8 +97,7 @@ class MethodChannelFFmpegKit extends FFmpegKitPlatform {
   @override
   Future<bool> abstractSessionThereAreAsynchronousMessagesInTransmit(
           int? sessionId) async =>
-      _channel.invokeMethod<bool>(
-          'abstractSessionThereAreAsynchronousMessagesInTransmit',
+      _channel.invokeMethod<bool>('thereAreAsynchronousMessagesInTransmit',
           {'sessionId': sessionId}).then((bool? value) => value ?? false);
 
   // ArchDetect
