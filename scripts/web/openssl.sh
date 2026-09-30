@@ -5,6 +5,8 @@ THREAD_OPTIONS=""
 if [[ ${FFMPEG_KIT_WEB_PTHREADS:-1} != "1" ]]; then
   THREAD_OPTIONS="no-threads"
 fi
+export CFLAGS="${CFLAGS} $(pkg-config --cflags zlib)"
+export LDFLAGS="${LDFLAGS} $(pkg-config --libs zlib)"
 
 # ALWAYS CLEAN THE PREVIOUS BUILD
 make distclean 2>/dev/null 1>/dev/null
