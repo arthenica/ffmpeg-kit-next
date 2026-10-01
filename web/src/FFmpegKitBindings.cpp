@@ -44,6 +44,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <exception>
 #include <list>
 #include <map>
 #include <memory>
@@ -587,9 +588,15 @@ mediaInformationJsonParser_from(const std::string ffprobeJsonOutput) {
     return MediaInformationJsonParser::from(ffprobeJsonOutput);
 }
 
-std::shared_ptr<MediaInformation>
-mediaInformationJsonParser_fromWithError(const std::string ffprobeJsonOutput) {
-    return MediaInformationJsonParser::fromWithError(ffprobeJsonOutput);
+val mediaInformationJsonParser_fromWithError(const std::string ffprobeJsonOutput) {
+    const val promise = val::global("Promise");
+    try {
+        return promise.call<val>(
+            "resolve", MediaInformationJsonParser::fromWithError(ffprobeJsonOutput));
+    } catch (const std::exception &exception) {
+        return promise.call<val>(
+            "reject", val::global("Error").new_(std::string(exception.what())));
+    }
 }
 
 val streamInformation_getIndex(StreamInformation &self) { return optInt64(self.getIndex()); }

@@ -2242,6 +2242,9 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
                        withTimeout:(int)waitTimeout {
     [mediaInformationSession startRunning];
 
+    ReturnCode *returnCode = nil;
+    NSString *ffprobeJsonOutput = nil;
+    MediaInformation *mediaInformation = nil;
     @try {
         AVBPrint mediaInformationBuffer;
         av_bprint_init(&mediaInformationBuffer, 0, AV_BPRINT_SIZE_UNLIMITED);
@@ -2249,7 +2252,7 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
             int returnCodeValue = executeFFprobeToBuffer(
                 [mediaInformationSession getSessionId],
                 [mediaInformationSession getArguments], &mediaInformationBuffer);
-            ReturnCode *returnCode = [[ReturnCode alloc] init:returnCodeValue];
+            returnCode = [[ReturnCode alloc] init:returnCodeValue];
             [mediaInformationSession complete:returnCode];
 
             // NOTE: waitTimeout is retained for API compatibility but is no
@@ -2258,10 +2261,10 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
             // async log delivery. Callers that read the session logs afterwards
             // still get the wait, because getAllLogs applies the timeout itself.
             if ([returnCode isValueSuccess]) {
-                NSString *ffprobeJsonOutput =
+                ffprobeJsonOutput =
                     [NSString stringWithCString:mediaInformationBuffer.str
                                        encoding:NSUTF8StringEncoding];
-                MediaInformation *mediaInformation = [MediaInformationJsonParser
+                mediaInformation = [MediaInformationJsonParser
                     fromWithError:ffprobeJsonOutput];
                 [mediaInformationSession setMediaInformation:mediaInformation];
             }

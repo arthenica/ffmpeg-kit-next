@@ -827,7 +827,7 @@ self.onmessage = async (event) => {
         break;
       }
       case 'mediaInformationJsonParserFromWithError': {
-        const info = Module.MediaInformationJsonParser.fromWithError(args.ffprobeJsonOutput || '');
+        const info = await Module.MediaInformationJsonParser.fromWithError(args.ffprobeJsonOutput || '');
         postMessage({
           id,
           type: MSG_RESULT,
