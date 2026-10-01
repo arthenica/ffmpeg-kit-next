@@ -52,6 +52,7 @@ static NSMutableArray *supportedExternalLibraries;
     [supportedExternalLibraries addObject:@"libxml2"];
     [supportedExternalLibraries addObject:@"opencore-amr"];
     [supportedExternalLibraries addObject:@"openh264"];
+    [supportedExternalLibraries addObject:@"openssl"];
     [supportedExternalLibraries addObject:@"opus"];
     [supportedExternalLibraries addObject:@"rubberband"];
     [supportedExternalLibraries addObject:@"sdl2"];
@@ -65,181 +66,11 @@ static NSMutableArray *supportedExternalLibraries;
     [supportedExternalLibraries addObject:@"x264"];
     [supportedExternalLibraries addObject:@"x265"];
     [supportedExternalLibraries addObject:@"xvid"];
+    [supportedExternalLibraries addObject:@"zimg"];
 }
 
 + (NSString *)getBuildConf {
     return [NSString stringWithUTF8String:FFMPEG_CONFIGURATION];
-}
-
-+ (NSString *)extractPackageNameFromExternalLibraries {
-    NSArray *enabledLibraryArray = [Packages getExternalLibraries];
-    Boolean speex = [enabledLibraryArray containsObject:@"speex"];
-    Boolean fribidi = [enabledLibraryArray containsObject:@"fribidi"];
-    Boolean gnutls = [enabledLibraryArray containsObject:@"gnutls"];
-    Boolean xvid = [enabledLibraryArray containsObject:@"xvid"];
-
-    Boolean minGpl = false;
-    Boolean https = false;
-    Boolean httpsGpl = false;
-    Boolean audio = false;
-    Boolean video = false;
-    Boolean full = false;
-    Boolean fullGpl = false;
-
-    if (speex && fribidi) {
-        if (xvid) {
-            fullGpl = true;
-        } else {
-            full = true;
-        }
-    } else if (speex) {
-        audio = true;
-    } else if (fribidi) {
-        video = true;
-    } else if (xvid) {
-        if (gnutls) {
-            httpsGpl = true;
-        } else {
-            minGpl = true;
-        }
-    } else {
-        if (gnutls) {
-            https = true;
-        }
-    }
-
-    if (fullGpl) {
-        if ([enabledLibraryArray containsObject:@"dav1d"] &&
-            [enabledLibraryArray containsObject:@"fontconfig"] &&
-            [enabledLibraryArray containsObject:@"freetype"] &&
-            [enabledLibraryArray containsObject:@"fribidi"] &&
-            [enabledLibraryArray containsObject:@"gmp"] &&
-            [enabledLibraryArray containsObject:@"gnutls"] &&
-            [enabledLibraryArray containsObject:@"kvazaar"] &&
-            [enabledLibraryArray containsObject:@"mp3lame"] &&
-            [enabledLibraryArray containsObject:@"libass"] &&
-            [enabledLibraryArray containsObject:@"iconv"] &&
-            [enabledLibraryArray containsObject:@"libilbc"] &&
-            [enabledLibraryArray containsObject:@"libtheora"] &&
-            [enabledLibraryArray containsObject:@"libvidstab"] &&
-            [enabledLibraryArray containsObject:@"libvorbis"] &&
-            [enabledLibraryArray containsObject:@"libvpx"] &&
-            [enabledLibraryArray containsObject:@"libwebp"] &&
-            [enabledLibraryArray containsObject:@"libxml2"] &&
-            [enabledLibraryArray containsObject:@"opencore-amr"] &&
-            [enabledLibraryArray containsObject:@"opus"] &&
-            [enabledLibraryArray containsObject:@"shine"] &&
-            [enabledLibraryArray containsObject:@"snappy"] &&
-            [enabledLibraryArray containsObject:@"soxr"] &&
-            [enabledLibraryArray containsObject:@"speex"] &&
-            [enabledLibraryArray containsObject:@"twolame"] &&
-            [enabledLibraryArray containsObject:@"x264"] &&
-            [enabledLibraryArray containsObject:@"x265"] &&
-            [enabledLibraryArray containsObject:@"xvid"]) {
-            return @"full-gpl";
-        } else {
-            return @"custom";
-        }
-    }
-
-    if (full) {
-        if ([enabledLibraryArray containsObject:@"dav1d"] &&
-            [enabledLibraryArray containsObject:@"fontconfig"] &&
-            [enabledLibraryArray containsObject:@"freetype"] &&
-            [enabledLibraryArray containsObject:@"fribidi"] &&
-            [enabledLibraryArray containsObject:@"gmp"] &&
-            [enabledLibraryArray containsObject:@"gnutls"] &&
-            [enabledLibraryArray containsObject:@"kvazaar"] &&
-            [enabledLibraryArray containsObject:@"mp3lame"] &&
-            [enabledLibraryArray containsObject:@"libass"] &&
-            [enabledLibraryArray containsObject:@"iconv"] &&
-            [enabledLibraryArray containsObject:@"libilbc"] &&
-            [enabledLibraryArray containsObject:@"libtheora"] &&
-            [enabledLibraryArray containsObject:@"libvorbis"] &&
-            [enabledLibraryArray containsObject:@"libvpx"] &&
-            [enabledLibraryArray containsObject:@"libwebp"] &&
-            [enabledLibraryArray containsObject:@"libxml2"] &&
-            [enabledLibraryArray containsObject:@"opencore-amr"] &&
-            [enabledLibraryArray containsObject:@"opus"] &&
-            [enabledLibraryArray containsObject:@"shine"] &&
-            [enabledLibraryArray containsObject:@"snappy"] &&
-            [enabledLibraryArray containsObject:@"soxr"] &&
-            [enabledLibraryArray containsObject:@"speex"] &&
-            [enabledLibraryArray containsObject:@"twolame"]) {
-            return @"full";
-        } else {
-            return @"custom";
-        }
-    }
-
-    if (video) {
-        if ([enabledLibraryArray containsObject:@"dav1d"] &&
-            [enabledLibraryArray containsObject:@"fontconfig"] &&
-            [enabledLibraryArray containsObject:@"freetype"] &&
-            [enabledLibraryArray containsObject:@"fribidi"] &&
-            [enabledLibraryArray containsObject:@"kvazaar"] &&
-            [enabledLibraryArray containsObject:@"libass"] &&
-            [enabledLibraryArray containsObject:@"iconv"] &&
-            [enabledLibraryArray containsObject:@"libtheora"] &&
-            [enabledLibraryArray containsObject:@"libvpx"] &&
-            [enabledLibraryArray containsObject:@"libwebp"] &&
-            [enabledLibraryArray containsObject:@"snappy"]) {
-            return @"video";
-        } else {
-            return @"custom";
-        }
-    }
-
-    if (audio) {
-        if ([enabledLibraryArray containsObject:@"mp3lame"] &&
-            [enabledLibraryArray containsObject:@"libilbc"] &&
-            [enabledLibraryArray containsObject:@"libvorbis"] &&
-            [enabledLibraryArray containsObject:@"opencore-amr"] &&
-            [enabledLibraryArray containsObject:@"opus"] &&
-            [enabledLibraryArray containsObject:@"shine"] &&
-            [enabledLibraryArray containsObject:@"soxr"] &&
-            [enabledLibraryArray containsObject:@"speex"] &&
-            [enabledLibraryArray containsObject:@"twolame"]) {
-            return @"audio";
-        } else {
-            return @"custom";
-        }
-    }
-
-    if (httpsGpl) {
-        if ([enabledLibraryArray containsObject:@"gmp"] &&
-            [enabledLibraryArray containsObject:@"gnutls"] &&
-            [enabledLibraryArray containsObject:@"libvidstab"] &&
-            [enabledLibraryArray containsObject:@"x264"] &&
-            [enabledLibraryArray containsObject:@"x265"] &&
-            [enabledLibraryArray containsObject:@"xvid"]) {
-            return @"https-gpl";
-        } else {
-            return @"custom";
-        }
-    }
-
-    if (https) {
-        if ([enabledLibraryArray containsObject:@"gmp"] &&
-            [enabledLibraryArray containsObject:@"gnutls"]) {
-            return @"https";
-        } else {
-            return @"custom";
-        }
-    }
-
-    if (minGpl) {
-        if ([enabledLibraryArray containsObject:@"libvidstab"] &&
-            [enabledLibraryArray containsObject:@"x264"] &&
-            [enabledLibraryArray containsObject:@"x265"] &&
-            [enabledLibraryArray containsObject:@"xvid"]) {
-            return @"min-gpl";
-        } else {
-            return @"custom";
-        }
-    }
-
-    return @"min";
 }
 
 + (NSString *)getPackageName {

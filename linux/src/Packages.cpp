@@ -22,144 +22,6 @@
 #include <algorithm>
 #include <memory>
 
-std::string extractPackageNameFromExternalLibraries() {
-    std::shared_ptr<std::set<std::string>> enabledLibrarySet =
-        ffmpegkit::Packages::getExternalLibraries();
-#define contains_ext_lib(element)                                              \
-    enabledLibrarySet->find(element) != enabledLibrarySet->end()
-    bool speex = contains_ext_lib("speex");
-    bool fribidi = contains_ext_lib("fribidi");
-    bool gnutls = contains_ext_lib("gnutls");
-    bool xvid = contains_ext_lib("xvid");
-
-    bool min = false;
-    bool minGpl = false;
-    bool https = false;
-    bool httpsGpl = false;
-    bool audio = false;
-    bool video = false;
-    bool full = false;
-    bool fullGpl = false;
-
-    if (speex && fribidi) {
-        if (xvid) {
-            fullGpl = true;
-        } else {
-            full = true;
-        }
-    } else if (speex) {
-        audio = true;
-    } else if (fribidi) {
-        video = true;
-    } else if (xvid) {
-        if (gnutls) {
-            httpsGpl = true;
-        } else {
-            minGpl = true;
-        }
-    } else {
-        if (gnutls) {
-            https = true;
-        } else {
-            min = true;
-        }
-    }
-
-    if (fullGpl) {
-        if (contains_ext_lib("dav1d") && contains_ext_lib("fontconfig") &&
-            contains_ext_lib("freetype") && contains_ext_lib("fribidi") &&
-            contains_ext_lib("gmp") && contains_ext_lib("gnutls") &&
-            contains_ext_lib("kvazaar") && contains_ext_lib("mp3lame") &&
-            contains_ext_lib("libass") && contains_ext_lib("iconv") &&
-            contains_ext_lib("libilbc") && contains_ext_lib("libtheora") &&
-            contains_ext_lib("libvidstab") && contains_ext_lib("libvorbis") &&
-            contains_ext_lib("libvpx") && contains_ext_lib("libwebp") &&
-            contains_ext_lib("libxml2") && contains_ext_lib("opencore-amr") &&
-            contains_ext_lib("opus") && contains_ext_lib("shine") &&
-            contains_ext_lib("snappy") && contains_ext_lib("soxr") &&
-            contains_ext_lib("speex") && contains_ext_lib("twolame") &&
-            contains_ext_lib("x264") && contains_ext_lib("x265") &&
-            contains_ext_lib("xvid")) {
-            return "full-gpl";
-        } else {
-            return "custom";
-        }
-    }
-
-    if (full) {
-        if (contains_ext_lib("dav1d") && contains_ext_lib("fontconfig") &&
-            contains_ext_lib("freetype") && contains_ext_lib("fribidi") &&
-            contains_ext_lib("gmp") && contains_ext_lib("gnutls") &&
-            contains_ext_lib("kvazaar") && contains_ext_lib("mp3lame") &&
-            contains_ext_lib("libass") && contains_ext_lib("iconv") &&
-            contains_ext_lib("libilbc") && contains_ext_lib("libtheora") &&
-            contains_ext_lib("libvorbis") && contains_ext_lib("libvpx") &&
-            contains_ext_lib("libwebp") && contains_ext_lib("libxml2") &&
-            contains_ext_lib("opencore-amr") && contains_ext_lib("opus") &&
-            contains_ext_lib("shine") && contains_ext_lib("snappy") &&
-            contains_ext_lib("soxr") && contains_ext_lib("speex") &&
-            contains_ext_lib("twolame")) {
-            return "full";
-        } else {
-            return "custom";
-        }
-    }
-
-    if (video) {
-        if (contains_ext_lib("dav1d") && contains_ext_lib("fontconfig") &&
-            contains_ext_lib("freetype") && contains_ext_lib("fribidi") &&
-            contains_ext_lib("kvazaar") && contains_ext_lib("libass") &&
-            contains_ext_lib("iconv") && contains_ext_lib("libtheora") &&
-            contains_ext_lib("libvpx") && contains_ext_lib("libwebp") &&
-            contains_ext_lib("snappy")) {
-            return "video";
-        } else {
-            return "custom";
-        }
-    }
-
-    if (audio) {
-        if (contains_ext_lib("mp3lame") && contains_ext_lib("libilbc") &&
-            contains_ext_lib("libvorbis") && contains_ext_lib("opencore-amr") &&
-            contains_ext_lib("opus") && contains_ext_lib("shine") &&
-            contains_ext_lib("soxr") && contains_ext_lib("speex") &&
-            contains_ext_lib("twolame")) {
-            return "audio";
-        } else {
-            return "custom";
-        }
-    }
-
-    if (httpsGpl) {
-        if (contains_ext_lib("gmp") && contains_ext_lib("gnutls") &&
-            contains_ext_lib("libvidstab") && contains_ext_lib("x264") &&
-            contains_ext_lib("x265") && contains_ext_lib("xvid")) {
-            return "https-gpl";
-        } else {
-            return "custom";
-        }
-    }
-
-    if (https) {
-        if (contains_ext_lib("gmp") && contains_ext_lib("gnutls")) {
-            return "https";
-        } else {
-            return "custom";
-        }
-    }
-
-    if (minGpl) {
-        if (contains_ext_lib("libvidstab") && contains_ext_lib("x264") &&
-            contains_ext_lib("x265") && contains_ext_lib("xvid")) {
-            return "min-gpl";
-        } else {
-            return "custom";
-        }
-    }
-
-    return "min";
-}
-
 std::string ffmpegkit::Packages::getPackageName() {
 #ifndef FFMPEG_KIT_PACKAGE_NAME
 #define FFMPEG_KIT_PACKAGE_NAME
@@ -174,16 +36,46 @@ std::string ffmpegkit::Packages::getPackageName() {
 std::shared_ptr<std::set<std::string>>
 ffmpegkit::Packages::getExternalLibraries() {
     const std::set<const char *> supportedExternalLibraries{
-        "dav1d",  "fontconfig", "freetype",  "fribidi",      "gmp",
-        "gnutls", "harfbuzz",   "kvazaar",   "mp3lame",      "libaom",
-        "libass", "libjxl",     "liblc3",    "libsvtav1",    "iconv",
+        "dav1d",
+        "fontconfig",
+        "freetype",
+        "fribidi",
+        "gmp",
+        "gnutls",
+        "harfbuzz",
+        "kvazaar",
+        "mp3lame",
+        "libaom",
+        "libass",
+        "libjxl",
+        "liblc3",
+        "libsvtav1",
+        "iconv",
         "libilbc",
         "libtheora",
         "libvidstab",
-        "libvorbis", "libvpx",  "libwebp",   "libxml2",      "opencore-amr",
-        "openh264", "opus",     "rubberband", "sdl2",        "shine",
-        "snappy", "soxr",       "speex",     "tesseract",    "twolame",
-        "vvenc",  "x264",       "x265",      "xvid"};
+        "libvorbis",
+        "libvpx",
+        "libwebp",
+        "libxml2",
+        "opencore-amr",
+        "openh264",
+        "openssl",
+        "opus",
+        "rubberband",
+        "sdl2",
+        "shine",
+        "snappy",
+        "soxr",
+        "speex",
+        "tesseract",
+        "twolame",
+        "vvenc",
+        "x264",
+        "x265",
+        "xvid",
+        "zimg"
+    };
     std::string buildConfiguration(FFMPEG_CONFIGURATION);
     char libraryName1[50];
     char libraryName2[50];
