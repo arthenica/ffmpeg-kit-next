@@ -116,10 +116,10 @@ via the podspec / Swift package.
   ABIs compiled by your nix profile, and the Apple xcframeworks only the
   built slices. If the AAR lacks an ABI your build targets (e.g. `x86_64` for an
   emulator), restrict the app with `ndk { abiFilters ... }` or build that ABI.
-- **`smart-exception-java` is still fetched from Maven Central.** It is a small
-  pure-Java dependency of the AAR (not a native binary), declared in the AAR's POM
-  inside `android/libs-maven` and resolved transitively (`android/build.gradle`
-  keeps `mavenCentral()` for this). If you must avoid Maven entirely, vendor it as
-  a local jar instead.
+- **`smart-exception-java` and `kotlin-stdlib` are still fetched from Maven
+  Central.** They are JVM dependencies of the AAR (not native binaries), declared
+  in the AAR's POM inside `android/libs-maven` and resolved transitively
+  (`android/build.gradle` keeps `mavenCentral()` for this). If you must avoid
+  Maven entirely, vendor them as local jars instead.
 - **External libraries are fixed by what you enabled.** They are determined by
   the flags passed to `nix-<platform>.sh`.
