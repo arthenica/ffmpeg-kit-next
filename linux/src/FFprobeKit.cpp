@@ -21,10 +21,6 @@
 #include "FFmpegKit.h"
 #include "FFmpegKitConfig.h"
 
-extern void *ffmpegKitInitialize();
-
-const void *_ffprobeKitInitializer{ffmpegKitInitialize()};
-
 static std::list<std::string>
 defaultGetMediaInformationCommandArguments(const std::string &path) {
     return std::list<std::string>{"-v",

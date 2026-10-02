@@ -259,7 +259,39 @@ static pthread_t callbackThread;
 
 void *ffmpegKitInitialize();
 
+/**
+ * Starts the callback thread. It must stay the only static initializer that
+ * calls ffmpegKitInitialize(), and stay below the globals the thread uses, so
+ * that they are constructed before the thread starts. An initializer in another
+ * file can run before this file's globals are constructed.
+ */
 const void *_ffmpegKitConfigInitializer{ffmpegKitInitialize()};
+
+/**
+ * Stops the callback thread before the globals it uses are destroyed at exit.
+ * Static objects are destroyed in the reverse order of their construction, so
+ * this one, defined after them, is destroyed first. Otherwise glibc's
+ * pthread_cond_destroy() waits on callbackMonitor while the thread keeps
+ * waiting on it, and the process can hang on exit.
+ */
+static struct CallbackThreadShutdown {
+    ~CallbackThreadShutdown() {
+        std::unique_lock<std::recursive_mutex> lock(callbackDataMutex);
+        if (redirectionEnabled != 1) {
+            return;
+        }
+        redirectionEnabled = 0;
+        lock.unlock();
+
+        callbackMonitor.notify_one();
+
+        if (pthread_equal(pthread_self(), callbackThread)) {
+            pthread_detach(callbackThread);
+        } else {
+            pthread_join(callbackThread, NULL);
+        }
+    }
+} callbackThreadShutdown;
 
 enum CallbackType { LogType, StatisticsType };
 
@@ -1652,8 +1684,14 @@ void ffmpegkit::FFmpegKitConfig::enableRedirection() {
                             reinterpret_cast<void *>(
                                 static_cast<intptr_t>(generationId)));
     if (rc != 0) {
-        std::cout << "Failed to create async callback block: %d" << rc
+        std::cout << "Failed to create async callback block: " << rc
                   << std::endl;
+
+        // NO THREAD WAS STARTED, SO THE REDIRECTION MUST NOT STAY ENABLED.
+        // OTHERWISE disableRedirection() AND THE SHUTDOWN AT EXIT WOULD JOIN
+        // OR DETACH A THREAD THAT DOES NOT EXIST
+        lock.lock();
+        redirectionEnabled = 0;
         lock.unlock();
         return;
     }

@@ -1649,8 +1649,14 @@ void ffmpegkit::internal::FFmpegKitConfig::enableRedirection() {
                             reinterpret_cast<void *>(
                                 static_cast<intptr_t>(generationId)));
     if (rc != 0) {
-        std::cout << "Failed to create async callback block: %d" << rc
+        std::cout << "Failed to create async callback block: " << rc
                   << std::endl;
+
+        // NO THREAD WAS STARTED, SO THE REDIRECTION MUST NOT STAY ENABLED.
+        // OTHERWISE disableRedirection() WOULD DETACH A THREAD THAT DOES NOT
+        // EXIST
+        lock.lock();
+        redirectionEnabled = 0;
         lock.unlock();
         return;
     }

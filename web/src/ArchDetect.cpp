@@ -19,10 +19,6 @@
 
 #include "ArchDetect.h"
 
-extern void *ffmpegKitInitialize();
-
-const void *_archDetectInitializer{ffmpegKitInitialize()};
-
 std::string ffmpegkit::ArchDetect::getArch() {
 #ifdef FFMPEG_KIT_ARM64
     return "arm64";

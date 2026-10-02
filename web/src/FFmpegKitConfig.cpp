@@ -260,6 +260,12 @@ static pthread_t callbackThread;
 
 void *ffmpegKitInitialize();
 
+/**
+ * Starts the callback thread. It must stay the only static initializer that
+ * calls ffmpegKitInitialize(), and stay below the globals the thread uses, so
+ * that they are constructed before the thread starts. An initializer in another
+ * file can run before this file's globals are constructed.
+ */
 const void *_ffmpegKitConfigInitializer{ffmpegKitInitialize()};
 
 enum CallbackType { LogType, StatisticsType };
@@ -1618,7 +1624,7 @@ void *ffmpegKitInitialize() {
         ffmpegkit::FFmpegKitConfig::enableRedirection();
 
         // Use C stdio here, NOT std::cout. This lambda runs from a global static
-        // initializer (see the _*Initializer objects) via __wasm_call_ctors while
+        // initializer (_ffmpegKitConfigInitializer) via __wasm_call_ctors while
         // Emscripten loads this side module — before the main module's libc++ iostream
         // globals (std::cout / std::ios_base::Init) are constructed. Touching std::cout
         // that early faults across the module boundary ("memory access out of bounds"
@@ -1660,8 +1666,14 @@ void ffmpegkit::FFmpegKitConfig::enableRedirection() {
                             reinterpret_cast<void *>(
                                 static_cast<intptr_t>(generationId)));
     if (rc != 0) {
-        std::cout << "Failed to create async callback block: %d" << rc
+        std::cout << "Failed to create async callback block: " << rc
                   << std::endl;
+
+        // NO THREAD WAS STARTED, SO THE REDIRECTION MUST NOT STAY ENABLED.
+        // OTHERWISE disableRedirection() WOULD DETACH A THREAD THAT DOES NOT
+        // EXIST
+        lock.lock();
+        redirectionEnabled = 0;
         lock.unlock();
         return;
     }
