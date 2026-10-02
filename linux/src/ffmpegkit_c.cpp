@@ -61,6 +61,7 @@
 #include <memory>
 #include <mutex>
 #include <new>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -239,6 +240,25 @@ class Parser {
         return true;
     }
 
+    /** Moves past the character when it is the next one. */
+    bool accept(const char expected) {
+        if (_position < _text.size() && _text[_position] == expected) {
+            _position++;
+            return true;
+        }
+        return false;
+    }
+
+    /** Moves past one or more decimal digits; false when there is none. */
+    bool acceptDigits() {
+        const size_t start = _position;
+        while (_position < _text.size() && _text[_position] >= '0' &&
+               _text[_position] <= '9') {
+            _position++;
+        }
+        return _position > start;
+    }
+
     static bool appendUtf8(uint32_t codepoint, std::string &out) {
         if (codepoint < 0x80) {
             out += static_cast<char>(codepoint);
@@ -290,6 +310,10 @@ class Parser {
             const char c = _text[_position++];
             if (c == '"') {
                 return true;
+            }
+            if (static_cast<unsigned char>(c) < 0x20) {
+                // JSON text escapes control characters inside strings
+                return false;
             }
             if (c != '\\') {
                 out += c;
@@ -344,6 +368,9 @@ class Parser {
                     }
                     codepoint =
                         0x10000 + ((codepoint - 0xd800) << 10) + (low - 0xdc00);
+                } else if (codepoint >= 0xdc00 && codepoint <= 0xdfff) {
+                    // A low surrogate is only valid after a high surrogate
+                    return false;
                 }
                 if (!appendUtf8(codepoint, out)) {
                     return false;
@@ -358,33 +385,45 @@ class Parser {
     }
 
     bool parseNumber(Value &out) {
+        // The JSON number grammar, which is stricter than std::stod: an
+        // optional minus, no leading zeros, digits on both sides of a decimal
+        // point and in an exponent, and nothing else
         const size_t start = _position;
-        if (_position < _text.size() &&
-            (_text[_position] == '-' || _text[_position] == '+')) {
-            _position++;
-        }
         bool isDouble = false;
-        while (_position < _text.size()) {
-            const char c = _text[_position];
-            if (c >= '0' && c <= '9') {
-                _position++;
-            } else if (c == '.' || c == 'e' || c == 'E' || c == '+' ||
-                       c == '-') {
-                isDouble = isDouble || c == '.' || c == 'e' || c == 'E';
-                _position++;
-            } else {
-                break;
+        accept('-');
+        if (!accept('0')) {
+            if (!acceptDigits()) {
+                return false;
             }
         }
-        if (_position == start) {
-            return false;
+        if (accept('.')) {
+            isDouble = true;
+            if (!acceptDigits()) {
+                return false;
+            }
+        }
+        if (accept('e') || accept('E')) {
+            isDouble = true;
+            if (!accept('+')) {
+                accept('-');
+            }
+            if (!acceptDigits()) {
+                return false;
+            }
         }
         const std::string number = _text.substr(start, _position - start);
         try {
             if (isDouble) {
                 out = Value(static_cast<double>(std::stod(number)));
             } else {
-                out = Value(static_cast<int64_t>(std::stoll(number)));
+                try {
+                    out = Value(static_cast<int64_t>(std::stoll(number)));
+                } catch (const std::out_of_range &) {
+                    // An integer outside the 64 bit range is still a number:
+                    // it is kept as a double, as MediaInformationJsonParser
+                    // does, instead of failing the whole document
+                    out = Value(static_cast<double>(std::stod(number)));
+                }
             }
         } catch (...) {
             return false;
@@ -649,11 +688,112 @@ template <typename Body> auto guard(Body &&body) -> decltype(body()) {
 /* Conversion helpers                                                        */
 /* ------------------------------------------------------------------------ */
 
+/*
+ * Text is UTF-8, as on every other platform, and text that is not is rejected
+ * the way the macOS implementation rejects it, with the same messages. A
+ * rejected call stores the message in the error slot and does nothing.
+ */
+
+/**
+ * Tells whether the text is well-formed UTF-8: no stray continuation bytes,
+ * truncated or overlong sequences, surrogates or code points above U+10FFFF.
+ */
+bool isValidUtf8(const char *text) {
+    const unsigned char *bytes = reinterpret_cast<const unsigned char *>(text);
+    while (*bytes != 0) {
+        const unsigned char lead = *bytes++;
+        if (lead < 0x80) {
+            continue;
+        }
+        size_t continuations;
+        unsigned char low = 0x80;
+        unsigned char high = 0xbf;
+        if (lead >= 0xc2 && lead <= 0xdf) {
+            continuations = 1;
+        } else if (lead >= 0xe0 && lead <= 0xef) {
+            continuations = 2;
+            if (lead == 0xe0) {
+                low = 0xa0; // overlong
+            } else if (lead == 0xed) {
+                high = 0x9f; // surrogates
+            }
+        } else if (lead >= 0xf0 && lead <= 0xf4) {
+            continuations = 3;
+            if (lead == 0xf0) {
+                low = 0x90; // overlong
+            } else if (lead == 0xf4) {
+                high = 0x8f; // above U+10FFFF
+            }
+        } else {
+            return false;
+        }
+        for (size_t index = 0; index < continuations; index++) {
+            const unsigned char next = *bytes++;
+            if (next < low || next > high) {
+                // also stops at the terminating zero of a truncated sequence
+                return false;
+            }
+            low = 0x80;
+            high = 0xbf;
+        }
+    }
+    return true;
+}
+
+/**
+ * Converts a text argument. NULL is the empty text, and text that is not valid
+ * UTF-8 throws, naming the argument as `what`.
+ */
+std::string toText(const char *value, const char *what) {
+    if (value == nullptr) {
+        return std::string();
+    }
+    if (!isValidUtf8(value)) {
+        throw std::invalid_argument(std::string("The ") + what +
+                                    " is not valid UTF-8.");
+    }
+    return std::string(value);
+}
+
+/**
+ * Converts a text argument of a call that reports failure as -1 rather than
+ * through a neutral result: a text that is not valid UTF-8 is stored in the
+ * error slot and false is returned.
+ */
+bool toTextOrFail(const char *value, const char *what, std::string &text) {
+    try {
+        text = toText(value, what);
+        return true;
+    } catch (const std::invalid_argument &rejected) {
+        setError(rejected.what());
+        return false;
+    }
+}
+
+/**
+ * Tells whether a property name can match a property. A name that is NULL or
+ * not valid UTF-8 matches nothing, and that is not an error.
+ */
+bool isPropertyKey(const char *key) {
+    return key != nullptr && isValidUtf8(key);
+}
+
+/**
+ * Converts an array of texts. A NULL array holds `argumentCount` empty texts,
+ * and a NULL entry is an empty text. `what` names one entry in the message of
+ * an entry that is not valid UTF-8.
+ */
 std::list<std::string> toArgumentList(const char *const *arguments,
-                                      const size_t argumentCount) {
+                                      const size_t argumentCount,
+                                      const char *what = "Argument") {
     std::list<std::string> list;
     for (size_t index = 0; index < argumentCount; index++) {
         const char *argument = arguments == nullptr ? nullptr : arguments[index];
+        if (argument != nullptr && !isValidUtf8(argument)) {
+            throw std::invalid_argument(std::string(what) + " " +
+                                        std::to_string(index) +
+                                        " is not valid UTF-8.");
+        }
         list.push_back(argument == nullptr ? std::string() : std::string(argument));
     }
     return list;
@@ -668,6 +808,10 @@ std::map<std::string, std::string> toStringMap(const char *const *keys,
         const char *value = values == nullptr ? nullptr : values[index];
         if (key == nullptr) {
             continue;
+        }
+        if (!isValidUtf8(key) || (value != nullptr && !isValidUtf8(value))) {
+            throw std::invalid_argument("Mapping entry " + std::to_string(index) +
+                                        " is not valid UTF-8.");
         }
         mapping[key] = value == nullptr ? std::string() : std::string(value);
     }
@@ -989,7 +1133,7 @@ FFKLog *ffk_log_create(const long sessionId, const int level,
     return guard([&]() -> FFKLog * {
         return makeHandle<FFKLog>(std::make_shared<internal::Log>(
             sessionId, static_cast<internal::Level>(level),
-            message == nullptr ? "" : message));
+            toText(message, "message").c_str()));
     });
 }
 
@@ -1295,9 +1439,14 @@ int ffk_session_get_return_code(const FFKSession *session, int *value) {
 
 char *ffk_session_get_fail_stack_trace(const FFKSession *session) {
     return guard([&]() -> char * {
-        return session == nullptr
-                   ? nullptr
-                   : duplicateString(session->value->getFailStackTrace());
+        // The C++ API answers an empty string until the session fails; the C
+        // API answers NULL, so that it can tell "not failed" from "failed
+        // without a reason"
+        if (session == nullptr ||
+            session->value->getState() != internal::SessionStateFailed) {
+            return nullptr;
+        }
+        return duplicateString(session->value->getFailStackTrace());
     });
 }
 
@@ -1337,7 +1486,7 @@ void ffk_session_add_log(FFKSession *session, const long logSessionId,
         }
         session->value->addLog(std::make_shared<internal::Log>(
             logSessionId, static_cast<internal::Level>(level),
-            message == nullptr ? "" : message));
+            toText(message, "message").c_str()));
     });
 }
 
@@ -1361,7 +1510,7 @@ void ffk_session_complete(FFKSession *session, const int returnCode) {
 void ffk_session_fail(FFKSession *session, const char *error) {
     guard([&]() {
         if (session != nullptr) {
-            session->value->fail(error == nullptr ? "" : error);
+            session->value->fail(toText(error, "error").c_str());
         }
     });
 }
@@ -1544,7 +1693,7 @@ void ffk_media_information_session_set_media_information(
     int prefix##_get_number_property(HandleType *handle, const char *key,      \
                                      int64_t *value) {                         \
         return guard([&]() -> int {                                            \
-            if (handle == nullptr || key == nullptr) {                         \
+            if (handle == nullptr || !isPropertyKey(key)) {                    \
                 return 0;                                                      \
             }                                                                  \
             const auto property = handle->value->getNumberProperty(key);       \
@@ -1560,7 +1709,7 @@ void ffk_media_information_session_set_media_information(
                                                                                \
     char *prefix##_get_string_property(HandleType *handle, const char *key) {  \
         return guard([&]() -> char * {                                         \
-            if (handle == nullptr || key == nullptr) {                         \
+            if (handle == nullptr || !isPropertyKey(key)) {                    \
                 return nullptr;                                                \
             }                                                                  \
             return duplicateString(handle->value->getStringProperty(key));     \
@@ -1569,7 +1718,7 @@ void ffk_media_information_session_set_media_information(
                                                                                \
     char *prefix##_get_property_json(HandleType *handle, const char *key) {    \
         return guard([&]() -> char * {                                         \
-            if (handle == nullptr || key == nullptr) {                         \
+            if (handle == nullptr || !isPropertyKey(key)) {                    \
                 return nullptr;                                                \
             }                                                                  \
             return toJson(handle->value->getProperty(key));                    \
@@ -1594,7 +1743,7 @@ namespace {
  * but an object has none.
  */
 std::shared_ptr<ffmpegkit::json::Value> parseJson(const char *json) {
-    if (json == nullptr) {
+    if (json == nullptr || !isValidUtf8(json)) {
         return nullptr;
     }
     auto value = std::make_shared<ffmpegkit::json::Value>();
@@ -1674,7 +1823,7 @@ ffk_media_information_get_chapters(FFKMediaInformation *mediaInformation) {
 int ffk_media_information_get_number_format_property(
     FFKMediaInformation *mediaInformation, const char *key, int64_t *value) {
     return guard([&]() -> int {
-        if (mediaInformation == nullptr || key == nullptr) {
+        if (mediaInformation == nullptr || !isPropertyKey(key)) {
             return 0;
         }
         const auto property =
@@ -1692,7 +1841,7 @@ int ffk_media_information_get_number_format_property(
 char *ffk_media_information_get_string_format_property(
     FFKMediaInformation *mediaInformation, const char *key) {
     return guard([&]() -> char * {
-        if (mediaInformation == nullptr || key == nullptr) {
+        if (mediaInformation == nullptr || !isPropertyKey(key)) {
             return nullptr;
         }
         return duplicateString(
@@ -1703,7 +1852,7 @@ char *ffk_media_information_get_string_format_property(
 char *ffk_media_information_get_format_property_json(
     FFKMediaInformation *mediaInformation, const char *key) {
     return guard([&]() -> char * {
-        if (mediaInformation == nullptr || key == nullptr) {
+        if (mediaInformation == nullptr || !isPropertyKey(key)) {
             return nullptr;
         }
         return toJson(mediaInformation->value->getFormatProperty(key));
@@ -1726,10 +1875,13 @@ ffk_media_information_parser_from(const char *ffprobeJsonOutput) {
         // Not MediaInformationJsonParser::from(): when it fails it prints a
         // message to the standard output. This one is silent and leaves the
         // error slot alone, so a failure is nothing but a NULL result.
+        const char *text = ffprobeJsonOutput == nullptr ? "" : ffprobeJsonOutput;
+        if (!isValidUtf8(text)) {
+            return nullptr;
+        }
         try {
             return makeHandle<FFKMediaInformation>(
-                internal::MediaInformationJsonParser::fromWithError(
-                    ffprobeJsonOutput == nullptr ? "" : ffprobeJsonOutput));
+                internal::MediaInformationJsonParser::fromWithError(text));
         } catch (const std::exception &) {
             return nullptr;
         }
@@ -1739,9 +1891,20 @@ ffk_media_information_parser_from(const char *ffprobeJsonOutput) {
 FFKMediaInformation *
 ffk_media_information_parser_from_with_error(const char *ffprobeJsonOutput) {
     return guard([&]() -> FFKMediaInformation * {
-        return makeHandle<FFKMediaInformation>(
-            internal::MediaInformationJsonParser::fromWithError(
-                ffprobeJsonOutput == nullptr ? "" : ffprobeJsonOutput));
+        // The message names the failure the same way on every platform; the
+        // reason after it is the parser's own and platform specific
+        const char *text = ffprobeJsonOutput == nullptr ? "" : ffprobeJsonOutput;
+        std::string problem = "the text is not valid UTF-8";
+        if (isValidUtf8(text)) {
+            try {
+                return makeHandle<FFKMediaInformation>(
+                    internal::MediaInformationJsonParser::fromWithError(text));
+            } catch (const std::exception &exception) {
+                problem = exception.what();
+            }
+        }
+        setError(("Media information could not be parsed: " + problem).c_str());
+        return nullptr;
     });
 }
 
@@ -1784,7 +1947,7 @@ FFKSession *ffk_ffmpegkit_execute_with_arguments_async(
 FFKSession *ffk_ffmpegkit_execute(const char *command) {
     return guard([&]() -> FFKSession * {
         return makeHandle<FFKSession>(
-            internal::FFmpegKit::execute(command == nullptr ? "" : command));
+            internal::FFmpegKit::execute(toText(command, "command")));
     });
 }
 
@@ -1806,7 +1969,7 @@ FFKSession *ffk_ffmpegkit_execute_async(
             statisticsCallback, statisticsUserData, statisticsFree);
 
         return makeHandle<FFKSession>(internal::FFmpegKit::executeAsync(
-            command == nullptr ? "" : command, complete, log, statistics));
+            toText(command, "command"), complete, log, statistics));
     });
 }
 
@@ -1857,7 +2020,7 @@ FFKSession *ffk_ffprobekit_execute_with_arguments_async(
 FFKSession *ffk_ffprobekit_execute(const char *command) {
     return guard([&]() -> FFKSession * {
         return makeHandle<FFKSession>(
-            internal::FFprobeKit::execute(command == nullptr ? "" : command));
+            internal::FFprobeKit::execute(toText(command, "command")));
     });
 }
 
@@ -1878,7 +2041,7 @@ FFKSession *ffk_ffprobekit_execute_async(const char *command,
         const auto log = makeLogCallback(logCallback, logUserData, logFree);
 
         return makeHandle<FFKSession>(internal::FFprobeKit::executeAsync(
-            command == nullptr ? "" : command, complete, log));
+            toText(command, "command"), complete, log));
     });
 }
 
@@ -1886,7 +2049,7 @@ FFKSession *ffk_ffprobekit_get_media_information(const char *path,
                                                  const int waitTimeout) {
     return guard([&]() -> FFKSession * {
         return makeHandle<FFKSession>(internal::FFprobeKit::getMediaInformation(
-            path == nullptr ? "" : path, waitTimeout));
+            toText(path, "path"), waitTimeout));
     });
 }
 
@@ -1905,7 +2068,7 @@ FFKSession *ffk_ffprobekit_get_media_information_async(
 
         return makeHandle<FFKSession>(
             internal::FFprobeKit::getMediaInformationAsync(
-                path == nullptr ? "" : path, complete, log, waitTimeout));
+                toText(path, "path"), complete, log, waitTimeout));
     });
 }
 
@@ -1914,7 +2077,7 @@ ffk_ffprobekit_get_media_information_from_command(const char *command) {
     return guard([&]() -> FFKSession * {
         return makeHandle<FFKSession>(
             internal::FFprobeKit::getMediaInformationFromCommand(
-                command == nullptr ? "" : command));
+                toText(command, "command")));
     });
 }
 
@@ -1946,8 +2109,11 @@ void ffk_config_disable_redirection(void) {
 
 int ffk_config_set_fontconfig_configuration_path(const char *path) {
     return guard([&]() -> int {
-        return internal::FFmpegKitConfig::setFontconfigConfigurationPath(
-            path == nullptr ? "" : path);
+        std::string text;
+        if (!toTextOrFail(path, "path", text)) {
+            return -1;
+        }
+        return internal::FFmpegKitConfig::setFontconfigConfigurationPath(text);
     });
 }
 
@@ -1957,7 +2123,7 @@ void ffk_config_set_font_directory(const char *fontDirectoryPath,
                                    const size_t mappingCount) {
     guard([&]() {
         internal::FFmpegKitConfig::setFontDirectory(
-            fontDirectoryPath == nullptr ? "" : fontDirectoryPath,
+            toText(fontDirectoryPath, "font directory path"),
             toStringMap(mappingKeys, mappingValues, mappingCount));
     });
 }
@@ -1969,7 +2135,8 @@ void ffk_config_set_font_directory_list(const char *const *fontDirectories,
                                         const size_t mappingCount) {
     guard([&]() {
         internal::FFmpegKitConfig::setFontDirectoryList(
-            toArgumentList(fontDirectories, fontDirectoryCount),
+            toArgumentList(fontDirectories, fontDirectoryCount,
+                           "Font directory"),
             toStringMap(mappingKeys, mappingValues, mappingCount));
     });
 }
@@ -1990,7 +2157,7 @@ char *ffk_config_register_new_ffmpeg_pipe(void) {
 void ffk_config_close_ffmpeg_pipe(const char *ffmpegPipePath) {
     guard([&]() {
         internal::FFmpegKitConfig::closeFFmpegPipe(
-            ffmpegPipePath == nullptr ? "" : ffmpegPipePath);
+            toText(ffmpegPipePath, "pipe path"));
     });
 }
 
@@ -2087,8 +2254,8 @@ char *ffk_protocol_build_url(const char *protocol, const long id,
                              const char *extension) {
     return guard([&]() -> char * {
         return duplicateString(internal::buildFFmpegKitUrl(
-            protocol == nullptr ? "" : protocol, id,
-            extension == nullptr ? "" : extension));
+            toText(protocol, "protocol"), id,
+            toText(extension, "extension")));
     });
 }
 
@@ -2125,9 +2292,13 @@ char *ffk_config_get_build_date(void) {
 int ffk_config_set_environment_variable(const char *variableName,
                                         const char *variableValue) {
     return guard([&]() -> int {
-        return internal::FFmpegKitConfig::setEnvironmentVariable(
-            variableName == nullptr ? "" : variableName,
-            variableValue == nullptr ? "" : variableValue);
+        std::string name;
+        std::string value;
+        if (!toTextOrFail(variableName, "variable name", name) ||
+            !toTextOrFail(variableValue, "variable value", value)) {
+            return -1;
+        }
+        return internal::FFmpegKitConfig::setEnvironmentVariable(name, value);
     });
 }
 
@@ -2434,7 +2605,7 @@ FFKStringList *ffk_config_parse_arguments(const char *command) {
     return guard([&]() -> FFKStringList * {
         std::unique_ptr<FFKStringList> list(new FFKStringList());
         const auto arguments = internal::FFmpegKitConfig::parseArguments(
-            command == nullptr ? "" : command);
+            toText(command, "command"));
         list->items.assign(arguments.begin(), arguments.end());
         return list.release();
     });

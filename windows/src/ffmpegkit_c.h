@@ -57,9 +57,13 @@
  *
  * TEXT
  *
- *   Text is UTF-8, which is not checked. A NULL text is the empty text, a NULL
- *   entry of an array of texts is an empty text, a NULL key of a key/value
- *   mapping is skipped and a NULL value of one is empty.
+ *   Text is UTF-8. A NULL text is the empty text, a NULL entry of an array of
+ *   texts is an empty text, a NULL key of a key/value mapping is skipped and a
+ *   NULL value of one is empty. Text that is not valid UTF-8 is rejected, as on
+ *   every other platform: the call stores the reason in the error slot, does
+ *   nothing and returns a neutral value, or -1 where it reports failure that
+ *   way. Property names that are not valid UTF-8 match nothing, and metadata
+ *   JSON that is not valid UTF-8 has no properties; neither is an error.
  *
  * ERROR HANDLING
  *
@@ -511,7 +515,9 @@ FFK_API FFKMediaInformation *
 ffk_media_information_parser_from(const char *ffprobe_json_output);
 /**
  * Like ffk_media_information_parser_from(), but a parse failure also fills the
- * error slot with the parser's own description of it, whose wording is
+ * error slot with "Media information could not be parsed: " followed by the
+ * reason. JSON that is not an object is reported as "The top-level JSON value
+ * is not an object."; the wording of other reasons is the parser's own and
  * platform specific.
  */
 FFK_API FFKMediaInformation *
@@ -576,6 +582,7 @@ FFK_API FFKSessionList *ffk_ffprobekit_list_media_information_sessions(void);
 
 FFK_API void ffk_config_enable_redirection(void);
 FFK_API void ffk_config_disable_redirection(void);
+/** @return 0 on success, non-zero on failure, -1 when the path is not valid UTF-8 */
 FFK_API int ffk_config_set_fontconfig_configuration_path(const char *path);
 FFK_API void ffk_config_set_font_directory(const char *font_directory_path,
                                            const char *const *mapping_keys,
@@ -647,6 +654,7 @@ FFK_API char *ffk_config_get_ffmpeg_version(void);
 FFK_API char *ffk_config_get_version(void);
 FFK_API int ffk_config_is_lts_build(void);
 FFK_API char *ffk_config_get_build_date(void);
+/** @return 0 on success, non-zero on failure, -1 when a text is not valid UTF-8 */
 FFK_API int ffk_config_set_environment_variable(const char *variable_name,
                                                 const char *variable_value);
 FFK_API void ffk_config_ignore_signal(int signal);
