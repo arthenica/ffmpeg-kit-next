@@ -344,9 +344,9 @@ void term_init(void)
 
             tcsetattr (0, TCSANOW, &tty);
         }
-        if (handleSIGQUIT == 1)
-            SIGNAL(SIGQUIT, sigterm_handler); /* Quit (POSIX).  */
     }
+    if (handleSIGQUIT == 1)
+        SIGNAL(SIGQUIT, sigterm_handler); /* Quit (POSIX).  */
 #endif
 
     if (handleSIGINT == 1)
@@ -1176,7 +1176,7 @@ static int ffmpeg_var_cleanup(void)
     exit_on_error = 0;
     abort_on_flags = 0;
     print_stats = -1;
-    stdin_interaction = 1;
+    stdin_interaction = 0;
     max_error_rate = 2.0 / 3;
     filter_nbthreads = NULL;
     filter_complex_nbthreads = 0;

@@ -146,7 +146,9 @@ __thread int debug_ts          = 0;
 __thread int exit_on_error     = 0;
 __thread int abort_on_flags    = 0;
 __thread int print_stats       = -1;
-__thread int stdin_interaction = 1;
+/* ffmpeg-kit runs inside an application, so it never reads the keyboard or takes over
+ * the terminal unless -stdin is passed. */
+__thread int stdin_interaction = 0;
 __thread float max_error_rate  = 2.0/3;
 __thread char *filter_nbthreads;
 __thread int filter_complex_nbthreads = 0;
