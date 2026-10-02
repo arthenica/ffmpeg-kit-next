@@ -3,7 +3,7 @@
 `FFmpegKitNext` for Linux can be built locally with the recommended [Nix package manager](https://github.com/arthenica/ffmpeg-kit-next/wiki/Nix) workflow, or without Nix by installing the required Linux toolchain yourself.
 
 ### 1. Features
-- Provides a `C++` API built with `c++11`
+- Provides a `C++` API built with `c++11` and a `C` API
 - Includes `arm64` and `x86_64` architectures
 - Libraries are compiled natively, so only the architecture of the host machine is built
 - Custom `FFmpegKit` protocols: `ffkitmem:` for finite in-memory input/output and `ffkitstream:` for memory-backed streaming input/output

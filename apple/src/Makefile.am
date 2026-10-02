@@ -61,6 +61,12 @@ libffmpegkit_la_SOURCES = \
     fftools/textformat/tw_buffer.c \
     fftools/textformat/tw_stdout.c
 
+# THE FLAT C API (ffmpegkit_c.h) IS PART OF EVERY MACOS BUILD. THE OTHER APPLE
+# PLATFORMS SHARE THIS SOURCE TREE BUT DO NOT GET IT (SEE configure.ac).
+if FFMPEG_KIT_MACOS
+libffmpegkit_la_SOURCES += ffmpegkit_c.m
+endif
+
 include_HEADERS = \
     AbstractSession.h \
     ArchDetect.h \
@@ -109,6 +115,10 @@ include_HEADERS = \
     fftools/textformat/tf_internal.h \
     fftools/textformat/tf_mermaid.h \
     fftools/thread_queue.h
+
+if FFMPEG_KIT_MACOS
+include_HEADERS += ffmpegkit_c.h
+endif
 
 libffmpegkit_la_CFLAGS = $(CFLAGS)
 libffmpegkit_la_OBJCFLAGS = $(CFLAGS)

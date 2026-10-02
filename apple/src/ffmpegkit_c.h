@@ -21,25 +21,22 @@
 #define FFMPEG_KIT_C_H
 
 /*
- * FFmpegKitNext flat C API.
+ * FFmpegKitNext flat C API for macOS.
  *
- * THIS HEADER IS THE ONLY ABI OF libffmpegkit. Everything the library exports
- * is declared here: extern "C" functions over opaque handles, plain integers
- * and UTF-8 strings. No C++ type ever crosses this boundary, which is what
- * makes the library usable from MSVC and clang-cl even though it is built with
- * MinGW-w64.
+ * This is the C interface of libffmpegkit on macOS: functions over opaque
+ * handles, plain integers and UTF-8 strings, with no Objective-C type in any
+ * signature. It is meant for consumers that cannot use the Objective-C API,
+ * such as Python through ctypes or cffi. Every function declared here is
+ * exported by the library and nothing else is.
  *
- * The object oriented C++ API (ffmpegkit::FFmpegKit and friends) is a
- * header-only facade over these functions. It compiles into the consumer's own
- * translation unit with the consumer's own compiler and standard library, so
- * it is not part of the ABI either.
+ * The Objective-C API (FFmpegKit, FFmpegSession and friends) is unchanged and
+ * remains the implementation behind these functions.
  *
  * MEMORY OWNERSHIP
  *
  *   - The library owns every allocation it hands out and every allocation is
  *     released by an ffk_*_free function from this header. Callers must never
- *     free returned memory themselves. That is what makes the CRT mismatch
- *     between a MinGW built library and an MSVC built consumer irrelevant.
+ *     free returned memory themselves.
  *   - Every `char *` returned by this API is a heap allocated UTF-8 string
  *     owned by the caller and must be released with ffk_string_free(). A NULL
  *     return means the value is absent, never that an empty string was
@@ -50,46 +47,48 @@
  *   - Handles returned by this API are owned by the caller and must be
  *     released with the matching ffk_*_free function. Handles passed into
  *     callbacks are owned by the library and are only valid for the duration
- *     of the callback; use ffk_session_retain() to keep one alive longer.
+ *     of the callback; use ffk_session_retain() to keep a session longer.
+ *   - A list is a snapshot taken when it is returned. Elements taken from it
+ *     are handles of their own and outlive the list.
  *   - Passing NULL for a handle is allowed: getters return 0 or NULL and
  *     ffk_*_free functions do nothing. Passing a handle of the wrong kind, or
  *     one that has already been released, is undefined behavior.
  *
  * TEXT
  *
- *   Text is UTF-8, which is not checked. A NULL text is the empty text, a NULL
- *   entry of an array of texts is an empty text, a NULL key of a key/value
- *   mapping is skipped and a NULL value of one is empty.
+ *   Text is UTF-8. A NULL text is the empty text, a NULL entry of an array of
+ *   texts is an empty text, a NULL key of a key/value mapping is skipped and a
+ *   NULL value of one is empty. Bytes that are not valid UTF-8 can not be held
+ *   by the Objective-C classes behind this API, so a call given such text is
+ *   rejected with an error and does nothing.
  *
  * ERROR HANDLING
  *
- *   No C++ exception ever escapes this API. Every entry point clears the
- *   calling thread's error slot on entry and, if the operation throws, stores
- *   the message there and returns a neutral value (0, NULL or no-op). Callers
- *   check ffk_has_error() and take the message with ffk_take_error(). The
- *   message can be of any length.
+ *   No Objective-C exception ever escapes this API. Every entry point clears
+ *   the calling thread's error slot on entry and, if the operation raises,
+ *   stores the reason there and returns a neutral value (0, NULL or no-op).
+ *   Callers check ffk_has_error() and take the message with ffk_take_error().
+ *   The message can be of any length.
  *
  * CALLBACKS
  *
  *   Callbacks are a C function pointer plus a `void *user_data` cookie plus an
  *   ffk_free_cb that the library calls when it drops its last reference to the
- *   cookie. Since the consumer supplies the free function, the cookie is
- *   always released by the allocator that created it. The library takes
- *   ownership of the cookie as soon as a call that accepts callbacks starts,
- *   even if that call fails or the callback is NULL, in which case the cookie
- *   is released before the call returns. Callbacks of asynchronous executions
- *   run on threads owned by the library. Nothing is promised about which thread
- *   that is, and asynchronous executions may run at the same time, so a
- *   callback has to be safe to run on any thread, next to another one. The
- *   *_get_*_callback() functions read back only callbacks that were registered
- *   through this API.
+ *   cookie. The library takes ownership of the cookie as soon as a call that
+ *   accepts callbacks starts, even if that call fails or the callback is NULL,
+ *   in which case the cookie is released before the call returns. Callbacks of
+ *   asynchronous executions run on threads owned by the library. Nothing is
+ *   promised about which thread that is, and asynchronous executions may run at
+ *   the same time, so a callback has to be safe to run on any thread, next to
+ *   another one. The *_get_*_callback() functions read back only callbacks that
+ *   were registered through this API.
  *
  * METADATA
  *
- *   Media, stream and chapter properties are exchanged as JSON text: object
- *   keys are sorted and slashes are not escaped. Metadata given as JSON text
- *   has to be a JSON object; anything else leaves an object without
- *   properties.
+ *   Media, stream and chapter properties are exchanged as JSON text written by
+ *   NSJSONSerialization: object keys are sorted and slashes are not escaped.
+ *   Metadata given as JSON text has to be a JSON object; anything else leaves an
+ *   object without properties.
  *
  *   A number property is a JSON integer that fits in 64 bits. A fraction, an
  *   exponent (5.0 and 1e2 are doubles although they are whole), a boolean, null
@@ -98,22 +97,23 @@
  *
  * ENUMS
  *
- *   Enumerations (session state, log level, log redirection strategy, signal)
- *   cross this boundary as plain int, never as a C++ enum type.
+ *   Enumerations cross this boundary as plain int:
+ *
+ *   - session state: 0 created, 1 running, 2 failed, 3 completed
+ *   - log level: -16 stderr, -8 quiet, 0 panic, 8 fatal, 16 error, 24 warning,
+ *     32 info, 40 verbose, 48 debug, 56 trace
+ *   - log redirection strategy: 0 always print logs, 1 print logs when no
+ *     callbacks are defined, 2 print logs when the global callback is not
+ *     defined, 3 print logs when the session callback is not defined, 4 never
+ *     print logs
+ *   - signal: the POSIX signal number (2 SIGINT, 3 SIGQUIT, 13 SIGPIPE,
+ *     15 SIGTERM, 24 SIGXCPU)
  */
 
 #include <stddef.h>
 #include <stdint.h>
 
-#if defined(_WIN32)
-#if defined(FFMPEG_KIT_BUILDING_DLL)
-#define FFK_API __declspec(dllexport)
-#else
-#define FFK_API __declspec(dllimport)
-#endif
-#else
 #define FFK_API __attribute__((visibility("default")))
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -261,7 +261,8 @@ FFK_API FFKSession *ffk_abstract_session_create(
     int log_redirection_strategy);
 
 /**
- * Creates an FFmpeg session.
+ * Creates an FFmpeg session without running it. Every session is added to the
+ * session history when it is created.
  *
  * @param log_redirection_strategy strategy as int, or -1 to use the value
  * configured with ffk_config_set_log_redirection_strategy()
@@ -295,9 +296,9 @@ FFK_API FFKSession *ffk_session_retain(const FFKSession *session);
 FFK_API long ffk_session_get_session_id(const FFKSession *session);
 /** @return creation time as milliseconds since the epoch */
 FFK_API int64_t ffk_session_get_create_time(const FFKSession *session);
-/** @return start time as milliseconds since the epoch */
+/** @return start time as milliseconds since the epoch, 0 before it started */
 FFK_API int64_t ffk_session_get_start_time(const FFKSession *session);
-/** @return end time as milliseconds since the epoch */
+/** @return end time as milliseconds since the epoch, 0 before it ended */
 FFK_API int64_t ffk_session_get_end_time(const FFKSession *session);
 FFK_API long ffk_session_get_duration(const FFKSession *session);
 FFK_API FFKStringList *ffk_session_get_arguments(const FFKSession *session);
@@ -337,9 +338,10 @@ FFK_API void ffk_session_add_log(FFKSession *session, long log_session_id,
 FFK_API void ffk_session_start_running(FFKSession *session);
 FFK_API void ffk_session_complete(FFKSession *session, int return_code);
 /**
- * Marks the session as failed. ffk_session_get_fail_stack_trace() describes the
- * failure and always contains the text; its format is platform specific, and
- * here it is the text itself.
+ * Marks the session as failed. The text becomes the reason of an NSException.
+ * ffk_session_get_fail_stack_trace() describes the failure and always contains
+ * the text; its format is platform specific, and on macOS it is that
+ * exception's user info followed by its call stack.
  */
 FFK_API void ffk_session_fail(FFKSession *session, const char *error);
 FFK_API int ffk_session_is_ffmpeg(const FFKSession *session);
@@ -350,11 +352,10 @@ FFK_API void ffk_session_cancel(FFKSession *session);
 /**
  * Reads back the log callback registered for this session.
  *
- * Only callbacks registered through this C API can be read back. The C++
- * facade registers its callbacks through it, and uses this to recognise its own
- * trampoline and recover the std::function it stored consumer side. The
- * returned user_data is borrowed and stays valid for as long as the session
- * holds the callback.
+ * Objective-C blocks cannot be inspected, so only callbacks registered through
+ * this C API can be read back; a callback set through the Objective-C API
+ * reports 0. The returned user_data is borrowed and stays valid for as long as
+ * the session holds the callback.
  *
  * @return 1 when a callback registered through this API is present, 0 otherwise
  */
@@ -369,6 +370,7 @@ FFK_API int ffk_session_get_complete_callback(const FFKSession *session,
 
 /* ---- FFmpeg session specific -------------------------------------------- */
 
+/** Statistics functions return NULL for a session that is not an FFmpeg session. */
 FFK_API FFKStatisticsList *
 ffk_ffmpeg_session_get_all_statistics_with_timeout(FFKSession *session,
                                                    int wait_timeout);
@@ -503,16 +505,12 @@ FFK_API char *ffk_media_information_get_format_properties_json(
 FFK_API char *ffk_media_information_get_all_properties_json(
     FFKMediaInformation *media_information);
 
-/**
- * @return the parsed ffprobe output, or NULL when it cannot be parsed. Nothing
- * is printed and the error slot is left alone.
- */
+/** @return the parsed ffprobe output, or NULL when it cannot be parsed */
 FFK_API FFKMediaInformation *
 ffk_media_information_parser_from(const char *ffprobe_json_output);
 /**
  * Like ffk_media_information_parser_from(), but a parse failure also fills the
- * error slot with the parser's own description of it, whose wording is
- * platform specific.
+ * error slot with the reason.
  */
 FFK_API FFKMediaInformation *
 ffk_media_information_parser_from_with_error(const char *ffprobe_json_output);
@@ -521,15 +519,31 @@ ffk_media_information_parser_from_with_error(const char *ffprobe_json_output);
 /* FFmpegKit                                                                 */
 /* ------------------------------------------------------------------------ */
 
+/**
+ * Synchronously executes FFmpeg with the given arguments.
+ *
+ * @return the session of this execution, to release with ffk_session_free(),
+ * or NULL with the error slot set when an argument is not valid UTF-8
+ */
 FFK_API FFKSession *
 ffk_ffmpegkit_execute_with_arguments(const char *const *arguments,
                                      size_t argument_count);
+
+/**
+ * Starts an asynchronous FFmpeg execution and returns immediately. Each
+ * callback may be NULL.
+ */
 FFK_API FFKSession *ffk_ffmpegkit_execute_with_arguments_async(
     const char *const *arguments, size_t argument_count,
     ffk_session_cb complete_callback, void *complete_user_data,
     ffk_free_cb complete_free, ffk_log_cb log_callback, void *log_user_data,
     ffk_free_cb log_free, ffk_statistics_cb statistics_callback,
     void *statistics_user_data, ffk_free_cb statistics_free);
+
+/**
+ * Synchronously executes an FFmpeg command. Spaces split the command into
+ * arguments; single or double quotes group them.
+ */
 FFK_API FFKSession *ffk_ffmpegkit_execute(const char *command);
 FFK_API FFKSession *ffk_ffmpegkit_execute_async(
     const char *command, ffk_session_cb complete_callback,
@@ -537,6 +551,8 @@ FFK_API FFKSession *ffk_ffmpegkit_execute_async(
     ffk_log_cb log_callback, void *log_user_data, ffk_free_cb log_free,
     ffk_statistics_cb statistics_callback, void *statistics_user_data,
     ffk_free_cb statistics_free);
+
+/** Cancels all running FFmpeg sessions. */
 FFK_API void ffk_ffmpegkit_cancel(void);
 FFK_API void ffk_ffmpegkit_cancel_session(long session_id);
 FFK_API FFKSessionList *ffk_ffmpegkit_list_sessions(void);
@@ -576,6 +592,12 @@ FFK_API FFKSessionList *ffk_ffprobekit_list_media_information_sessions(void);
 
 FFK_API void ffk_config_enable_redirection(void);
 FFK_API void ffk_config_disable_redirection(void);
+/**
+ * Points fontconfig at a configuration directory by setting the
+ * FONTCONFIG_PATH environment variable.
+ *
+ * @return 0 on success, non-zero on failure
+ */
 FFK_API int ffk_config_set_fontconfig_configuration_path(const char *path);
 FFK_API void ffk_config_set_font_directory(const char *font_directory_path,
                                            const char *const *mapping_keys,
@@ -587,25 +609,40 @@ FFK_API void ffk_config_set_font_directory_list(
     size_t mapping_count);
 
 /**
- * Named pipes are not supported on Windows. Always returns NULL.
+ * Creates a named pipe (FIFO) in the "pipes" folder of the user's caches
+ * directory.
  *
+ * @return the path of the pipe to release with ffk_string_free(), or NULL
  * @deprecated Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.
  */
 FFK_API char *ffk_config_register_new_ffmpeg_pipe(void);
 /**
- * Named pipes are not supported on Windows. No-op.
+ * Deletes a named pipe created by ffk_config_register_new_ffmpeg_pipe().
  *
  * @deprecated Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.
  */
 FFK_API void ffk_config_close_ffmpeg_pipe(const char *ffmpeg_pipe_path);
 
+/**
+ * Registers a copy of the data as a seekable input that ffmpeg reads through
+ * an ffkitmem: url.
+ *
+ * @return the buffer id, or 0 when it could not be registered
+ */
 FFK_API long ffk_config_register_ffmpegkit_input_buffer(const uint8_t *data,
                                                         size_t size);
+/**
+ * Registers a seekable output that ffmpeg writes through an ffkitmem: url.
+ * A capacity of 0 selects the default.
+ *
+ * @return the buffer id, or 0 when it could not be registered
+ */
 FFK_API long ffk_config_register_ffmpegkit_output_buffer(long initial_capacity,
                                                          long max_capacity);
+/** @return the number of bytes in the buffer, or -1 when there is no such buffer */
 FFK_API long ffk_config_get_ffmpegkit_buffer_size(long buffer_id);
 /**
- * @param data receives a buffer to release with ffk_bytes_free()
+ * @param data receives a copy to release with ffk_bytes_free()
  * @param size receives the buffer size
  * @return 1 when a buffer was returned, 0 otherwise
  */
@@ -614,14 +651,29 @@ FFK_API int ffk_config_get_ffmpegkit_output_buffer(long buffer_id,
                                                    size_t *size);
 FFK_API void ffk_config_unregister_ffmpegkit_buffer(long buffer_id);
 
+/**
+ * Registers a non-seekable stream that ffmpeg reads or writes through an
+ * ffkitstream: url.
+ *
+ * @param type 1 for an input stream, 2 for an output stream
+ * @return the stream id, or 0 when it could not be registered
+ */
 FFK_API long ffk_config_register_ffmpegkit_stream(long capacity, int type);
+/**
+ * @param timeout_ms how long to wait for room, or a negative value to wait
+ * without limit
+ * @return the number of bytes written, or a negative FFmpeg error code
+ */
 FFK_API int ffk_config_write_ffmpegkit_stream(long stream_id,
                                               const uint8_t *data,
                                               size_t length, int timeout_ms);
 /**
+ * Reads the next chunk of an output stream. An empty chunk means the stream
+ * has ended; no chunk means nothing arrived before the timeout.
+ *
  * @param data receives a buffer to release with ffk_bytes_free()
  * @param size receives the buffer size
- * @return 1 when a buffer was returned, 0 otherwise
+ * @return 1 when a chunk was returned, 0 otherwise
  */
 FFK_API int ffk_config_read_ffmpegkit_stream(long stream_id, int max_bytes,
                                              int timeout_ms, uint8_t **data,
@@ -645,8 +697,10 @@ FFK_API char *ffk_protocol_build_url(const char *protocol, long id,
 
 FFK_API char *ffk_config_get_ffmpeg_version(void);
 FFK_API char *ffk_config_get_version(void);
+/** Apple builds have no LTS build concept: always 0. */
 FFK_API int ffk_config_is_lts_build(void);
 FFK_API char *ffk_config_get_build_date(void);
+/** @return 0 on success, non-zero on failure */
 FFK_API int ffk_config_set_environment_variable(const char *variable_name,
                                                 const char *variable_value);
 FFK_API void ffk_config_ignore_signal(int signal);
@@ -718,6 +772,7 @@ FFK_API int ffk_config_get_log_redirection_strategy(void);
 FFK_API void ffk_config_set_log_redirection_strategy(int strategy);
 FFK_API int ffk_config_messages_in_transmit(long session_id);
 FFK_API char *ffk_config_session_state_to_string(int state);
+/** @return the arguments a command splits into, to release with ffk_string_list_free() */
 FFK_API FFKStringList *ffk_config_parse_arguments(const char *command);
 FFK_API char *ffk_config_arguments_to_string(const char *const *arguments,
                                              size_t argument_count);

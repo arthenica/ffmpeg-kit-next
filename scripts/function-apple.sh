@@ -930,6 +930,11 @@ get_static_archive_name() {
 build_modulemap() {
   local FILE_PATH="$1"
 
+  local C_API_HEADER="";
+  if [[ ${FFMPEG_KIT_BUILD_TYPE} == "macos" ]]; then
+    C_API_HEADER=$'  header "ffmpegkit_c.h"\n'
+  fi
+
   cat >"${FILE_PATH}" <<EOF
 framework module ffmpegkit {
 
@@ -964,7 +969,7 @@ framework module ffmpegkit {
   header "StatisticsCallback.h"
   header "StreamInformation.h"
   header "ffmpegkit_exception.h"
-
+${C_API_HEADER}
   export *
 }
 EOF

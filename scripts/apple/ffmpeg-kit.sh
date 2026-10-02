@@ -87,6 +87,12 @@ make -j$(get_cpu_count) 1>>"${BASEDIR}"/build.log 2>&1
 make install 1>>"${BASEDIR}"/build.log 2>&1
 
 if [ $? -eq 0 ]; then
+
+  # THE C API IS PART OF EVERY MACOS BUILD: ITS HEADER HAS TO DECLARE EXACTLY WHAT THE LIBRARY EXPORTS
+  if [[ ${FFMPEG_KIT_BUILD_TYPE} == "macos" ]]; then
+    check_macos_c_api_exports "${FFMPEG_KIT_LIBRARY_PATH}" || exit 1
+  fi
+
   echo "ok"
 else
   exit 1

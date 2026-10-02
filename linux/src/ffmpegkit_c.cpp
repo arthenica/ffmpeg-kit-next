@@ -18,34 +18,40 @@
  */
 
 /*
- * Implementation of the flat C API declared in api/ffmpegkit_c.h.
+ * Implementation of the flat C API declared in ffmpegkit_c.h.
  *
- * This is the only translation unit that sits on the ABI boundary. It converts
- * between the C representation (opaque handles, ints, UTF-8 strings, function
- * pointers) and the C++ implementation classes in ffmpegkit::internal, and it
- * makes sure no C++ exception ever leaves the library.
+ * This is the Linux port of windows/src/ffmpegkit_c.cpp, kept textually close
+ * to it so that changes can be diffed and ported. It converts between the C
+ * representation (opaque handles, ints, UTF-8 strings, function pointers) and
+ * the C++ classes in ffmpegkit, and it makes sure no C++ exception ever leaves
+ * the library through this API.
+ *
+ * On Linux the C++ classes stay public, so this API is a second front door
+ * onto them. Only the ffk_ functions are exported from here; everything else
+ * in this file has internal linkage.
  */
 
 #include "ffmpegkit_c.h"
 
-#include "internal/ArchDetect.h"
-#include "internal/Chapter.h"
-#include "internal/FFmpegKit.h"
-#include "internal/FFmpegKitConfig.h"
-#include "internal/FFmpegKitProtocolUrl.h"
-#include "internal/FFmpegSession.h"
-#include "internal/FFprobeKit.h"
-#include "internal/FFprobeSession.h"
-#include "internal/Log.h"
-#include "internal/MediaInformation.h"
-#include "internal/MediaInformationJsonParser.h"
-#include "internal/MediaInformationSession.h"
-#include "internal/Packages.h"
-#include "internal/ReturnCode.h"
-#include "internal/Statistics.h"
-#include "internal/StreamInformation.h"
+#include "ArchDetect.h"
+#include "Chapter.h"
+#include "FFmpegKit.h"
+#include "FFmpegKitConfig.h"
+#include "FFmpegKitProtocolUrl.h"
+#include "FFmpegSession.h"
+#include "FFprobeKit.h"
+#include "FFprobeSession.h"
+#include "Log.h"
+#include "MediaInformation.h"
+#include "MediaInformationJsonParser.h"
+#include "MediaInformationSession.h"
+#include "Packages.h"
+#include "ReturnCode.h"
+#include "Statistics.h"
+#include "StreamInformation.h"
 
 #include <chrono>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
@@ -59,7 +65,464 @@
 #include <utility>
 #include <vector>
 
-namespace internal = ffmpegkit::internal;
+// The Windows shim addresses the classes as internal::X, which on Linux live
+// directly in ffmpegkit
+namespace internal = ::ffmpegkit;
+
+/* ------------------------------------------------------------------------ */
+/* JSON serialization                                                        */
+/* ------------------------------------------------------------------------ */
+
+/*
+ * On Windows these helpers are inline in json/Value.h, next to the header-only
+ * facade that uses them. The Linux json/Value.h is an installed header of the
+ * existing C++ API and has no such helpers, so they are copied here verbatim
+ * from windows/src/json/Value.h. The unnamed namespace gives them internal
+ * linkage, so they add no exported symbol, while the ffmpegkit::json::detail
+ * spelling used below keeps resolving.
+ */
+namespace ffmpegkit {
+namespace json {
+namespace detail {
+namespace {
+
+
+inline void serializeString(const std::string &value, std::string &out) {
+    out += '"';
+    for (unsigned char c : value) {
+        switch (c) {
+        case '"':
+            out += "\\\"";
+            break;
+        case '\\':
+            out += "\\\\";
+            break;
+        case '\b':
+            out += "\\b";
+            break;
+        case '\f':
+            out += "\\f";
+            break;
+        case '\n':
+            out += "\\n";
+            break;
+        case '\r':
+            out += "\\r";
+            break;
+        case '\t':
+            out += "\\t";
+            break;
+        default:
+            if (c < 0x20) {
+                static const char *digits = "0123456789abcdef";
+                out += "\\u00";
+                out += digits[(c >> 4) & 0xf];
+                out += digits[c & 0xf];
+            } else {
+                // UTF-8 lead and continuation bytes are emitted verbatim: JSON
+                // text is UTF-8 and they need no further escaping.
+                out += static_cast<char>(c);
+            }
+            break;
+        }
+    }
+    out += '"';
+}
+
+inline void serializeValue(const Value &value, std::string &out) {
+    switch (value.getType()) {
+    case Value::Type::Null:
+        out += "null";
+        break;
+    case Value::Type::Bool:
+        out += *value.getBool() ? "true" : "false";
+        break;
+    case Value::Type::Int: {
+        char buffer[32];
+        std::snprintf(buffer, sizeof(buffer), "%lld",
+                      static_cast<long long>(*value.getInt()));
+        out += buffer;
+        break;
+    }
+    case Value::Type::Double: {
+        const double number = *value.getDouble();
+        if (number != number || number - number != 0) {
+            // NaN and the infinities have no JSON representation
+            out += "null";
+        } else {
+            char buffer[64];
+            std::snprintf(buffer, sizeof(buffer), "%.17g", number);
+            out += buffer;
+        }
+        break;
+    }
+    case Value::Type::String:
+        serializeString(*value.getString(), out);
+        break;
+    case Value::Type::Array: {
+        out += '[';
+        bool first = true;
+        for (const Value &element : value.getArray()) {
+            if (!first) {
+                out += ',';
+            }
+            first = false;
+            serializeValue(element, out);
+        }
+        out += ']';
+        break;
+    }
+    case Value::Type::Object: {
+        out += '{';
+        bool first = true;
+        for (const auto &member : value.getObject()) {
+            if (!first) {
+                out += ',';
+            }
+            first = false;
+            serializeString(member.first, out);
+            out += ':';
+            serializeValue(member.second, out);
+        }
+        out += '}';
+        break;
+    }
+    }
+}
+
+/**
+ * <p>Serializes a value into JSON text.
+ *
+ * @param value value to serialize
+ * @return JSON text
+ */
+inline std::string serialize(const Value &value) {
+    std::string out;
+    serializeValue(value, out);
+    return out;
+}
+
+/**
+ * <p>Recursive descent parser for the JSON text produced by serialize().
+ */
+class Parser {
+  public:
+    Parser(const std::string &text) : _text(text), _position(0) {}
+
+    bool parse(Value &out) {
+        skipWhitespace();
+        if (!parseValue(out)) {
+            return false;
+        }
+        skipWhitespace();
+        return _position == _text.size();
+    }
+
+  private:
+    void skipWhitespace() {
+        while (_position < _text.size()) {
+            const char c = _text[_position];
+            if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+                _position++;
+            } else {
+                break;
+            }
+        }
+    }
+
+    bool literal(const char *expected) {
+        const size_t length = std::char_traits<char>::length(expected);
+        if (_text.compare(_position, length, expected) != 0) {
+            return false;
+        }
+        _position += length;
+        return true;
+    }
+
+    static bool appendUtf8(uint32_t codepoint, std::string &out) {
+        if (codepoint < 0x80) {
+            out += static_cast<char>(codepoint);
+        } else if (codepoint < 0x800) {
+            out += static_cast<char>(0xc0 | (codepoint >> 6));
+            out += static_cast<char>(0x80 | (codepoint & 0x3f));
+        } else if (codepoint < 0x10000) {
+            out += static_cast<char>(0xe0 | (codepoint >> 12));
+            out += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3f));
+            out += static_cast<char>(0x80 | (codepoint & 0x3f));
+        } else if (codepoint <= 0x10ffff) {
+            out += static_cast<char>(0xf0 | (codepoint >> 18));
+            out += static_cast<char>(0x80 | ((codepoint >> 12) & 0x3f));
+            out += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3f));
+            out += static_cast<char>(0x80 | (codepoint & 0x3f));
+        } else {
+            return false;
+        }
+        return true;
+    }
+
+    bool parseHex4(uint32_t &out) {
+        if (_position + 4 > _text.size()) {
+            return false;
+        }
+        out = 0;
+        for (int index = 0; index < 4; index++) {
+            const char c = _text[_position++];
+            out <<= 4;
+            if (c >= '0' && c <= '9') {
+                out |= static_cast<uint32_t>(c - '0');
+            } else if (c >= 'a' && c <= 'f') {
+                out |= static_cast<uint32_t>(c - 'a' + 10);
+            } else if (c >= 'A' && c <= 'F') {
+                out |= static_cast<uint32_t>(c - 'A' + 10);
+            } else {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool parseString(std::string &out) {
+        if (_position >= _text.size() || _text[_position] != '"') {
+            return false;
+        }
+        _position++;
+        while (_position < _text.size()) {
+            const char c = _text[_position++];
+            if (c == '"') {
+                return true;
+            }
+            if (c != '\\') {
+                out += c;
+                continue;
+            }
+            if (_position >= _text.size()) {
+                return false;
+            }
+            const char escape = _text[_position++];
+            switch (escape) {
+            case '"':
+                out += '"';
+                break;
+            case '\\':
+                out += '\\';
+                break;
+            case '/':
+                out += '/';
+                break;
+            case 'b':
+                out += '\b';
+                break;
+            case 'f':
+                out += '\f';
+                break;
+            case 'n':
+                out += '\n';
+                break;
+            case 'r':
+                out += '\r';
+                break;
+            case 't':
+                out += '\t';
+                break;
+            case 'u': {
+                uint32_t codepoint = 0;
+                if (!parseHex4(codepoint)) {
+                    return false;
+                }
+                if (codepoint >= 0xd800 && codepoint <= 0xdbff) {
+                    // A high surrogate is only valid when its low surrogate
+                    // follows; the pair encodes a single codepoint.
+                    if (_position + 1 >= _text.size() ||
+                        _text[_position] != '\\' ||
+                        _text[_position + 1] != 'u') {
+                        return false;
+                    }
+                    _position += 2;
+                    uint32_t low = 0;
+                    if (!parseHex4(low) || low < 0xdc00 || low > 0xdfff) {
+                        return false;
+                    }
+                    codepoint =
+                        0x10000 + ((codepoint - 0xd800) << 10) + (low - 0xdc00);
+                }
+                if (!appendUtf8(codepoint, out)) {
+                    return false;
+                }
+                break;
+            }
+            default:
+                return false;
+            }
+        }
+        return false;
+    }
+
+    bool parseNumber(Value &out) {
+        const size_t start = _position;
+        if (_position < _text.size() &&
+            (_text[_position] == '-' || _text[_position] == '+')) {
+            _position++;
+        }
+        bool isDouble = false;
+        while (_position < _text.size()) {
+            const char c = _text[_position];
+            if (c >= '0' && c <= '9') {
+                _position++;
+            } else if (c == '.' || c == 'e' || c == 'E' || c == '+' ||
+                       c == '-') {
+                isDouble = isDouble || c == '.' || c == 'e' || c == 'E';
+                _position++;
+            } else {
+                break;
+            }
+        }
+        if (_position == start) {
+            return false;
+        }
+        const std::string number = _text.substr(start, _position - start);
+        try {
+            if (isDouble) {
+                out = Value(static_cast<double>(std::stod(number)));
+            } else {
+                out = Value(static_cast<int64_t>(std::stoll(number)));
+            }
+        } catch (...) {
+            return false;
+        }
+        return true;
+    }
+
+    bool parseValue(Value &out) {
+        if (_position >= _text.size()) {
+            return false;
+        }
+        switch (_text[_position]) {
+        case 'n':
+            if (!literal("null")) {
+                return false;
+            }
+            out = Value();
+            return true;
+        case 't':
+            if (!literal("true")) {
+                return false;
+            }
+            out = Value(true);
+            return true;
+        case 'f':
+            if (!literal("false")) {
+                return false;
+            }
+            out = Value(false);
+            return true;
+        case '"': {
+            std::string text;
+            if (!parseString(text)) {
+                return false;
+            }
+            out = Value(std::move(text));
+            return true;
+        }
+        case '[': {
+            _position++;
+            out = Value::makeArray();
+            skipWhitespace();
+            if (_position < _text.size() && _text[_position] == ']') {
+                _position++;
+                return true;
+            }
+            while (true) {
+                skipWhitespace();
+                Value element;
+                if (!parseValue(element)) {
+                    return false;
+                }
+                out.append(std::move(element));
+                skipWhitespace();
+                if (_position >= _text.size()) {
+                    return false;
+                }
+                if (_text[_position] == ',') {
+                    _position++;
+                    continue;
+                }
+                if (_text[_position] == ']') {
+                    _position++;
+                    return true;
+                }
+                return false;
+            }
+        }
+        case '{': {
+            _position++;
+            out = Value::makeObject();
+            skipWhitespace();
+            if (_position < _text.size() && _text[_position] == '}') {
+                _position++;
+                return true;
+            }
+            while (true) {
+                skipWhitespace();
+                std::string key;
+                if (!parseString(key)) {
+                    return false;
+                }
+                skipWhitespace();
+                if (_position >= _text.size() || _text[_position] != ':') {
+                    return false;
+                }
+                _position++;
+                skipWhitespace();
+                Value member;
+                if (!parseValue(member)) {
+                    return false;
+                }
+                out.set(key, std::move(member));
+                skipWhitespace();
+                if (_position >= _text.size()) {
+                    return false;
+                }
+                if (_text[_position] == ',') {
+                    _position++;
+                    continue;
+                }
+                if (_text[_position] == '}') {
+                    _position++;
+                    return true;
+                }
+                return false;
+            }
+        }
+        default:
+            return parseNumber(out);
+        }
+    }
+
+    const std::string &_text;
+    size_t _position;
+};
+
+/**
+ * <p>Parses JSON text into a value.
+ *
+ * @param text JSON text
+ * @param out value parsed, left untouched when parsing fails
+ * @return true when the whole text was parsed, false otherwise
+ */
+inline bool parse(const std::string &text, Value &out) {
+    Value parsed;
+    Parser parser(text);
+    if (!parser.parse(parsed)) {
+        return false;
+    }
+    out = std::move(parsed);
+    return true;
+}
+
+} // namespace
+} // namespace detail
+} // namespace json
+} // namespace ffmpegkit
 
 /* ------------------------------------------------------------------------ */
 /* Handle definitions                                                        */
@@ -615,6 +1078,8 @@ FFKSession *ffk_ffmpeg_session_create(
     void *statisticsUserData, ffk_free_cb statisticsFree,
     const int logRedirectionStrategy) {
     return guard([&]() -> FFKSession * {
+        // The callbacks come first: the library owns their cookies from here on,
+        // so nothing that can throw may run before they are adopted
         const auto complete =
             makeSessionCallback<internal::FFmpegSession,
                                 internal::FFmpegSessionCompleteCallback>(
@@ -643,6 +1108,8 @@ FFKSession *ffk_ffprobe_session_create(
     ffk_free_cb completeFree, ffk_log_cb logCallback, void *logUserData,
     ffk_free_cb logFree, const int logRedirectionStrategy) {
     return guard([&]() -> FFKSession * {
+        // The callbacks come first: the library owns their cookies from here on,
+        // so nothing that can throw may run before they are adopted
         const auto complete =
             makeSessionCallback<internal::FFprobeSession,
                                 internal::FFprobeSessionCompleteCallback>(
@@ -667,6 +1134,8 @@ FFKSession *ffk_media_information_session_create(
     ffk_free_cb completeFree, ffk_log_cb logCallback, void *logUserData,
     ffk_free_cb logFree) {
     return guard([&]() -> FFKSession * {
+        // The callbacks come first: the library owns their cookies from here on,
+        // so nothing that can throw may run before they are adopted
         const auto complete =
             makeSessionCallback<internal::MediaInformationSession,
                                 internal::MediaInformationSessionCompleteCallback>(
@@ -1067,7 +1536,7 @@ void ffk_media_information_session_set_media_information(
 /*
  * The three metadata classes expose the same four generic property accessors.
  * The convenience getters on top of them (getFilename, getCodec, getStart and
- * so on) are pure key lookups and stay in the header-only facade.
+ * so on) are pure key lookups and are left to the caller.
  */
 #define FFK_DEFINE_PROPERTY_ACCESSORS(prefix, HandleType)                      \
     void prefix##_free(HandleType *handle) { delete handle; }                  \
@@ -1254,6 +1723,9 @@ char *ffk_media_information_get_format_properties_json(
 FFKMediaInformation *
 ffk_media_information_parser_from(const char *ffprobeJsonOutput) {
     return guard([&]() -> FFKMediaInformation * {
+        // Not MediaInformationJsonParser::from(): when it fails it prints a
+        // message to the standard output. This one is silent and leaves the
+        // error slot alone, so a failure is nothing but a NULL result.
         try {
             return makeHandle<FFKMediaInformation>(
                 internal::MediaInformationJsonParser::fromWithError(
@@ -1292,6 +1764,8 @@ FFKSession *ffk_ffmpegkit_execute_with_arguments_async(
     ffk_free_cb logFree, ffk_statistics_cb statisticsCallback,
     void *statisticsUserData, ffk_free_cb statisticsFree) {
     return guard([&]() -> FFKSession * {
+        // The callbacks come first: the library owns their cookies from here on,
+        // so nothing that can throw may run before they are adopted
         const auto complete =
             makeSessionCallback<internal::FFmpegSession,
                                 internal::FFmpegSessionCompleteCallback>(
@@ -1321,6 +1795,8 @@ FFKSession *ffk_ffmpegkit_execute_async(
     ffk_statistics_cb statisticsCallback, void *statisticsUserData,
     ffk_free_cb statisticsFree) {
     return guard([&]() -> FFKSession * {
+        // The callbacks come first: the library owns their cookies from here on,
+        // so nothing that can throw may run before they are adopted
         const auto complete =
             makeSessionCallback<internal::FFmpegSession,
                                 internal::FFmpegSessionCompleteCallback>(
@@ -1364,6 +1840,8 @@ FFKSession *ffk_ffprobekit_execute_with_arguments_async(
     ffk_free_cb completeFree, ffk_log_cb logCallback, void *logUserData,
     ffk_free_cb logFree) {
     return guard([&]() -> FFKSession * {
+        // The callbacks come first: the library owns their cookies from here on,
+        // so nothing that can throw may run before they are adopted
         const auto complete =
             makeSessionCallback<internal::FFprobeSession,
                                 internal::FFprobeSessionCompleteCallback>(
@@ -1391,6 +1869,8 @@ FFKSession *ffk_ffprobekit_execute_async(const char *command,
                                          void *logUserData,
                                          ffk_free_cb logFree) {
     return guard([&]() -> FFKSession * {
+        // The callbacks come first: the library owns their cookies from here on,
+        // so nothing that can throw may run before they are adopted
         const auto complete =
             makeSessionCallback<internal::FFprobeSession,
                                 internal::FFprobeSessionCompleteCallback>(
@@ -1415,6 +1895,8 @@ FFKSession *ffk_ffprobekit_get_media_information_async(
     ffk_free_cb completeFree, ffk_log_cb logCallback, void *logUserData,
     ffk_free_cb logFree, const int waitTimeout) {
     return guard([&]() -> FFKSession * {
+        // The callbacks come first: the library owns their cookies from here on,
+        // so nothing that can throw may run before they are adopted
         const auto complete =
             makeSessionCallback<internal::MediaInformationSession,
                                 internal::MediaInformationSessionCompleteCallback>(
@@ -1492,10 +1974,14 @@ void ffk_config_set_font_directory_list(const char *const *fontDirectories,
     });
 }
 
+// Named pipes are deprecated but still work on Linux. The C API keeps exposing
+// them, so the deprecation warnings are silenced for these two calls only
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 char *ffk_config_register_new_ffmpeg_pipe(void) {
     return guard([&]() -> char * {
-        // Named pipes are not supported on Windows: the C++ method is a
-        // deprecated no-op that returns nullptr, and so is this one
+        // Creates the pipe with mkfifo, or returns nullptr when that fails
         return duplicateString(
             internal::FFmpegKitConfig::registerNewFFmpegPipe());
     });
@@ -1507,6 +1993,8 @@ void ffk_config_close_ffmpeg_pipe(const char *ffmpegPipePath) {
             ffmpegPipePath == nullptr ? "" : ffmpegPipePath);
     });
 }
+
+#pragma GCC diagnostic pop
 
 long ffk_config_register_ffmpegkit_input_buffer(const uint8_t *data,
                                                 const size_t size) {
@@ -1616,11 +2104,17 @@ char *ffk_config_get_version(void) {
     });
 }
 
+// isLTSBuild is deprecated as well, the C API still answers it
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 int ffk_config_is_lts_build(void) {
     return guard([&]() -> int {
         return internal::FFmpegKitConfig::isLTSBuild() ? 1 : 0;
     });
 }
+
+#pragma GCC diagnostic pop
 
 char *ffk_config_get_build_date(void) {
     return guard([&]() -> char * {

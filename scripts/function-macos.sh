@@ -429,3 +429,34 @@ create_macos_xcframeworks() {
 
   echo -e "INFO: xcframeworks built successfully\n" 1>>"${BASEDIR}"/build.log 2>&1
 }
+
+#
+# CHECKS THAT THE C API HEADER INSTALLED BY FFMPEG-KIT DECLARES EXACTLY WHAT
+# LIBFFMPEGKIT EXPORTS. THE C API IS PART OF EVERY MACOS BUILD. A DIFFERENCE FAILS
+# THE BUILD, UNLESS -f WAS GIVEN, AND THE FUNCTIONS INVOLVED ARE IN build.log.
+#
+# 1. ffmpeg-kit installation directory of the architecture that was just built
+#
+check_macos_c_api_exports() {
+  "${BASEDIR}"/scripts/apple/macos/c-api-exports-test.sh "$1" 1>>"${BASEDIR}"/build.log 2>&1
+  local RESULT=$?
+
+  if [[ ${RESULT} -eq 0 ]]; then
+    return 0
+  fi
+
+  # 1 = THE HEADER AND THE LIBRARY DIFFER, ANYTHING ELSE = THE BUILD COULD NOT BE CHECKED
+  if [[ ${RESULT} -eq 1 ]]; then
+    local PROBLEM="does not match its header"
+  else
+    local PROBLEM="could not be checked"
+  fi
+
+  if [[ -n ${BUILD_FORCE:-} ]]; then
+    echo -e "INFO: The C API of ${ARCH} ${PROBLEM}. Ignored because of -f.\n" 1>>"${BASEDIR}"/build.log 2>&1
+    return 0
+  fi
+
+  echo -e "ERROR: The C API of ${ARCH} ${PROBLEM}\n" 1>>"${BASEDIR}"/build.log 2>&1
+  return 1
+}

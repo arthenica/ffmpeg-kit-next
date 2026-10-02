@@ -27,6 +27,20 @@ CFLAGS="$cflags_bckup"
 FFMPEG_FRAMEWORKS="-framework libavcodec -framework libavfilter -framework libavformat -framework libavutil -framework libswscale -framework libswresample"
 AC_SUBST(FFMPEG_FRAMEWORKS)
 
+# The flat C API (ffmpegkit_c.h) is part of every macOS build. This source tree
+# is shared by all Apple platforms, so the target is asked, not the build type:
+# TARGET_OS_OSX is set for macOS only, not for Mac Catalyst, iOS, tvOS or
+# visionOS.
+AC_MSG_CHECKING([whether the target is macOS])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#include <TargetConditionals.h>
+#if !TARGET_OS_OSX
+#error not macOS
+#endif
+]], [])], [ffmpegkit_target_macos=yes], [ffmpegkit_target_macos=no])
+AC_MSG_RESULT([$ffmpegkit_target_macos])
+AM_CONDITIONAL([FFMPEG_KIT_MACOS], [test "x$ffmpegkit_target_macos" = "xyes"])
+
 LT_INIT
 
 # Checks for header files.

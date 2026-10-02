@@ -23,23 +23,24 @@
 /*
  * FFmpegKitNext flat C API.
  *
- * THIS HEADER IS THE ONLY ABI OF libffmpegkit. Everything the library exports
- * is declared here: extern "C" functions over opaque handles, plain integers
- * and UTF-8 strings. No C++ type ever crosses this boundary, which is what
- * makes the library usable from MSVC and clang-cl even though it is built with
- * MinGW-w64.
+ * This header is the C ABI of libffmpegkit: extern "C" functions over opaque
+ * handles, plain integers and UTF-8 strings. No C++ type ever crosses this
+ * boundary, so the library can be used from C and from any language with a C
+ * foreign function interface.
  *
- * The object oriented C++ API (ffmpegkit::FFmpegKit and friends) is a
- * header-only facade over these functions. It compiles into the consumer's own
- * translation unit with the consumer's own compiler and standard library, so
- * it is not part of the ABI either.
+ * On Linux this API is a second entry point into the library. The object
+ * oriented C++ API (ffmpegkit::FFmpegKit and friends) stays public: its
+ * headers are installed and libffmpegkit exports its classes, so C++
+ * consumers can keep using it directly. This API is implemented on top of
+ * those same classes, and the functions, types and rules declared here are the
+ * same as on Windows.
  *
  * MEMORY OWNERSHIP
  *
  *   - The library owns every allocation it hands out and every allocation is
  *     released by an ffk_*_free function from this header. Callers must never
- *     free returned memory themselves. That is what makes the CRT mismatch
- *     between a MinGW built library and an MSVC built consumer irrelevant.
+ *     free returned memory themselves, so the same ownership rules apply on
+ *     every platform.
  *   - Every `char *` returned by this API is a heap allocated UTF-8 string
  *     owned by the caller and must be released with ffk_string_free(). A NULL
  *     return means the value is absent, never that an empty string was
@@ -105,15 +106,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#if defined(_WIN32)
-#if defined(FFMPEG_KIT_BUILDING_DLL)
-#define FFK_API __declspec(dllexport)
-#else
-#define FFK_API __declspec(dllimport)
-#endif
-#else
 #define FFK_API __attribute__((visibility("default")))
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -350,11 +343,9 @@ FFK_API void ffk_session_cancel(FFKSession *session);
 /**
  * Reads back the log callback registered for this session.
  *
- * Only callbacks registered through this C API can be read back. The C++
- * facade registers its callbacks through it, and uses this to recognise its own
- * trampoline and recover the std::function it stored consumer side. The
- * returned user_data is borrowed and stays valid for as long as the session
- * holds the callback.
+ * Only callbacks registered through this C API can be read back. A callback
+ * set through the C++ API is reported as not registered. The returned user_data
+ * is borrowed and stays valid for as long as the session holds the callback.
  *
  * @return 1 when a callback registered through this API is present, 0 otherwise
  */
@@ -587,13 +578,21 @@ FFK_API void ffk_config_set_font_directory_list(
     size_t mapping_count);
 
 /**
- * Named pipes are not supported on Windows. Always returns NULL.
+ * Creates a new named pipe (FIFO) under $HOME/.cache/ffmpegkit/pipes, falling
+ * back to $TMPDIR and then the current directory when HOME is not set.
+ *
+ * The caller is responsible for closing the pipe with
+ * ffk_config_close_ffmpeg_pipe().
+ *
+ * @return full path of the new pipe, to release with ffk_string_free(), or
+ * NULL when the pipe could not be created
  *
  * @deprecated Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.
  */
 FFK_API char *ffk_config_register_new_ffmpeg_pipe(void);
 /**
- * Named pipes are not supported on Windows. No-op.
+ * Closes a named pipe created by ffk_config_register_new_ffmpeg_pipe() by
+ * removing it from the file system.
  *
  * @deprecated Named pipes are deprecated. Use FFmpegKit input/output buffers and streams instead.
  */
