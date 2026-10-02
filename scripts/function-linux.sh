@@ -421,7 +421,7 @@ Description: FFmpeg for applications
 Version: ${FFMPEGKIT_VERSION}
 
 Libs: -L\${libdir} -lstdc++ -lffmpegkit -lavutil
-Requires: libavfilter, libswscale, libavformat, libavcodec, libswresample, libavutil
+Requires: libavdevice, libavfilter, libswscale, libavformat, libavcodec, libswresample, libavutil
 Cflags: -I\${includedir}
 EOF
 }
