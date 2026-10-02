@@ -88,6 +88,13 @@ static LogRedirectionStrategy globalLogRedirectionStrategy;
 
 /** Redirection control variables */
 static int redirectionEnabled;
+/**
+ * Counts the loops that deliver the asynchronous messages. A loop belongs to
+ * the redirection that started it, so once the redirection is switched off and
+ * on again, the loop of the earlier one ends instead of running next to the new
+ * one.
+ */
+static atomic_int redirectionGenerationId;
 static NSRecursiveLock *lock;
 static dispatch_semaphore_t semaphore;
 static NSMutableArray *callbackDataArray;
@@ -1239,7 +1246,15 @@ void ffmpegkit_statistics_callback_function(int frameNumber, float fps,
 }
 
 void process_log(long sessionId, int levelValue, AVBPrint *logMessage) {
-    int activeLogLevel = av_log_get_level();
+    const int activeLogLevel = configuredLogLevel;
+
+    // LevelAVLogStdErr logs are always redirected
+    if ((activeLogLevel == LevelAVLogQuiet && levelValue != LevelAVLogStdErr) ||
+        (levelValue > activeLogLevel)) {
+        // LOG NEITHER PRINTED NOR FORWARDED
+        return;
+    }
+
     NSString *message = [NSString stringWithCString:logMessage->str
                                            encoding:NSUTF8StringEncoding];
     if (message == nil) {
@@ -1251,13 +1266,6 @@ void process_log(long sessionId, int levelValue, AVBPrint *logMessage) {
     BOOL sessionCallbackDefined = false;
     LogRedirectionStrategy activeLogRedirectionStrategy =
         globalLogRedirectionStrategy;
-
-    // LevelAVLogStdErr logs are always redirected
-    if ((activeLogLevel == LevelAVLogQuiet && levelValue != LevelAVLogStdErr) ||
-        (levelValue > activeLogLevel)) {
-        // LOG NEITHER PRINTED NOR FORWARDED
-        return;
-    }
 
     id<Session> session = [FFmpegKitConfig getSession:sessionId];
     if (session != nil) {
@@ -1373,15 +1381,23 @@ void process_statistics(long sessionId, int videoFrameNumber, float videoFps,
 
 /**
  * Forwards asynchronous messages to Callbacks.
+ *
+ * The messages of this loop are about the library, so they follow the log level
+ * that was configured. The log level of FFmpeg is thread local and is not the
+ * one of this thread's session.
+ *
+ * @param generationId number of the redirection that started this loop. The
+ * loop ends when that redirection is switched off, or replaced by a newer one.
  */
-void callbackBlockFunction() {
-    int activeLogLevel = av_log_get_level();
+void callbackBlockFunction(int generationId) {
+    int activeLogLevel = configuredLogLevel;
     if ((activeLogLevel != LevelAVLogQuiet) &&
         (LevelAVLogDebug <= activeLogLevel)) {
         NSLog(@"Async callback block started.\n");
     }
 
-    while (redirectionEnabled) {
+    while (redirectionEnabled &&
+           generationId == atomic_load(&redirectionGenerationId)) {
         @autoreleasepool {
             @try {
 
@@ -1415,7 +1431,7 @@ void callbackBlockFunction() {
                 }
 
             } @catch (NSException *exception) {
-                activeLogLevel = av_log_get_level();
+                activeLogLevel = configuredLogLevel;
                 if ((activeLogLevel != LevelAVLogQuiet) &&
                     (LevelAVLogWarning <= activeLogLevel)) {
                     NSLog(@"Async callback block received error: %@n\n",
@@ -1426,7 +1442,7 @@ void callbackBlockFunction() {
         }
     }
 
-    activeLogLevel = av_log_get_level();
+    activeLogLevel = configuredLogLevel;
     if ((activeLogLevel != LevelAVLogQuiet) &&
         (LevelAVLogDebug <= activeLogLevel)) {
         NSLog(@"Async callback block stopped.\n");
@@ -1962,11 +1978,15 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
     }
     redirectionEnabled = 1;
 
+    // THE LOOP OF AN EARLIER REDIRECTION, IF IT IS STILL ON ITS WAY OUT, ENDS
+    // INSTEAD OF RUNNING NEXT TO THE NEW ONE
+    const int generationId = atomic_fetch_add(&redirectionGenerationId, 1) + 1;
+
     [lock unlock];
 
     dispatch_async(
         dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-          callbackBlockFunction();
+          callbackBlockFunction(generationId);
         });
 
     av_log_set_callback(ffmpegkit_log_callback_function);

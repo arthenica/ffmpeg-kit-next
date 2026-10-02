@@ -73,6 +73,13 @@ static pthread_cond_t monitorCondition;
 
 pthread_t callbackThread;
 int redirectionEnabled;
+/**
+ * Counts the loops that deliver the asynchronous messages. A loop belongs to
+ * the redirection that started it, so once the redirection is switched off and
+ * on again, the loop of the earlier one ends instead of running next to the new
+ * one.
+ */
+static atomic_int redirectionGenerationId;
 
 struct CallbackData *callbackDataHead;
 struct CallbackData *callbackDataTail;
@@ -736,8 +743,14 @@ void ffmpegkit_statistics_callback_function(int frameNumber, float fps,
 
 /**
  * Forwards callback messages to Java classes.
+ *
+ * @param pointer the number of the redirection that started this loop, as an
+ * integer. The loop ends when that redirection is switched off, or replaced by
+ * a newer one.
  */
-void *callbackThreadFunction() {
+void *callbackThreadFunction(void *pointer) {
+    const int generationId = (int)(intptr_t)pointer;
+
     JNIEnv *env;
     jint getEnvRc =
         (*globalVm)->GetEnv(globalVm, (void **)&env, JNI_VERSION_1_6);
@@ -758,7 +771,8 @@ void *callbackThreadFunction() {
 
     LOGD("Async callback block started.\n");
 
-    while (redirectionEnabled) {
+    while (redirectionEnabled &&
+           generationId == atomic_load(&redirectionGenerationId)) {
 
         struct CallbackData *callbackData = callbackDataRemove();
         if (callbackData != NULL) {
@@ -1439,9 +1453,14 @@ static void enableNativeRedirection() {
     }
     redirectionEnabled = 1;
 
+    // THE LOOP OF AN EARLIER REDIRECTION, IF IT IS STILL ON ITS WAY OUT, ENDS
+    // INSTEAD OF RUNNING NEXT TO THE NEW ONE
+    const int generationId = atomic_fetch_add(&redirectionGenerationId, 1) + 1;
+
     mutexUnlock();
 
-    int rc = pthread_create(&callbackThread, 0, callbackThreadFunction, 0);
+    int rc = pthread_create(&callbackThread, 0, callbackThreadFunction,
+                            (void *)(intptr_t)generationId);
     if (rc != 0) {
         LOGE("Failed to create callback thread (rc=%d).\n", rc);
         return;

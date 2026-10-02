@@ -147,6 +147,9 @@ typedef struct FFmpegContext {
     int report_file_level;
     int warned_cfg;
 
+    // libavutil/log.c
+    int avLogLevel;
+
     // FFmpegKit session context
     long globalSessionId;
 

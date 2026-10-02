@@ -95,6 +95,13 @@ static ffmpegkit::LogRedirectionStrategy globalLogRedirectionStrategy;
 
 /** Redirection control variables */
 static int redirectionEnabled;
+/**
+ * Counts the loops that deliver the asynchronous messages. A loop belongs to
+ * the redirection that started it, so once the redirection is switched off and
+ * on again, the loop of the earlier one ends instead of running next to the new
+ * one.
+ */
+static std::atomic<int> redirectionGenerationId(0);
 static std::recursive_mutex callbackDataMutex;
 static std::mutex callbackMutex;
 static std::condition_variable callbackMonitor;
@@ -1276,7 +1283,7 @@ void ffmpegkit_statistics_callback_function(int frameNumber, float fps,
 
 static void process_log(long sessionId, int levelValueInt,
                         AVBPrint *logMessage) {
-    int activeLogLevel = av_log_get_level();
+    int activeLogLevel = configuredLogLevel;
     ffmpegkit::Level levelValue = static_cast<ffmpegkit::Level>(levelValueInt);
     std::shared_ptr<ffmpegkit::Log> log = std::make_shared<ffmpegkit::Log>(
         sessionId, levelValue, logMessage->str);
@@ -1404,15 +1411,26 @@ void process_statistics(long sessionId, int videoFrameNumber, float videoFps,
 
 /**
  * Forwards asynchronous messages to Callbacks.
+ *
+ * The messages of this loop are about the library, so they follow the log level
+ * that was configured. The log level of FFmpeg is thread local and is not the
+ * one of this thread's session.
+ *
+ * @param pointer the number of the redirection that started this loop, as an
+ * integer. The loop ends when that redirection is switched off, or replaced by
+ * a newer one.
  */
 void *callbackThreadFunction(void *pointer) {
-    int activeLogLevel = av_log_get_level();
+    const int generationId =
+        static_cast<int>(reinterpret_cast<intptr_t>(pointer));
+    int activeLogLevel = configuredLogLevel;
     if ((activeLogLevel != ffmpegkit::LevelAVLogQuiet) &&
         (ffmpegkit::LevelAVLogDebug <= activeLogLevel)) {
         std::cout << "Async callback block started." << std::endl;
     }
 
-    while (redirectionEnabled) {
+    while (redirectionEnabled &&
+           generationId == std::atomic_load(&redirectionGenerationId)) {
         try {
             CallbackData *callbackData = callbackDataRemove();
 
@@ -1444,7 +1462,7 @@ void *callbackThreadFunction(void *pointer) {
             }
 
         } catch (const std::exception &exception) {
-            activeLogLevel = av_log_get_level();
+            activeLogLevel = configuredLogLevel;
             if ((activeLogLevel != ffmpegkit::LevelAVLogQuiet) &&
                 (ffmpegkit::LevelAVLogWarning <= activeLogLevel)) {
                 std::cout << "Async callback block received error: "
@@ -1453,7 +1471,7 @@ void *callbackThreadFunction(void *pointer) {
         }
     }
 
-    activeLogLevel = av_log_get_level();
+    activeLogLevel = configuredLogLevel;
     if ((activeLogLevel != ffmpegkit::LevelAVLogQuiet) &&
         (ffmpegkit::LevelAVLogDebug <= activeLogLevel)) {
         std::cout << "Async callback block stopped." << std::endl;
@@ -1623,10 +1641,16 @@ void ffmpegkit::FFmpegKitConfig::enableRedirection() {
     }
     redirectionEnabled = 1;
 
+    // THE LOOP OF AN EARLIER REDIRECTION, IF IT IS STILL ON ITS WAY OUT, ENDS
+    // INSTEAD OF RUNNING NEXT TO THE NEW ONE
+    const int generationId =
+        std::atomic_fetch_add(&redirectionGenerationId, 1) + 1;
+
     lock.unlock();
 
-    int rc =
-        pthread_create(&callbackThread, NULL, callbackThreadFunction, NULL);
+    int rc = pthread_create(&callbackThread, NULL, callbackThreadFunction,
+                            reinterpret_cast<void *>(
+                                static_cast<intptr_t>(generationId)));
     if (rc != 0) {
         std::cout << "Failed to create async callback block: %d" << rc
                   << std::endl;

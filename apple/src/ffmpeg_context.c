@@ -28,6 +28,7 @@
  */
 
 #include "ffmpeg_context.h"
+#include "libavutil/log.h"
 
 /*
  * Per-session thread-local state propagation.
@@ -51,6 +52,12 @@
  *   1. declared as __thread (in fftools_*.c / fftools_*.h),
  *   2. copied into the struct in saveFFmpegContext() below, and
  *   3. restored from the struct in loadFFmpegContext() below (in the same order).
+ *
+ * The log level of libavutil (av_log_level in libavutil/log.c, made __thread by
+ * the ffmpeg build scripts) follows the same rule although it is not an fftools
+ * variable, and it is the one that is NOT zero-initialized in a new thread: it
+ * starts at AV_LOG_INFO. Without it, a worker filtered its logs by INFO whatever
+ * the session used: the configured log level, or the -loglevel of the command.
  *
  * When upgrading FFmpeg: any NEW fftools global that becomes __thread AND is read
  * by code that can run after transcoding starts (i.e. on a worker thread) MUST be
@@ -151,6 +158,9 @@ FFmpegContext *saveFFmpegContext(void *arg) {
     context->report_file_level = report_file_level;
     context->warned_cfg = warned_cfg;
 
+    // libavutil/log.c
+    context->avLogLevel = av_log_get_level();
+
     // FFmpegKit session context
     context->globalSessionId = globalSessionId;
     context->arg = arg;
@@ -245,6 +255,9 @@ void *loadFFmpegContext(FFmpegContext *context) {
     report_file = context->report_file;
     report_file_level = context->report_file_level;
     warned_cfg = context->warned_cfg;
+
+    // libavutil/log.c
+    av_log_set_level(context->avLogLevel);
 
     // FFmpegKit session context
     globalSessionId = context->globalSessionId;
