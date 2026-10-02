@@ -65,9 +65,25 @@ install_pkg_config_file() {
     exit 1
   fi
 
-  # UPDATE PATHS
-  ${SED_INLINE} "s|${LIB_INSTALL_BASE}/ffmpeg-kit|${BASEDIR}/prebuilt/$(get_bundle_directory)/ffmpeg-kit-next|g" "$DESTINATION" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
-  ${SED_INLINE} "s|${LIB_INSTALL_BASE}/ffmpeg|${BASEDIR}/prebuilt/$(get_bundle_directory)/ffmpeg-kit-next|g" "$DESTINATION" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+  # UPDATE PATHS. THEY ARE DERIVED FROM THE FILE'S OWN LOCATION (<bundle>/pkgconfig)
+  # SO THAT THE BUNDLE STILL RESOLVES AFTER IT IS COPIED OR MOVED
+  ${SED_INLINE} 's|^prefix=.*|prefix=${pcfiledir}/..|' "$DESTINATION" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+  ${SED_INLINE} "s|${LIB_INSTALL_BASE}/ffmpeg-kit|\${prefix}|g" "$DESTINATION" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+  ${SED_INLINE} "s|${LIB_INSTALL_BASE}/ffmpeg|\${prefix}|g" "$DESTINATION" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+}
+
+# PRINTS A LINKER FLAG THAT GIVES A SHARED LIBRARY A RUNPATH OF $ORIGIN, SO THE
+# BUNDLE'S LIBRARIES FIND EACH OTHER IN THEIR OWN DIRECTORY WITHOUT
+# LD_LIBRARY_PATH. $ORIGIN IS PASSED IN A LINKER RESPONSE FILE BECAUSE IT DOES
+# NOT SURVIVE FFMPEG'S configure, make AND libtool UNLESS IT IS ESCAPED
+# DIFFERENTLY FOR EACH OF THEM
+get_origin_runpath_ldflag() {
+  local RESPONSE_FILE="${FFMPEG_KIT_TMPDIR}/linux-origin-runpath.rsp"
+
+  mkdir -p "${FFMPEG_KIT_TMPDIR}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+  printf '%s\n' '-rpath' '$ORIGIN' >"${RESPONSE_FILE}" 2>>"${BASEDIR}"/build.log || return 1
+
+  echo "-Wl,@${RESPONSE_FILE}"
 }
 
 get_bundle_directory() {

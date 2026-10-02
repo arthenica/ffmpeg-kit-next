@@ -39,7 +39,7 @@ export CFLAGS="$(get_cflags ${LIB_NAME}) -I${LIB_INSTALL_BASE}/ffmpeg/include"
 # RAPIDJSON_INCLUDE_BASE IS LISTED FIRST SO THAT OUR PINNED HEADERS TAKE PRECEDENCE
 # OVER A RAPIDJSON INSTALLED UNDER /usr/include
 export CXXFLAGS="$(get_cxxflags ${LIB_NAME}) -I${RAPIDJSON_INCLUDE_BASE} -I${LIB_INSTALL_BASE}/ffmpeg/include"
-export LDFLAGS="$(get_ldflags ${LIB_NAME}) -L${LIB_INSTALL_BASE}/ffmpeg/lib -lavdevice"
+export LDFLAGS="$(get_ldflags ${LIB_NAME}) -L${LIB_INSTALL_BASE}/ffmpeg/lib -lavdevice $(get_origin_runpath_ldflag)"
 
 cd "${BASEDIR}"/linux 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 

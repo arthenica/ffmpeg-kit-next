@@ -439,6 +439,7 @@ fi
   --cc="${CC}" \
   --cxx="${CXX}" \
   --host-cc="${HOST_CC}" \
+  --extra-ldsoflags="$(get_origin_runpath_ldflag)" \
   --ranlib="${RANLIB}" \
   --strip="${STRIP}" \
   --nm="${NM}" \

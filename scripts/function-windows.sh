@@ -759,7 +759,6 @@ install_pkg_config_file() {
   local SOURCE="${INSTALL_PKG_CONFIG_DIR}/${FILE_NAME}"
   local DESTINATION="${FFMPEG_KIT_BUNDLE_PKG_CONFIG_DIRECTORY}/${FILE_NAME}"
   local NATIVE_LIB_INSTALL_BASE
-  local NATIVE_BUNDLE_PREFIX
 
   # DELETE OLD FILE
   rm -f "$DESTINATION" 2>>"${BASEDIR}"/build.log
@@ -773,11 +772,12 @@ install_pkg_config_file() {
     exit 1
   fi
 
-  # UPDATE PATHS
+  # UPDATE PATHS. THEY ARE DERIVED FROM THE FILE'S OWN LOCATION (<bundle>/lib/pkgconfig)
+  # SO THAT THE BUNDLE STILL RESOLVES AFTER IT IS COPIED OR MOVED, WITH ANY pkg-config
   NATIVE_LIB_INSTALL_BASE=$(get_native_path "${LIB_INSTALL_BASE}") || return 1
-  NATIVE_BUNDLE_PREFIX=$(get_native_path "${BASEDIR}/prebuilt/$(get_bundle_directory)/ffmpeg-kit-next") || return 1
-  ${SED_INLINE} "s|${NATIVE_LIB_INSTALL_BASE}/ffmpeg-kit|${NATIVE_BUNDLE_PREFIX}|g" "$DESTINATION" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
-  ${SED_INLINE} "s|${NATIVE_LIB_INSTALL_BASE}/ffmpeg|${NATIVE_BUNDLE_PREFIX}|g" "$DESTINATION" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+  ${SED_INLINE} 's|^prefix=.*|prefix=${pcfiledir}/../..|' "$DESTINATION" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+  ${SED_INLINE} "s|${NATIVE_LIB_INSTALL_BASE}/ffmpeg-kit|\${prefix}|g" "$DESTINATION" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+  ${SED_INLINE} "s|${NATIVE_LIB_INSTALL_BASE}/ffmpeg|\${prefix}|g" "$DESTINATION" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 }
 
 create_ffmpegkit_package_config() {
