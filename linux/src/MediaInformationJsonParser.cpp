@@ -118,6 +118,10 @@ ffmpegkit::MediaInformationJsonParser::fromWithError(
 
     if (document->HasParseError()) {
         throw std::runtime_error(GetParseError_En(document->GetParseError()));
+    } else if (!document->IsObject()) {
+        // Checked here rather than left to the rapidjson assertion that
+        // HasMember() raises, so the message says what is wrong, as on Apple
+        throw std::runtime_error("The top-level JSON value is not an object.");
     } else {
         std::shared_ptr<
             std::vector<std::shared_ptr<ffmpegkit::StreamInformation>>>
