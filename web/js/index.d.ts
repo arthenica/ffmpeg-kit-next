@@ -559,7 +559,11 @@ export declare abstract class AbstractSession extends Session {
     getLogRedirectionStrategy(): number | null;
 
     /** Complete callback invoked once an asynchronous run finishes (null for sync runs). */
-    getCompleteCallback(): ((session: Session) => void) | null;
+    getCompleteCallback():
+        | FFmpegSessionCompleteCallback
+        | FFprobeSessionCompleteCallback
+        | MediaInformationSessionCompleteCallback
+        | null;
 
     /** Resolves true when native still has asynchronous messages queued for this session. */
     thereAreAsynchronousMessagesInTransmit(): Promise<boolean>;

@@ -526,23 +526,27 @@ ffprobeKit_getMediaInformationAsync(const std::string path) {
         path, [](std::shared_ptr<ffmpegkit::MediaInformationSession>) {});
 }
 
-// Arguments-based media information: FFprobeKit has no from-command-arguments entry
-// point, so compose it from the session factory + the FFmpegKitConfig execute primitive
-// (exactly how the Flutter/RN plugins build it). The async variant returns immediately;
-// the JS host polls the session to completion.
+// Custom-command media information uses the native FFprobeKit entry points.
+// Async wrappers return immediately; the JS host polls the session to
+// completion.
+std::shared_ptr<MediaInformationSession>
+ffprobeKit_getMediaInformationFromCommandAsync(const std::string command,
+                                               const int waitTimeout) {
+    return FFprobeKit::getMediaInformationFromCommandAsync(
+        command, nullptr, nullptr, waitTimeout);
+}
+
 std::shared_ptr<MediaInformationSession>
 ffprobeKit_getMediaInformationFromCommandArguments(const val arguments,
                                                    const int waitTimeout) {
-    auto session = MediaInformationSession::create(jsArrayToStringList(arguments));
-    FFmpegKitConfig::getMediaInformationExecute(session, waitTimeout);
-    return session;
+    return FFprobeKit::getMediaInformationFromCommandArguments(
+        jsArrayToStringList(arguments), waitTimeout);
 }
 std::shared_ptr<MediaInformationSession>
 ffprobeKit_getMediaInformationFromCommandArgumentsAsync(const val arguments,
                                                         const int waitTimeout) {
-    auto session = MediaInformationSession::create(jsArrayToStringList(arguments));
-    FFmpegKitConfig::asyncGetMediaInformationExecute(session, waitTimeout);
-    return session;
+    return FFprobeKit::getMediaInformationFromCommandArgumentsAsync(
+        jsArrayToStringList(arguments), nullptr, nullptr, waitTimeout);
 }
 
 // ---- MediaInformation / StreamInformation accessors -------------------------
@@ -1097,15 +1101,25 @@ EMSCRIPTEN_BINDINGS(ffmpegkit_bindings) {
 
     class_<FFprobeKit>("FFprobeKit")
         .class_function("execute", &ffprobeKit_execute)
-        .class_function("executeWithArguments", &ffprobeKit_executeWithArguments)
+        .class_function("executeWithArguments",
+                        &ffprobeKit_executeWithArguments)
         .class_function("executeAsync", &ffprobeKit_executeAsync)
-        .class_function("executeWithArgumentsAsync", &ffprobeKit_executeWithArgumentsAsync)
+        .class_function("executeWithArgumentsAsync",
+                        &ffprobeKit_executeWithArgumentsAsync)
         .class_function("getMediaInformation", &ffprobeKit_getMediaInformation)
-        .class_function("getMediaInformationWithTimeout", &ffprobeKit_getMediaInformationWithTimeout)
-        .class_function("getMediaInformationFromCommand", &ffprobeKit_getMediaInformationFromCommand)
-        .class_function("getMediaInformationAsync", &ffprobeKit_getMediaInformationAsync)
-        .class_function("getMediaInformationFromCommandArguments", &ffprobeKit_getMediaInformationFromCommandArguments)
-        .class_function("getMediaInformationFromCommandArgumentsAsync", &ffprobeKit_getMediaInformationFromCommandArgumentsAsync);
+        .class_function("getMediaInformationWithTimeout",
+                        &ffprobeKit_getMediaInformationWithTimeout)
+        .class_function("getMediaInformationFromCommand",
+                        &ffprobeKit_getMediaInformationFromCommand)
+        .class_function("getMediaInformationFromCommandAsync",
+                        &ffprobeKit_getMediaInformationFromCommandAsync)
+        .class_function("getMediaInformationAsync",
+                        &ffprobeKit_getMediaInformationAsync)
+        .class_function("getMediaInformationFromCommandArguments",
+                        &ffprobeKit_getMediaInformationFromCommandArguments)
+        .class_function(
+            "getMediaInformationFromCommandArgumentsAsync",
+            &ffprobeKit_getMediaInformationFromCommandArgumentsAsync);
 
     class_<ArchDetect>("ArchDetect")
         .class_function("getArch", &ArchDetect::getArch);

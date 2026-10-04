@@ -1564,6 +1564,54 @@ ffk_ffprobekit_get_media_information_from_command(const char *command) {
     });
 }
 
+FFKSession *ffk_ffprobekit_get_media_information_from_command_async(
+    const char *command, ffk_session_cb completeCallback,
+    void *completeUserData, ffk_free_cb completeFree, ffk_log_cb logCallback,
+    void *logUserData, ffk_free_cb logFree, const int waitTimeout) {
+    return guard([&]() -> FFKSession * {
+        // Adopt callback cookies before converting input that may throw.
+        const auto complete = makeSessionCallback<
+            internal::MediaInformationSession,
+            internal::MediaInformationSessionCompleteCallback>(
+            completeCallback, completeUserData, completeFree);
+        const auto log = makeLogCallback(logCallback, logUserData, logFree);
+
+        return makeHandle<FFKSession>(
+            internal::FFprobeKit::getMediaInformationFromCommandAsync(
+                toText(command, "command"), complete, log, waitTimeout));
+    });
+}
+
+FFKSession *ffk_ffprobekit_get_media_information_from_command_arguments(
+    const char *const *arguments, const size_t argumentCount,
+    const int waitTimeout) {
+    return guard([&]() -> FFKSession * {
+        return makeHandle<FFKSession>(
+            internal::FFprobeKit::getMediaInformationFromCommandArguments(
+                toArgumentList(arguments, argumentCount), waitTimeout));
+    });
+}
+
+FFKSession *ffk_ffprobekit_get_media_information_from_command_arguments_async(
+    const char *const *arguments, const size_t argumentCount,
+    ffk_session_cb completeCallback, void *completeUserData,
+    ffk_free_cb completeFree, ffk_log_cb logCallback, void *logUserData,
+    ffk_free_cb logFree, const int waitTimeout) {
+    return guard([&]() -> FFKSession * {
+        // Adopt callback cookies before converting input that may throw.
+        const auto complete = makeSessionCallback<
+            internal::MediaInformationSession,
+            internal::MediaInformationSessionCompleteCallback>(
+            completeCallback, completeUserData, completeFree);
+        const auto log = makeLogCallback(logCallback, logUserData, logFree);
+
+        return makeHandle<FFKSession>(
+            internal::FFprobeKit::getMediaInformationFromCommandArgumentsAsync(
+                toArgumentList(arguments, argumentCount), complete, log,
+                waitTimeout));
+    });
+}
+
 FFKSessionList *ffk_ffprobekit_list_ffprobe_sessions(void) {
     return guard([&]() -> FFKSessionList * {
         return makeList<FFKSessionList>(

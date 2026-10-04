@@ -1735,6 +1735,71 @@ ffk_ffprobekit_get_media_information_from_command(const char *command) {
     FFK_END(NULL)
 }
 
+FFKSession *ffk_ffprobekit_get_media_information_from_command_async(
+    const char *command, ffk_session_cb complete_callback,
+    void *complete_user_data, ffk_free_cb complete_free,
+    ffk_log_cb log_callback, void *log_user_data, ffk_free_cb log_free,
+    int wait_timeout) {
+    FFK_BEGIN
+    MediaInformationSessionCompleteCallback complete =
+        ffkMediaInformationCompleteBlock(complete_callback, complete_user_data,
+                                         complete_free);
+    LogCallback log = ffkLogBlock(log_callback, log_user_data, log_free);
+
+    NSString *text = ffkText(command, "command");
+    if (text == nil) {
+        return NULL;
+    }
+    return (FFKSession *)ffkRetain([FFprobeKit
+        getMediaInformationFromCommandAsync:text
+                       withCompleteCallback:complete
+                            withLogCallback:log
+                            onDispatchQueue:dispatch_get_global_queue(
+                                                DISPATCH_QUEUE_PRIORITY_DEFAULT,
+                                                0)
+                                withTimeout:wait_timeout]);
+    FFK_END(NULL)
+}
+
+FFKSession *ffk_ffprobekit_get_media_information_from_command_arguments(
+    const char *const *arguments, size_t argument_count, int wait_timeout) {
+    FFK_BEGIN
+    NSArray *list = ffkArguments(arguments, argument_count);
+    if (list == nil) {
+        return NULL;
+    }
+    return (FFKSession *)ffkRetain([FFprobeKit
+        getMediaInformationFromCommandArguments:list
+                                    withTimeout:wait_timeout]);
+    FFK_END(NULL)
+}
+
+FFKSession *ffk_ffprobekit_get_media_information_from_command_arguments_async(
+    const char *const *arguments, size_t argument_count,
+    ffk_session_cb complete_callback, void *complete_user_data,
+    ffk_free_cb complete_free, ffk_log_cb log_callback, void *log_user_data,
+    ffk_free_cb log_free, int wait_timeout) {
+    FFK_BEGIN
+    MediaInformationSessionCompleteCallback complete =
+        ffkMediaInformationCompleteBlock(complete_callback, complete_user_data,
+                                         complete_free);
+    LogCallback log = ffkLogBlock(log_callback, log_user_data, log_free);
+
+    NSArray *list = ffkArguments(arguments, argument_count);
+    if (list == nil) {
+        return NULL;
+    }
+    return (FFKSession *)ffkRetain([FFprobeKit
+        getMediaInformationFromCommandArgumentsAsync:list
+                                withCompleteCallback:complete
+                                     withLogCallback:log
+                                     onDispatchQueue:
+                                         dispatch_get_global_queue(
+                                             DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)
+                                         withTimeout:wait_timeout]);
+    FFK_END(NULL)
+}
+
 FFKSessionList *ffk_ffprobekit_list_ffprobe_sessions(void) {
     FFK_BEGIN
     return (FFKSessionList *)ffkRetainList([FFprobeKit listFFprobeSessions]);

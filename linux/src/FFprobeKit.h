@@ -206,7 +206,7 @@ class FFprobeKit {
         ffmpegkit::LogCallback logCallback, const int waitTimeout);
 
     /**
-     * <p>Extracts media information using the command provided asynchronously.
+     * <p>Synchronously extracts media information using the command provided.
      *
      * @param command FFprobe command that prints media information for a file
      * in JSON format
@@ -214,6 +214,92 @@ class FFprobeKit {
      */
     static std::shared_ptr<ffmpegkit::MediaInformationSession>
     getMediaInformationFromCommand(const std::string command);
+
+    /**
+     * <p>Synchronously extracts media information using command arguments
+     * that generate JSON output, without command string parsing.
+     *
+     * @param arguments FFprobe command arguments that print JSON
+     * @return media information session created for this execution
+     */
+    static std::shared_ptr<ffmpegkit::MediaInformationSession>
+    getMediaInformationFromCommandArguments(
+        const std::list<std::string> &arguments);
+
+    /**
+     * <p>Synchronously extracts media information using command arguments
+     * that generate JSON output, without command string parsing.
+     *
+     * @param arguments FFprobe command arguments that print JSON
+     * @param waitTimeout max time to wait until media information is
+     * transmitted
+     * @return media information session created for this execution
+     */
+    static std::shared_ptr<ffmpegkit::MediaInformationSession>
+    getMediaInformationFromCommandArguments(
+        const std::list<std::string> &arguments, const int waitTimeout);
+
+    /**
+     * <p>Starts asynchronous media information extraction using a custom
+     * command that generates JSON output. Returns before execution completes.
+     *
+     * @param command FFprobe command that prints JSON
+     * @param completeCallback callback notified when execution has completed
+     * @return media information session created for this execution
+     */
+    static std::shared_ptr<ffmpegkit::MediaInformationSession>
+    getMediaInformationFromCommandAsync(
+        const std::string command,
+        MediaInformationSessionCompleteCallback completeCallback);
+
+    /**
+     * <p>Starts asynchronous media information extraction using a custom
+     * command that generates JSON output. Returns before execution completes.
+     *
+     * @param command FFprobe command that prints JSON
+     * @param completeCallback callback notified when execution has completed
+     * @param logCallback callback that receives logs
+     * @param waitTimeout max time to wait until media information is
+     * transmitted
+     * @return media information session created for this execution
+     */
+    static std::shared_ptr<ffmpegkit::MediaInformationSession>
+    getMediaInformationFromCommandAsync(
+        const std::string command,
+        MediaInformationSessionCompleteCallback completeCallback,
+        ffmpegkit::LogCallback logCallback, const int waitTimeout);
+
+    /**
+     * <p>Starts asynchronous media information extraction using command
+     * arguments that generate JSON output, without command string parsing.
+     * Returns before execution completes.
+     *
+     * @param arguments FFprobe command arguments that print JSON
+     * @param completeCallback callback notified when execution has completed
+     * @return media information session created for this execution
+     */
+    static std::shared_ptr<ffmpegkit::MediaInformationSession>
+    getMediaInformationFromCommandArgumentsAsync(
+        const std::list<std::string> &arguments,
+        MediaInformationSessionCompleteCallback completeCallback);
+
+    /**
+     * <p>Starts asynchronous media information extraction using command
+     * arguments that generate JSON output, without command string parsing.
+     * Returns before execution completes.
+     *
+     * @param arguments FFprobe command arguments that print JSON
+     * @param completeCallback callback notified when execution has completed
+     * @param logCallback callback that receives logs
+     * @param waitTimeout max time to wait until media information is
+     * transmitted
+     * @return media information session created for this execution
+     */
+    static std::shared_ptr<ffmpegkit::MediaInformationSession>
+    getMediaInformationFromCommandArgumentsAsync(
+        const std::list<std::string> &arguments,
+        MediaInformationSessionCompleteCallback completeCallback,
+        ffmpegkit::LogCallback logCallback, const int waitTimeout);
 
     /**
      * <p>Lists all FFprobe sessions in the session history.

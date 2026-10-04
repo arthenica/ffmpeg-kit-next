@@ -375,11 +375,32 @@ open class FFprobeKit private constructor() {
          * @return media information session created for this execution
          */
         @JvmStatic
-        fun getMediaInformationFromCommand(command: String): MediaInformationSession {
-            val session = MediaInformationSession.create(FFmpegKitConfig.parseArguments(command))
+        fun getMediaInformationFromCommand(command: String): MediaInformationSession =
+            getMediaInformationFromCommandArguments(FFmpegKitConfig.parseArguments(command))
 
-            FFmpegKitConfig.getMediaInformationExecute(session, AbstractSession.DEFAULT_TIMEOUT_FOR_ASYNCHRONOUS_MESSAGES_IN_TRANSMIT)
+        /**
+         * <p>Extracts media information using command arguments that generate JSON output.
+         * Arguments are passed directly to FFprobe without command string parsing.
+         *
+         * @param arguments FFprobe command arguments that print media information in JSON format
+         * @return media information session created for this execution
+         */
+        @JvmStatic
+        fun getMediaInformationFromCommandArguments(arguments: Array<String>): MediaInformationSession =
+            getMediaInformationFromCommandArguments(arguments, AbstractSession.DEFAULT_TIMEOUT_FOR_ASYNCHRONOUS_MESSAGES_IN_TRANSMIT)
 
+        /**
+         * <p>Extracts media information using command arguments that generate JSON output.
+         * Arguments are passed directly to FFprobe without command string parsing.
+         *
+         * @param arguments FFprobe command arguments that print media information in JSON format
+         * @param waitTimeout max time to wait until media information is transmitted
+         * @return media information session created for this execution
+         */
+        @JvmStatic
+        fun getMediaInformationFromCommandArguments(arguments: Array<String>, waitTimeout: Int): MediaInformationSession {
+            val session = MediaInformationSession.create(arguments)
+            FFmpegKitConfig.getMediaInformationExecute(session, waitTimeout)
             return session
         }
 
@@ -419,7 +440,8 @@ open class FFprobeKit private constructor() {
          * @param waitTimeout      max time to wait until media information is transmitted
          * @return media information session created for this execution
          */
-        private fun getMediaInformationFromCommandArgumentsAsync(arguments: Array<String>, completeCallback: MediaInformationSessionCompleteCallback?, logCallback: LogCallback?, waitTimeout: Int): MediaInformationSession {
+        @JvmStatic
+        fun getMediaInformationFromCommandArgumentsAsync(arguments: Array<String>, completeCallback: MediaInformationSessionCompleteCallback?, logCallback: LogCallback?, waitTimeout: Int): MediaInformationSession {
             val session = MediaInformationSession.create(arguments, completeCallback, logCallback)
 
             FFmpegKitConfig.asyncGetMediaInformationExecute(session, waitTimeout)

@@ -330,13 +330,37 @@
                                           withTimeout:(int)waitTimeout;
 
 /**
- * <p>Extracts media information using the command provided asynchronously.
+ * <p>Synchronously extracts media information using the command provided.
  *
  * @param command FFprobe command that prints media information for a file in
  * JSON format
  * @return media information session created for this execution
  */
 + (MediaInformationSession *)getMediaInformationFromCommand:(NSString *)command;
+
+/**
+ * <p>Synchronously extracts media information using command arguments that
+ * generate JSON output. Arguments are passed directly without command parsing.
+ *
+ * @param arguments FFprobe command arguments that print media information in
+ * JSON format
+ * @return media information session created for this execution
+ */
++ (MediaInformationSession *)getMediaInformationFromCommandArguments:
+    (NSArray *)arguments;
+
+/**
+ * <p>Synchronously extracts media information using command arguments that
+ * generate JSON output. Arguments are passed directly without command parsing.
+ *
+ * @param arguments FFprobe command arguments that print media information in
+ * JSON format
+ * @param waitTimeout max time to wait until media information is transmitted
+ * @return media information session created for this execution
+ */
++ (MediaInformationSession *)
+    getMediaInformationFromCommandArguments:(NSArray *)arguments
+                                withTimeout:(int)waitTimeout;
 
 /**
  * <p>Starts an asynchronous FFprobe execution to extract media information

@@ -573,6 +573,37 @@ FFK_API FFKSession *ffk_ffprobekit_get_media_information_async(
     int wait_timeout);
 FFK_API FFKSession *
 ffk_ffprobekit_get_media_information_from_command(const char *command);
+
+/**
+ * Starts asynchronous media information extraction with a command that emits
+ * JSON. The returned session handle is owned by the caller; execution may still
+ * be running.
+ */
+FFK_API FFKSession *ffk_ffprobekit_get_media_information_from_command_async(
+    const char *command, ffk_session_cb complete_callback,
+    void *complete_user_data, ffk_free_cb complete_free,
+    ffk_log_cb log_callback, void *log_user_data, ffk_free_cb log_free,
+    int wait_timeout);
+/**
+ * Extracts media information synchronously using arguments that emit JSON.
+ * Arguments are copied without command parsing. The caller owns the returned
+ * handle.
+ */
+FFK_API FFKSession *ffk_ffprobekit_get_media_information_from_command_arguments(
+    const char *const *arguments, size_t argument_count, int wait_timeout);
+/**
+ * Starts asynchronous media information extraction using arguments that emit
+ * JSON. Arguments are copied without command parsing. The caller owns the
+ * returned handle. Callback cookies follow the ownership rules documented at
+ * the top of this header.
+ */
+FFK_API FFKSession *
+ffk_ffprobekit_get_media_information_from_command_arguments_async(
+    const char *const *arguments, size_t argument_count,
+    ffk_session_cb complete_callback, void *complete_user_data,
+    ffk_free_cb complete_free, ffk_log_cb log_callback, void *log_user_data,
+    ffk_free_cb log_free, int wait_timeout);
+
 FFK_API FFKSessionList *ffk_ffprobekit_list_ffprobe_sessions(void);
 FFK_API FFKSessionList *ffk_ffprobekit_list_media_information_sessions(void);
 

@@ -307,11 +307,11 @@ declare module 'ffmpeg-kit-next-react-native' {
 
     static getMediaInformationFromCommandArguments(commandArguments: string[], waitTimeout?: number): Promise<MediaInformationSession>;
 
-    static getMediaInformationAsync(path: string, completeCallback?: FFprobeSessionCompleteCallback, logCallback?: LogCallback, waitTimeout?: number): Promise<MediaInformationSession>;
+    static getMediaInformationAsync(path: string, completeCallback?: MediaInformationSessionCompleteCallback, logCallback?: LogCallback, waitTimeout?: number): Promise<MediaInformationSession>;
 
-    static getMediaInformationFromCommandAsync(command: string, completeCallback?: FFprobeSessionCompleteCallback, logCallback?: LogCallback, waitTimeout?: number): Promise<MediaInformationSession>;
+    static getMediaInformationFromCommandAsync(command: string, completeCallback?: MediaInformationSessionCompleteCallback, logCallback?: LogCallback, waitTimeout?: number): Promise<MediaInformationSession>;
 
-    static getMediaInformationFromCommandArgumentsAsync(commandArguments: string[], completeCallback?: FFprobeSessionCompleteCallback, logCallback?: LogCallback, waitTimeout?: number): Promise<MediaInformationSession>;
+    static getMediaInformationFromCommandArgumentsAsync(commandArguments: string[], completeCallback?: MediaInformationSessionCompleteCallback, logCallback?: LogCallback, waitTimeout?: number): Promise<MediaInformationSession>;
 
     static listFFprobeSessions(): Promise<FFprobeSession[]>;
 
@@ -434,7 +434,11 @@ declare module 'ffmpeg-kit-next-react-native' {
 
     static create(argumentsArray: Array<string>, completeCallback?: MediaInformationSessionCompleteCallback, logCallback?: LogCallback): Promise<MediaInformationSession>;
 
-    getMediaInformation(): MediaInformation;
+    /**
+     * Returns extracted media information, or undefined while it is unavailable,
+     * if the command failed, or if its output could not be parsed.
+     */
+    getMediaInformation(): MediaInformation | undefined;
 
     setMediaInformation(mediaInformation: MediaInformation): void;
 

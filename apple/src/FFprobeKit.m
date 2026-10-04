@@ -230,12 +230,26 @@
 
 + (MediaInformationSession *)getMediaInformationFromCommand:
     (NSString *)command {
-    MediaInformationSession *session = [MediaInformationSession
-        create:[FFmpegKitConfig parseArguments:command]];
-    [FFmpegKitConfig
-        getMediaInformationExecute:session
-                       withTimeout:
-                           AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit];
+    return [FFprobeKit
+        getMediaInformationFromCommandArguments:[FFmpegKitConfig
+                                                    parseArguments:command]];
+}
+
++ (MediaInformationSession *)getMediaInformationFromCommandArguments:
+    (NSArray *)arguments {
+    return [FFprobeKit
+        getMediaInformationFromCommandArguments:arguments
+                                    withTimeout:
+                                        AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit];
+}
+
++ (MediaInformationSession *)
+    getMediaInformationFromCommandArguments:(NSArray *)arguments
+                                withTimeout:(int)waitTimeout {
+    MediaInformationSession *session =
+        [MediaInformationSession create:arguments];
+    [FFmpegKitConfig getMediaInformationExecute:session
+                                    withTimeout:waitTimeout];
     return session;
 }
 
@@ -246,14 +260,13 @@
                         withLogCallback:(LogCallback)logCallback
                         onDispatchQueue:(dispatch_queue_t)queue
                             withTimeout:(int)waitTimeout {
-    MediaInformationSession *session =
-        [MediaInformationSession create:[FFmpegKitConfig parseArguments:command]
-                   withCompleteCallback:completeCallback
-                        withLogCallback:logCallback];
-    [FFmpegKitConfig asyncGetMediaInformationExecute:session
+    return [FFprobeKit
+        getMediaInformationFromCommandArgumentsAsync:[FFmpegKitConfig
+                                                         parseArguments:command]
+                                withCompleteCallback:completeCallback
+                                     withLogCallback:logCallback
                                      onDispatchQueue:queue
                                          withTimeout:waitTimeout];
-    return session;
 }
 
 + (MediaInformationSession *)
