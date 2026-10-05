@@ -46,6 +46,7 @@
 
 #include <windows.h>
 
+#include <AbstractSession.h>
 #include <ArchDetect.h>
 #include <FFmpegKit.h>
 #include <FFmpegKitConfig.h>
@@ -518,8 +519,10 @@ Value BytesResult(const std::shared_ptr<std::vector<uint8_t>> &bytes) {
 
 Value Dispatch(const std::shared_ptr<NativeState> &state,
                const std::string &method, const Arguments &args) {
-  const int wait = args.Int("waitTimeout", 5000, false);
-  const int timeout = wait > 0 ? wait : 5000;
+  const int default_timeout = ffmpegkit::AbstractSession::
+      DefaultTimeoutForAsynchronousMessagesInTransmit;
+  const int wait = args.Int("waitTimeout", default_timeout, false);
+  const int timeout = wait > 0 ? wait : default_timeout;
   if (method == "getArch")
     return Value(ffmpegkit::ArchDetect::getArch());
   if (method == "getPlatform")
