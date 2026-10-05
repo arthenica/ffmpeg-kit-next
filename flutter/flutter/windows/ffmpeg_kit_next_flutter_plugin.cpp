@@ -41,6 +41,7 @@
 #include <string>
 #include <thread>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <windows.h>
@@ -48,6 +49,10 @@
 #include <ArchDetect.h>
 #include <FFmpegKit.h>
 #include <FFmpegKitConfig.h>
+#include <FFmpegKitInputBuffer.h>
+#include <FFmpegKitOutputBuffer.h>
+#include <FFmpegKitStreamInput.h>
+#include <FFmpegKitStreamOutput.h>
 #include <FFprobeKit.h>
 #include <Log.h>
 #include <MediaInformationJsonParser.h>
@@ -371,11 +376,11 @@ public:
   const std::string code;
 };
 
-struct Resource {
-  long id;
-  bool stream;
-  bool input;
-};
+using Resource =
+    std::variant<std::shared_ptr<ffmpegkit::FFmpegKitInputBuffer>,
+                 std::shared_ptr<ffmpegkit::FFmpegKitOutputBuffer>,
+                 std::shared_ptr<ffmpegkit::FFmpegKitStreamInput>,
+                 std::shared_ptr<ffmpegkit::FFmpegKitStreamOutput>>;
 
 struct PendingResponse {
   explicit PendingResponse(std::shared_ptr<Result> value)
@@ -442,14 +447,18 @@ struct NativeState : std::enable_shared_from_this<NativeState> {
     });
   }
 
-  Resource FindResource(const Arguments &args, bool stream, bool input) {
+  template <typename T>
+  std::shared_ptr<T> FindResource(const Arguments &args) {
     std::lock_guard<std::mutex> lock(mutex);
     auto found = resources.find(args.String("url"));
-    if (found == resources.end() || found->second.stream != stream ||
-        found->second.input != input) {
+    if (found == resources.end()) {
       throw ChannelError("NOT_FOUND", "Buffer or stream not found.");
     }
-    return found->second;
+    const auto *resource = std::get_if<std::shared_ptr<T>>(&found->second);
+    if (!resource) {
+      throw ChannelError("NOT_FOUND", "Buffer or stream not found.");
+    }
+    return *resource;
   }
 };
 
@@ -501,14 +510,10 @@ GetMediaSession(const Arguments &args) {
   return std::static_pointer_cast<ffmpegkit::MediaInformationSession>(session);
 }
 
-Value BytesResult(uint8_t *bytes, size_t size, bool present) {
-  std::unique_ptr<uint8_t, decltype(&ffk_bytes_free)> owned(bytes,
-                                                            ffk_bytes_free);
-  ffmpegkit::detail::checkError();
-  if (!present)
+Value BytesResult(const std::shared_ptr<std::vector<uint8_t>> &bytes) {
+  if (!bytes)
     return Value();
-  return Value(size ? std::vector<uint8_t>(bytes, bytes + size)
-                    : std::vector<uint8_t>{});
+  return Value(*bytes);
 }
 
 Value Dispatch(const std::shared_ptr<NativeState> &state,
@@ -774,96 +779,73 @@ Value Dispatch(const std::shared_ptr<NativeState> &state,
   }
   if (method == "inputBufferFromByteArray" || method == "outputBufferCreate" ||
       method == "streamInputCreate" || method == "streamOutputCreate") {
-    const bool stream =
-        method == "streamInputCreate" || method == "streamOutputCreate";
-    const bool input =
-        method == "streamInputCreate" || method == "inputBufferFromByteArray";
     const auto extension = args.String("extension", false);
-    long id;
-    if (stream) {
-      const int capacity = args.Int("capacity", 1048576, false);
-      if (capacity <= 0)
-        throw std::invalid_argument("Stream capacity must be positive.");
-      id = ffk_config_register_ffmpegkit_stream(capacity, input ? 1 : 2);
-    } else if (input) {
-      const auto bytes = args.Bytes("data");
-      id = ffk_config_register_ffmpegkit_input_buffer(bytes.data(),
-                                                      bytes.size());
-    } else
-      id = ffk_config_register_ffmpegkit_output_buffer(
-          args.Int("initialCapacity", 4096, false),
-          args.Int("maxCapacity", 0, false));
-    ffmpegkit::detail::checkError();
-    if (!id)
-      throw ChannelError("CREATE_FAILED", "Failed to create buffer or stream.");
-    try {
-      const auto url = ffmpegkit::detail::takeString(ffk_protocol_build_url(
-          stream ? "ffkitstream" : "ffkitmem", id, extension.c_str()));
-      ffmpegkit::detail::checkError();
-      std::lock_guard<std::mutex> lock(state->mutex);
-      state->resources[url] = Resource{id, stream, input};
-      return Value(url);
-    } catch (...) {
-      if (stream)
-        ffk_config_unregister_ffmpegkit_stream(id);
-      else
-        ffk_config_unregister_ffmpegkit_buffer(id);
-      throw;
+    Resource resource;
+    if (method == "inputBufferFromByteArray") {
+      resource = ffmpegkit::FFmpegKitInputBuffer::fromByteArray(
+          args.Bytes("data"), extension);
+    } else if (method == "outputBufferCreate") {
+      resource = args.Find("initialCapacity") && args.Find("maxCapacity")
+                     ? ffmpegkit::FFmpegKitOutputBuffer::create(
+                           extension, args.Int("initialCapacity"),
+                           args.Int("maxCapacity"))
+                     : ffmpegkit::FFmpegKitOutputBuffer::create(extension);
+    } else if (method == "streamInputCreate") {
+      resource = args.Find("capacity")
+                     ? ffmpegkit::FFmpegKitStreamInput::create(
+                           extension, args.Int("capacity"))
+                     : ffmpegkit::FFmpegKitStreamInput::create(extension);
+    } else {
+      resource = args.Find("capacity")
+                     ? ffmpegkit::FFmpegKitStreamOutput::create(
+                           extension, args.Int("capacity"))
+                     : ffmpegkit::FFmpegKitStreamOutput::create(extension);
     }
+    const auto url = std::visit([](const auto &item) { return item->getUrl(); },
+                                resource);
+    std::lock_guard<std::mutex> lock(state->mutex);
+    state->resources[url] = std::move(resource);
+    return Value(url);
   }
   if (method == "inputBufferClose" || method == "outputBufferClose" ||
       method == "streamInputClose" || method == "streamOutputClose") {
     std::lock_guard<std::mutex> lock(state->mutex);
     const auto found = state->resources.find(args.String("url"));
     if (found != state->resources.end()) {
-      if (found->second.stream)
-        ffk_config_unregister_ffmpegkit_stream(found->second.id);
-      else
-        ffk_config_unregister_ffmpegkit_buffer(found->second.id);
-      ffmpegkit::detail::checkError();
+      std::visit([](const auto &item) { item->close(); }, found->second);
       state->resources.erase(found);
     }
     return Value();
   }
   if (method == "outputBufferGetSize") {
-    const auto resource = state->FindResource(args, false, false);
-    const auto size = ffk_config_get_ffmpegkit_buffer_size(resource.id);
-    ffmpegkit::detail::checkError();
-    return Value(static_cast<int64_t>(size));
+    const auto buffer =
+        state->FindResource<ffmpegkit::FFmpegKitOutputBuffer>(args);
+    return Value(static_cast<int64_t>(buffer->getSize()));
   }
   if (method == "outputBufferToByteArray") {
-    const auto resource = state->FindResource(args, false, false);
-    uint8_t *bytes = nullptr;
-    size_t size = 0;
-    const int present =
-        ffk_config_get_ffmpegkit_output_buffer(resource.id, &bytes, &size);
-    return BytesResult(bytes, size, present != 0);
+    const auto buffer =
+        state->FindResource<ffmpegkit::FFmpegKitOutputBuffer>(args);
+    return BytesResult(buffer->toByteArray());
   }
   if (method == "streamInputWrite") {
-    const auto resource = state->FindResource(args, true, true);
+    const auto stream =
+        state->FindResource<ffmpegkit::FFmpegKitStreamInput>(args);
     const auto bytes = args.Bytes("data");
-    const int written = ffk_config_write_ffmpegkit_stream(
-        resource.id, bytes.data(), bytes.size(),
-        args.Int("timeoutMs", -1, false));
-    ffmpegkit::detail::checkError();
-    if (written < 0)
-      throw ChannelError("WRITE_FAILED", "Stream write failed.");
-    return Value(written);
+    return Value(args.Find("timeoutMs")
+                     ? stream->write(bytes, args.Int("timeoutMs"))
+                     : stream->write(bytes));
   }
   if (method == "streamInputCloseInput") {
-    ffk_config_close_ffmpegkit_stream_input(
-        state->FindResource(args, true, true).id);
-    ffmpegkit::detail::checkError();
+    state->FindResource<ffmpegkit::FFmpegKitStreamInput>(args)->closeInput();
     return Value();
   }
   if (method == "streamOutputRead") {
-    const auto resource = state->FindResource(args, true, false);
-    uint8_t *bytes = nullptr;
-    size_t size = 0;
-    const int present = ffk_config_read_ffmpegkit_stream(
-        resource.id, args.Int("maxBytes"), args.Int("timeoutMs", -1, false),
-        &bytes, &size);
-    return BytesResult(bytes, size, present != 0);
+    const auto stream =
+        state->FindResource<ffmpegkit::FFmpegKitStreamOutput>(args);
+    return BytesResult(args.Find("timeoutMs")
+                           ? stream->read(args.Int("maxBytes"),
+                                          args.Int("timeoutMs"))
+                           : stream->read(args.Int("maxBytes")));
   }
   throw ChannelError("METHOD_NOT_IMPLEMENTED", method);
 }
@@ -973,10 +955,7 @@ public:
     {
       std::lock_guard<std::mutex> lock(state_->mutex);
       for (const auto &entry : state_->resources) {
-        if (entry.second.stream)
-          ffk_config_unregister_ffmpegkit_stream(entry.second.id);
-        else
-          ffk_config_unregister_ffmpegkit_buffer(entry.second.id);
+        std::visit([](const auto &item) { item->close(); }, entry.second);
       }
       state_->resources.clear();
     }
