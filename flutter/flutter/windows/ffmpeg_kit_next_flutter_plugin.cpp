@@ -621,8 +621,7 @@ Value Dispatch(const std::shared_ptr<NativeState> &state,
   }
   if (method == "abstractSessionGetFailStackTrace")
     return Value(Utf8(GetSession(args)->getFailStackTrace()));
-  if (method == "thereAreAsynchronousMessagesInTransmit" ||
-      method == "abstractSessionThereAreAsynchronousMessagesInTransmit")
+  if (method == "thereAreAsynchronousMessagesInTransmit")
     return Value(GetSession(args)->thereAreAsynchronousMessagesInTransmit());
   if (method == "ffmpegSessionGetAllStatistics")
     return ListValue(
