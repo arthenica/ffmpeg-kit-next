@@ -137,7 +137,9 @@ copy_windows() {
     echo "error: Windows bundle destination must not redirect outside this plugin" >&2
     return 1
   fi
-  rsync -a --delete "${src}/" "${dest}/"
+  rm -rf "${dest}"
+  mkdir -p "${dest}"
+  cp -R "${src}/." "${dest}/"
   echo "windows: copied bundle-windows -> windows/Frameworks/ffmpeg-kit-next/"
 }
 
