@@ -74,8 +74,10 @@ and repeat the copy step above whenever its native sources change.
 After adding the local dependency below, run `flutter build windows --debug` or
 `flutter build windows --release` from the consuming app.
 
-Named pipes are not supported on Windows. The pipe methods return a
-`NOT_SUPPORTED` platform error on this platform.
+Pipe registration and closing are forwarded to the native library. The current
+Windows implementation returns `null` from `registerNewFFmpegPipe`, and
+`closeFFmpegPipe` does nothing. The `writeToPipe` helper returns a `NOT_SUPPORTED`
+platform error on Windows.
 
 ### Local dependency
 

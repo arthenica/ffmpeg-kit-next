@@ -776,8 +776,24 @@ Value Dispatch(const std::shared_ptr<NativeState> &state,
       method == "getSupportedCameraIds") {
     throw ChannelError("NOT_SUPPORTED", "Not supported on Windows platform.");
   }
-  if (method == "registerNewFFmpegPipe" || method == "closeFFmpegPipe" ||
-      method == "writeToPipe") {
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
+  if (method == "registerNewFFmpegPipe") {
+    const auto pipe = Config::registerNewFFmpegPipe();
+    return pipe ? Value(*pipe) : Value();
+  }
+  if (method == "closeFFmpegPipe") {
+    const auto *pipe = args.Find("ffmpegPipePath");
+    if (pipe)
+      Config::closeFFmpegPipe(args.String("ffmpegPipePath"));
+    return Value();
+  }
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
+  if (method == "writeToPipe") {
     throw ChannelError("NOT_SUPPORTED", "Named pipes are not supported on Windows.");
   }
   if (method == "inputBufferFromByteArray" || method == "outputBufferCreate" ||
