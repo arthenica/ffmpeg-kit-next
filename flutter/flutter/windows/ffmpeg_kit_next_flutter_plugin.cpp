@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cstdio>
 #include <cstdint>
 #include <functional>
 #include <limits>
@@ -534,7 +535,15 @@ Value Dispatch(const std::shared_ptr<NativeState> &state,
   if (method == "isLTSBuild")
     return Value(false);
   if (method == "printLoadConfirmation") {
-    OutputDebugStringW(L"FFmpegKit Next Flutter Windows loaded.\n");
+    static std::once_flag load_confirmation;
+    std::call_once(load_confirmation, [] {
+      const auto package = ffmpegkit::Packages::getPackageName();
+      const auto package_part = package.empty() ? "" : package + "-";
+      std::fprintf(stderr, "Loaded ffmpeg-kit-next-flutter-%swindows-%s-%s.\n",
+                   package_part.c_str(),
+                   ffmpegkit::ArchDetect::getArch().c_str(),
+                   Config::getVersion().c_str());
+    });
     return Value();
   }
   if (method == "getPackageName")
