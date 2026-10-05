@@ -634,9 +634,16 @@ Value Dispatch(const std::shared_ptr<NativeState> &state,
   if (method == "mediaInformationJsonParserFrom")
     return MediaValue(ffmpegkit::MediaInformationJsonParser::from(
         args.String("ffprobeJsonOutput")));
-  if (method == "mediaInformationJsonParserFromWithError")
-    return MediaValue(ffmpegkit::MediaInformationJsonParser::fromWithError(
-        args.String("ffprobeJsonOutput")));
+  if (method == "mediaInformationJsonParserFromWithError") {
+    const auto json = args.String("ffprobeJsonOutput");
+    try {
+      return MediaValue(
+          ffmpegkit::MediaInformationJsonParser::fromWithError(json));
+    } catch (const std::exception &) {
+      throw ChannelError("PARSE_FAILED",
+                         "Parsing MediaInformation failed with JSON error.");
+    }
+  }
   if (method == "ffmpegSessionExecute") {
     Config::ffmpegExecute(GetFFmpegSession(args));
     return Value();
