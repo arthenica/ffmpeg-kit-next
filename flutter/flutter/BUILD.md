@@ -16,7 +16,7 @@ with the desired external libraries:
 ./nix-ios.sh     -p <profile>   # produces prebuilt/bundle-apple-xcframework-ios-*/... (covers both iOS and iPadOS)
 ./nix-macos.sh   -p <profile>   # produces prebuilt/bundle-apple-xcframework-macos-*/...
 ./nix-linux.sh   -p <profile>   # produces prebuilt/bundle-linux/... (native host architecture only)
-./windows.sh --no-static-mingw-runtime # run in MSYS2 CLANG64; produces prebuilt/bundle-windows/ffmpeg-kit-next/
+./windows.sh # run in MSYS2 CLANG64; produces prebuilt/bundle-windows/ffmpeg-kit-next/
 ```
 
 Then copy the built artifacts into this plugin:
