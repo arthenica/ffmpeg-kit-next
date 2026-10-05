@@ -132,11 +132,6 @@ copy_windows() {
     echo "error: incomplete Windows bundle: ${src}" >&2
     return 1
   fi
-  mkdir -p "${dest}"
-  if [[ "$(realpath "${dest}")" != "${plugin_dir}/windows/Frameworks/ffmpeg-kit-next" ]]; then
-    echo "error: Windows bundle destination must not redirect outside this plugin" >&2
-    return 1
-  fi
   rm -rf "${dest}"
   mkdir -p "${dest}"
   cp -R "${src}/." "${dest}/"
