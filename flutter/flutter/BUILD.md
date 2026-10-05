@@ -16,7 +16,7 @@ with the desired external libraries:
 ./nix-ios.sh     -p <profile>   # produces prebuilt/bundle-apple-xcframework-ios-*/... (covers both iOS and iPadOS)
 ./nix-macos.sh   -p <profile>   # produces prebuilt/bundle-apple-xcframework-macos-*/...
 ./nix-linux.sh   -p <profile>   # produces prebuilt/bundle-linux/... (native host architecture only)
-./windows.sh --no-static-mingw-runtime # run in MSYS2 UCRT64; produces prebuilt/bundle-windows/ffmpeg-kit-next/
+./windows.sh --no-static-mingw-runtime # run in MSYS2 CLANG64; produces prebuilt/bundle-windows/ffmpeg-kit-next/
 ```
 
 Then copy the built artifacts into this plugin:
@@ -59,7 +59,7 @@ otherwise; both reference the same `Sources/` and `Frameworks/` trees.
 
 ### Windows x64
 
-Windows builds require MSYS2 UCRT64, Visual Studio's Desktop development with C++
+Windows builds require MSYS2 CLANG64, Visual Studio's Desktop development with C++
 workload, and the Windows Flutter SDK. Complete the Windows build and copy steps
 in the one-time setup above before consuming the plugin.
 
