@@ -68,11 +68,13 @@
  *
  * ERROR HANDLING
  *
- *   No C++ exception ever escapes this API. Every entry point clears the
- *   calling thread's error slot on entry and, if the operation throws, stores
- *   the message there and returns a neutral value (0, NULL or no-op). Callers
- *   check ffk_has_error() and take the message with ffk_take_error(). The
- *   message can be of any length.
+ *   No C++ exception ever escapes this API. Every entry point that can fail
+ *   clears the calling thread's error slot on entry and, if the operation
+ *   throws, stores the message there and returns a neutral value (0, NULL or
+ *   no-op). The ffk_*_free and ffk_*_list_size functions cannot fail and leave
+ *   the slot alone, so an error outlives the release of the handles and
+ *   strings of the failed call. Callers check ffk_has_error() and take the
+ *   message with ffk_take_error(). The message can be of any length.
  *
  * CALLBACKS
  *
@@ -89,6 +91,25 @@
  *   *_get_*_callback() functions read back only callbacks that were registered
  *   through this API.
  *
+ *   A global callback (ffk_config_enable_*_callback) can be replaced from any
+ *   thread at any time, also while executions are running. The callback that
+ *   was replaced can still be running on another thread when the call returns,
+ *   and its cookie stays valid until its free function is called. That can
+ *   happen on any thread, including one owned by the library, so release what
+ *   the old callback uses from the free function, not after the replacing
+ *   call.
+ *
+ *   The library does not release what it still holds when the process exits.
+ *   The free function of a cookie that is still referenced then, by a session
+ *   in the history, a global callback or a session delete listener, is not
+ *   called. A consumer that needs its cookies released earlier releases each
+ *   kind it registered: ffk_config_clear_sessions() for the callbacks of
+ *   sessions, ffk_config_enable_*_callback() with a NULL callback for each
+ *   global callback, and ffk_config_remove_session_delete_listener() for each
+ *   session delete listener. A session that is still running, or that the
+ *   consumer still holds a handle to, keeps its cookies until it has finished
+ *   and the handle is released with ffk_session_free().
+ *
  * METADATA
  *
  *   Media, stream and chapter properties are exchanged as JSON text: object
@@ -103,8 +124,28 @@
  *
  * ENUMS
  *
- *   Enumerations (session state, log level, log redirection strategy, signal)
- *   cross this boundary as plain int, never as a C++ enum type.
+ *   Enumerations cross this boundary as plain int, never as a C++ enum type:
+ *
+ *   - session state: 0 created, 1 running, 2 failed, 3 completed
+ *   - log level: -16 stderr, -8 quiet, 0 panic, 8 fatal, 16 error, 24 warning,
+ *     32 info, 40 verbose, 48 debug, 56 trace
+ *   - log redirection strategy: 0 always print logs, 1 print logs when no
+ *     callbacks are defined, 2 print logs when the global callback is not
+ *     defined, 3 print logs when the session callback is not defined, 4 never
+ *     print logs
+ *   - signal: the POSIX signal number (2 SIGINT, 3 SIGQUIT, 13 SIGPIPE,
+ *     15 SIGTERM, 24 SIGXCPU)
+ *
+ *   A log level is any int. FFmpeg compares every message with the level as a
+ *   threshold and keeps the messages at or below it, so a value between two
+ *   named levels, such as 20, is as valid as a named one.
+ *
+ *   The other enumerations have a closed set of values. A value outside of it
+ *   is rejected the way text that is not valid UTF-8 is: the call stores the
+ *   reason in the error slot, does nothing and returns a neutral value. The
+ *   functions that create a session also take -1 as the log redirection
+ *   strategy, for the strategy that ffk_config_set_log_redirection_strategy()
+ *   configured. Any other value has to be a strategy.
  */
 
 #include <stddef.h>

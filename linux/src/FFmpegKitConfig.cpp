@@ -64,13 +64,20 @@ void cancel_operation(long id);
  */
 static std::atomic<long> pipeIndexGenerator(1);
 
+/*
+ * The session history and the global callbacks below own whatever the consumer
+ * registered, and through the C API that includes cookies released by the
+ * consumer's own free functions when the owning object is destroyed. They are
+ * created on the heap and never destroyed, so that static destruction at
+ * process exit cannot call into consumer code that is already gone.
+ */
+
 /* Session history variables */
 static int sessionHistorySize;
-static std::map<long, std::shared_ptr<ffmpegkit::Session>> sessionHistoryMap;
-static std::list<std::shared_ptr<ffmpegkit::Session>> sessionHistoryList;
+static auto &sessionHistoryMap = *new std::map<long, std::shared_ptr<ffmpegkit::Session>>();
+static auto &sessionHistoryList = *new std::list<std::shared_ptr<ffmpegkit::Session>>();
 static std::recursive_mutex sessionMutex;
-static std::list<std::weak_ptr<ffmpegkit::SessionDeleteListener>>
-    sessionDeleteListeners;
+static std::list<std::weak_ptr<ffmpegkit::SessionDeleteListener>> sessionDeleteListeners;
 static std::recursive_mutex sessionDeleteListenerMutex;
 
 /** Session control variables */
@@ -79,22 +86,57 @@ static std::atomic<short> sessionMap[SESSION_MAP_SIZE];
 static std::atomic<int> sessionInTransitMessageCountMap[SESSION_MAP_SIZE];
 
 /** Holds callback defined to redirect logs */
-static ffmpegkit::LogCallback logCallback;
+static auto &logCallback = *new std::shared_ptr<const ffmpegkit::LogCallback>();
 
 /** Holds callback defined to redirect statistics */
-static ffmpegkit::StatisticsCallback statisticsCallback;
+static auto &statisticsCallback = *new std::shared_ptr<const ffmpegkit::StatisticsCallback>();
 
-/** Holds complete callbacks defined to redirect asynchronous execution results
+/** Holds complete callbacks defined to redirect asynchronous execution results */
+static auto &ffmpegSessionCompleteCallback = *new std::shared_ptr<const ffmpegkit::FFmpegSessionCompleteCallback>();
+static auto &ffprobeSessionCompleteCallback = *new std::shared_ptr<const ffmpegkit::FFprobeSessionCompleteCallback>();
+static auto &mediaInformationSessionCompleteCallback = *new std::shared_ptr<const ffmpegkit::MediaInformationSessionCompleteCallback>();
+
+/**
+ * Guards the five global callbacks above. A consumer can replace them from any
+ * thread while the log and statistics delivery thread and the session worker
+ * threads read them. Readers retain the shared callback under the lock, then
+ * copy and invoke it outside the lock. Writers construct replacements before
+ * locking and release replaced callbacks after unlocking. Consumer copy
+ * constructors and cookie cleanup can therefore re-enter the API.
  */
-static ffmpegkit::FFmpegSessionCompleteCallback ffmpegSessionCompleteCallback;
-static ffmpegkit::FFprobeSessionCompleteCallback ffprobeSessionCompleteCallback;
-static ffmpegkit::MediaInformationSessionCompleteCallback
-    mediaInformationSessionCompleteCallback;
+static std::mutex globalCallbackMutex;
 
-static ffmpegkit::LogRedirectionStrategy globalLogRedirectionStrategy;
+/** Retains a global callback under the lock and copies it after unlocking. */
+template <typename CallbackFunction> static CallbackFunction readGlobalCallback(const std::shared_ptr<const CallbackFunction> &slot) {
+    std::shared_ptr<const CallbackFunction> snapshot;
+    {
+        std::lock_guard<std::mutex> lock(globalCallbackMutex);
+        snapshot = slot;
+    }
+    return snapshot == nullptr ? CallbackFunction() : *snapshot;
+}
+
+/** Constructs and releases consumer callback objects outside the lock. */
+template <typename CallbackFunction> static void exchangeGlobalCallback(std::shared_ptr<const CallbackFunction> &slot, const CallbackFunction &callback) {
+    std::shared_ptr<const CallbackFunction> replacement;
+    if (callback != nullptr) {
+        replacement = std::make_shared<const CallbackFunction>(callback);
+    }
+    {
+        std::lock_guard<std::mutex> lock(globalCallbackMutex);
+        slot.swap(replacement);
+    }
+}
+
+/**
+ * Atomic, like the other settings below that the delivery thread and the
+ * worker threads read while a consumer can change them.
+ */
+static std::atomic<ffmpegkit::LogRedirectionStrategy> globalLogRedirectionStrategy;
 
 /** Redirection control variables */
-static int redirectionEnabled;
+static std::atomic<int> redirectionEnabled(0);
+
 /**
  * Counts the loops that deliver the asynchronous messages. A loop belongs to
  * the redirection that started it, so once the redirection is switched off and
@@ -102,6 +144,27 @@ static int redirectionEnabled;
  * one.
  */
 static std::atomic<int> redirectionGenerationId(0);
+
+/**
+ * Serializes enabling and disabling the redirection. The flag, the callback
+ * thread with its handle and the log and statistics hooks of FFmpeg change
+ * together, so concurrent changes cannot leave the hooks out of step with the
+ * flag. It is not the lock of the message queue, so threads that log do not
+ * wait while a thread is created.
+ */
+static std::mutex redirectionMutex;
+
+/** Keeps every generation joinable until it has finished or shutdown waits. */
+struct CallbackThreadRecord {
+    pthread_t thread;
+    int generationId;
+    std::atomic<bool> finished;
+
+    explicit CallbackThreadRecord(int generation)
+        : thread{}, generationId{generation}, finished{false} {}
+};
+static std::list<CallbackThreadRecord> callbackThreads;
+static bool callbackThreadsShuttingDown = false;
 static std::recursive_mutex callbackDataMutex;
 static std::mutex callbackMutex;
 static std::condition_variable callbackMonitor;
@@ -119,7 +182,7 @@ volatile int handleSIGPIPE = 1;
 __thread long globalSessionId = 0;
 
 /** Holds the default log level */
-int configuredLogLevel = ffmpegkit::LevelAVLogInfo;
+std::atomic<int> configuredLogLevel(ffmpegkit::LevelAVLogInfo);
 
 #define FFKIT_RESOURCE_INPUT 1
 #define FFKIT_RESOURCE_OUTPUT 2
@@ -255,7 +318,33 @@ void ffmpegkit_log_callback_default(void *ptr, int level, const char *format,
 #endif
 
 static std::once_flag ffmpegKitInitializerFlag;
-static pthread_t callbackThread;
+
+/** Joins retired workers outside the lifecycle lock so callbacks can re-enter. */
+static void joinCallbackThreads(std::list<CallbackThreadRecord> &threads) {
+    for (auto &record : threads) {
+        if (pthread_equal(pthread_self(), record.thread)) {
+            // Process exit from a callback never returns to its worker loop.
+            pthread_detach(record.thread);
+        } else {
+            pthread_join(record.thread, NULL);
+        }
+    }
+}
+
+/** Reclaims completed generations without blocking a live callback. */
+static void reapFinishedCallbackThreads() {
+    std::list<CallbackThreadRecord> finishedThreads;
+    {
+        std::lock_guard<std::mutex> lock(redirectionMutex);
+        for (auto it = callbackThreads.begin(); it != callbackThreads.end();) {
+            auto current = it++;
+            if (current->finished.load() && !pthread_equal(pthread_self(), current->thread)) {
+                finishedThreads.splice(finishedThreads.end(), callbackThreads, current);
+            }
+        }
+    }
+    joinCallbackThreads(finishedThreads);
+}
 
 void *ffmpegKitInitialize();
 
@@ -268,7 +357,8 @@ void *ffmpegKitInitialize();
 const void *_ffmpegKitConfigInitializer{ffmpegKitInitialize()};
 
 /**
- * Stops the callback thread before the globals it uses are destroyed at exit.
+ * Stops every callback generation before its globals are destroyed at exit,
+ * including generations still finishing after redirection was disabled.
  * Static objects are destroyed in the reverse order of their construction, so
  * this one, defined after them, is destroyed first. Otherwise glibc's
  * pthread_cond_destroy() waits on callbackMonitor while the thread keeps
@@ -276,20 +366,16 @@ const void *_ffmpegKitConfigInitializer{ffmpegKitInitialize()};
  */
 static struct CallbackThreadShutdown {
     ~CallbackThreadShutdown() {
-        std::unique_lock<std::recursive_mutex> lock(callbackDataMutex);
-        if (redirectionEnabled != 1) {
-            return;
+        std::list<CallbackThreadRecord> threads;
+        {
+            std::lock_guard<std::mutex> lock(redirectionMutex);
+            callbackThreadsShuttingDown = true;
+            redirectionEnabled = 0;
+            threads.splice(threads.end(), callbackThreads);
         }
-        redirectionEnabled = 0;
-        lock.unlock();
 
-        callbackMonitor.notify_one();
-
-        if (pthread_equal(pthread_self(), callbackThread)) {
-            pthread_detach(callbackThread);
-        } else {
-            pthread_join(callbackThread, NULL);
-        }
+        callbackMonitor.notify_all();
+        joinCallbackThreads(threads);
     }
 } callbackThreadShutdown;
 
@@ -323,17 +409,16 @@ static bool fs_create_dir(const std::string &s) {
     return true;
 }
 
-std::list<long> deleteExpiredSessionsLocked() {
+/** Removes expired entries without destroying sessions while locked. */
+std::list<long> deleteExpiredSessionsLocked(std::list<std::shared_ptr<ffmpegkit::Session>> &retiredSessions) {
     std::list<long> deletedSessionIds;
 
     while (sessionHistoryList.size() > sessionHistorySize) {
-        auto first = sessionHistoryList.front();
-        if (first != nullptr) {
-            const long sessionId = first->getSessionId();
-            sessionHistoryList.pop_front();
-            sessionHistoryMap.erase(sessionId);
-            deletedSessionIds.push_back(sessionId);
-        }
+        auto first = sessionHistoryList.begin();
+        const long sessionId = (*first)->getSessionId();
+        deletedSessionIds.push_back(sessionId);
+        retiredSessions.splice(retiredSessions.end(), sessionHistoryList, first);
+        sessionHistoryMap.erase(sessionId);
     }
 
     return deletedSessionIds;
@@ -378,8 +463,8 @@ void notifySessionsDeleted(const std::list<long> &sessionIds) {
     }
 }
 
-void addSessionToSessionHistory(
-    const std::shared_ptr<ffmpegkit::Session> session) {
+void addSessionToSessionHistory(const std::shared_ptr<ffmpegkit::Session> session) {
+    std::list<std::shared_ptr<ffmpegkit::Session>> retiredSessions;
     std::unique_lock<std::recursive_mutex> lock(sessionMutex, std::defer_lock);
     std::list<long> deletedSessionIds;
 
@@ -394,11 +479,12 @@ void addSessionToSessionHistory(
     if (sessionHistoryMap.count(sessionId) == 0) {
         sessionHistoryMap.insert({sessionId, session});
         sessionHistoryList.push_back(session);
-        deletedSessionIds = deleteExpiredSessionsLocked();
+        deletedSessionIds = deleteExpiredSessionsLocked(retiredSessions);
     }
 
     lock.unlock();
 
+    retiredSessions.clear();
     notifySessionsDeleted(deletedSessionIds);
 }
 
@@ -1351,7 +1437,7 @@ static void process_log(long sessionId, int levelValueInt,
         }
     }
 
-    ffmpegkit::LogCallback globalLogCallback = logCallback;
+    ffmpegkit::LogCallback globalLogCallback = readGlobalCallback(logCallback);
     if (globalLogCallback != nullptr) {
         globalCallbackDefined = true;
 
@@ -1430,7 +1516,7 @@ void process_statistics(long sessionId, int videoFrameNumber, float videoFps,
         }
     }
 
-    ffmpegkit::StatisticsCallback globalStatisticsCallback = statisticsCallback;
+    ffmpegkit::StatisticsCallback globalStatisticsCallback = readGlobalCallback(statisticsCallback);
     if (globalStatisticsCallback != nullptr) {
         try {
             globalStatisticsCallback(statistics);
@@ -1448,13 +1534,16 @@ void process_statistics(long sessionId, int videoFrameNumber, float videoFps,
  * that was configured. The log level of FFmpeg is thread local and is not the
  * one of this thread's session.
  *
- * @param pointer the number of the redirection that started this loop, as an
- * integer. The loop ends when that redirection is switched off, or replaced by
- * a newer one.
+ * @param pointer the tracked worker record. The loop ends when its redirection
+ * is switched off, or replaced by a newer one.
  */
 void *callbackThreadFunction(void *pointer) {
-    const int generationId =
-        static_cast<int>(reinterpret_cast<intptr_t>(pointer));
+    auto *record = static_cast<CallbackThreadRecord *>(pointer);
+    const int generationId = record->generationId;
+    struct Completion {
+        std::atomic<bool> &finished;
+        ~Completion() { finished.store(true); }
+    } completion{record->finished};
     int activeLogLevel = configuredLogLevel;
     if ((activeLogLevel != ffmpegkit::LevelAVLogQuiet) &&
         (ffmpegkit::LevelAVLogDebug <= activeLogLevel)) {
@@ -1663,36 +1752,27 @@ void *ffmpegKitInitialize() {
 }
 
 void ffmpegkit::FFmpegKitConfig::enableRedirection() {
-    std::unique_lock<std::recursive_mutex> lock(callbackDataMutex,
-                                                std::defer_lock);
-    lock.lock();
+    reapFinishedCallbackThreads();
+    std::lock_guard<std::mutex> lock(redirectionMutex);
 
-    if (redirectionEnabled != 0) {
-        lock.unlock();
+    if (callbackThreadsShuttingDown || redirectionEnabled != 0) {
         return;
     }
-    redirectionEnabled = 1;
 
     // THE LOOP OF AN EARLIER REDIRECTION, IF IT IS STILL ON ITS WAY OUT, ENDS
     // INSTEAD OF RUNNING NEXT TO THE NEW ONE
     const int generationId =
         std::atomic_fetch_add(&redirectionGenerationId, 1) + 1;
 
-    lock.unlock();
-
-    int rc = pthread_create(&callbackThread, NULL, callbackThreadFunction,
-                            reinterpret_cast<void *>(
-                                static_cast<intptr_t>(generationId)));
+    callbackThreads.emplace_back(generationId);
+    auto &record = callbackThreads.back();
+    redirectionEnabled = 1;
+    int rc = pthread_create(&record.thread, NULL, callbackThreadFunction, &record);
     if (rc != 0) {
+        redirectionEnabled = 0;
+        callbackThreads.pop_back();
         std::cout << "Failed to create async callback block: " << rc
                   << std::endl;
-
-        // NO THREAD WAS STARTED, SO THE REDIRECTION MUST NOT STAY ENABLED.
-        // OTHERWISE disableRedirection() AND THE SHUTDOWN AT EXIT WOULD JOIN
-        // OR DETACH A THREAD THAT DOES NOT EXIST
-        lock.lock();
-        redirectionEnabled = 0;
-        lock.unlock();
         return;
     }
 
@@ -1701,25 +1781,20 @@ void ffmpegkit::FFmpegKitConfig::enableRedirection() {
 }
 
 void ffmpegkit::FFmpegKitConfig::disableRedirection() {
-    std::unique_lock<std::recursive_mutex> lock(callbackDataMutex,
-                                                std::defer_lock);
+    {
+        std::lock_guard<std::mutex> lock(redirectionMutex);
 
-    lock.lock();
+        if (redirectionEnabled != 1) {
+            return;
+        }
+        redirectionEnabled = 0;
 
-    if (redirectionEnabled != 1) {
-        lock.unlock();
-        return;
+        av_log_set_callback(ffmpegkit_log_callback_default);
+        set_report_callback(NULL);
     }
-    redirectionEnabled = 0;
-
-    lock.unlock();
 
     callbackNotify();
-
-    pthread_detach(callbackThread);
-
-    av_log_set_callback(ffmpegkit_log_callback_default);
-    set_report_callback(NULL);
+    reapFinishedCallbackThreads();
 }
 
 int ffmpegkit::FFmpegKitConfig::setFontconfigConfigurationPath(
@@ -2465,48 +2540,40 @@ void ffmpegkit::FFmpegKitConfig::asyncGetMediaInformationExecute(
     thread.detach();
 }
 
-void ffmpegkit::FFmpegKitConfig::enableLogCallback(
-    const ffmpegkit::LogCallback callback) {
-    logCallback = callback;
+void ffmpegkit::FFmpegKitConfig::enableLogCallback(const ffmpegkit::LogCallback callback) {
+    exchangeGlobalCallback(logCallback, callback);
 }
 
-void ffmpegkit::FFmpegKitConfig::enableStatisticsCallback(
-    const ffmpegkit::StatisticsCallback callback) {
-    statisticsCallback = callback;
+void ffmpegkit::FFmpegKitConfig::enableStatisticsCallback(const ffmpegkit::StatisticsCallback callback) {
+    exchangeGlobalCallback(statisticsCallback, callback);
 }
 
-void ffmpegkit::FFmpegKitConfig::enableFFmpegSessionCompleteCallback(
-    const FFmpegSessionCompleteCallback completeCallback) {
-    ffmpegSessionCompleteCallback = completeCallback;
+void ffmpegkit::FFmpegKitConfig::enableFFmpegSessionCompleteCallback(const FFmpegSessionCompleteCallback completeCallback) {
+    exchangeGlobalCallback(ffmpegSessionCompleteCallback, completeCallback);
 }
 
-ffmpegkit::FFmpegSessionCompleteCallback
-ffmpegkit::FFmpegKitConfig::getFFmpegSessionCompleteCallback() {
-    return ffmpegSessionCompleteCallback;
+ffmpegkit::FFmpegSessionCompleteCallback ffmpegkit::FFmpegKitConfig::getFFmpegSessionCompleteCallback() {
+    return readGlobalCallback(ffmpegSessionCompleteCallback);
 }
 
-void ffmpegkit::FFmpegKitConfig::enableFFprobeSessionCompleteCallback(
-    const FFprobeSessionCompleteCallback completeCallback) {
-    ffprobeSessionCompleteCallback = completeCallback;
+void ffmpegkit::FFmpegKitConfig::enableFFprobeSessionCompleteCallback(const FFprobeSessionCompleteCallback completeCallback) {
+    exchangeGlobalCallback(ffprobeSessionCompleteCallback, completeCallback);
 }
 
-ffmpegkit::FFprobeSessionCompleteCallback
-ffmpegkit::FFmpegKitConfig::getFFprobeSessionCompleteCallback() {
-    return ffprobeSessionCompleteCallback;
+ffmpegkit::FFprobeSessionCompleteCallback ffmpegkit::FFmpegKitConfig::getFFprobeSessionCompleteCallback() {
+    return readGlobalCallback(ffprobeSessionCompleteCallback);
 }
 
-void ffmpegkit::FFmpegKitConfig::enableMediaInformationSessionCompleteCallback(
-    const MediaInformationSessionCompleteCallback completeCallback) {
-    mediaInformationSessionCompleteCallback = completeCallback;
+void ffmpegkit::FFmpegKitConfig::enableMediaInformationSessionCompleteCallback(const MediaInformationSessionCompleteCallback completeCallback) {
+    exchangeGlobalCallback(mediaInformationSessionCompleteCallback, completeCallback);
 }
 
-ffmpegkit::MediaInformationSessionCompleteCallback
-ffmpegkit::FFmpegKitConfig::getMediaInformationSessionCompleteCallback() {
-    return mediaInformationSessionCompleteCallback;
+ffmpegkit::MediaInformationSessionCompleteCallback ffmpegkit::FFmpegKitConfig::getMediaInformationSessionCompleteCallback() {
+    return readGlobalCallback(mediaInformationSessionCompleteCallback);
 }
 
 ffmpegkit::Level ffmpegkit::FFmpegKitConfig::getLogLevel() {
-    return static_cast<ffmpegkit::Level>(configuredLogLevel);
+    return static_cast<ffmpegkit::Level>(configuredLogLevel.load());
 }
 
 void ffmpegkit::FFmpegKitConfig::setLogLevel(const ffmpegkit::Level level) {
@@ -2542,6 +2609,7 @@ ffmpegkit::FFmpegKitConfig::logLevelToString(const ffmpegkit::Level level) {
 }
 
 int ffmpegkit::FFmpegKitConfig::getSessionHistorySize() {
+    std::lock_guard<std::recursive_mutex> lock(sessionMutex);
     return sessionHistorySize;
 }
 
@@ -2556,16 +2624,18 @@ void ffmpegkit::FFmpegKitConfig::setSessionHistorySize(
         throw std::runtime_error(
             "Session history size must not exceed the hard limit!");
     } else if (newSessionHistorySize > 0) {
+        std::list<std::shared_ptr<ffmpegkit::Session>> retiredSessions;
         std::list<long> deletedSessionIds;
         std::unique_lock<std::recursive_mutex> lock(sessionMutex,
                                                     std::defer_lock);
         lock.lock();
 
         sessionHistorySize = newSessionHistorySize;
-        deletedSessionIds = deleteExpiredSessionsLocked();
+        deletedSessionIds = deleteExpiredSessionsLocked(retiredSessions);
 
         lock.unlock();
 
+        retiredSessions.clear();
         notifySessionsDeleted(deletedSessionIds);
     }
 }
@@ -2584,13 +2654,17 @@ ffmpegkit::FFmpegKitConfig::getSession(const long sessionId) {
 }
 
 void ffmpegkit::FFmpegKitConfig::deleteSession(const long sessionId) {
+    std::shared_ptr<ffmpegkit::Session> retiredSession;
     std::unique_lock<std::recursive_mutex> lock(sessionMutex, std::defer_lock);
     bool deleted = false;
 
     lock.lock();
 
-    deleted = sessionHistoryMap.erase(sessionId) > 0;
+    auto entry = sessionHistoryMap.find(sessionId);
+    deleted = entry != sessionHistoryMap.end();
     if (deleted) {
+        retiredSession = entry->second;
+        sessionHistoryMap.erase(entry);
         auto it = std::remove_if(
             sessionHistoryList.begin(), sessionHistoryList.end(),
             [sessionId](std::shared_ptr<ffmpegkit::Session> session) {
@@ -2601,6 +2675,7 @@ void ffmpegkit::FFmpegKitConfig::deleteSession(const long sessionId) {
 
     lock.unlock();
 
+    retiredSession.reset();
     if (deleted) {
         notifySessionDeleted(sessionId);
     }
@@ -2698,6 +2773,8 @@ ffmpegkit::FFmpegKitConfig::getSessions() {
 }
 
 void ffmpegkit::FFmpegKitConfig::clearSessions() {
+    std::map<long, std::shared_ptr<ffmpegkit::Session>> retiredMap;
+    std::list<std::shared_ptr<ffmpegkit::Session>> retiredList;
     std::unique_lock<std::recursive_mutex> lock(sessionMutex, std::defer_lock);
     std::list<long> deletedSessionIds;
 
@@ -2711,11 +2788,14 @@ void ffmpegkit::FFmpegKitConfig::clearSessions() {
         }
     }
 
-    sessionHistoryList.clear();
-    sessionHistoryMap.clear();
+    sessionHistoryList.swap(retiredList);
+    sessionHistoryMap.swap(retiredMap);
 
     lock.unlock();
 
+    // Cookie cleanup can re-enter the API after the live history is consistent.
+    retiredList.clear();
+    retiredMap.clear();
     notifySessionsDeleted(deletedSessionIds);
 }
 

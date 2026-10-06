@@ -24,9 +24,12 @@ namespace ffmpegkit {
 namespace internal {
 
 /**
- * <p>Enumeration type for log levels.
+ * <p>Enumeration type for log levels. FFmpeg uses a level as a threshold, so
+ * any int is a valid level and a value between two of these is meaningful. The
+ * underlying type is fixed for that reason: converting any int to it is
+ * defined.
  */
-enum Level {
+enum Level : int {
 
     /**
      * This log level is defined by FFmpegKit. It is used to specify logs

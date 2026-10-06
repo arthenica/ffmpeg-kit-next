@@ -872,10 +872,80 @@ double ffk_statistics_get_speed(const FFKStatistics *statistics) {
 /* Session                                                                   */
 /* ------------------------------------------------------------------------ */
 
-/** A negative strategy means "whatever FFmpegKitConfig is set to". */
-static LogRedirectionStrategy ffkStrategy(int strategy) {
-    return strategy < 0 ? [FFmpegKitConfig getLogRedirectionStrategy]
-                        : (LogRedirectionStrategy)strategy;
+/*
+ * Enumerations cross this API as plain int. A log level is any int, because
+ * FFmpeg compares every message with it as a threshold, so a level needs no
+ * check. The other enumerations have a closed set of values, and a value
+ * outside of it is rejected with an error, the way text that is not valid
+ * UTF-8 is.
+ */
+
+/** Stores the error of a value that is not one of the enumeration's values. */
+static void ffkRejectEnum(const char *what, int value, const char *reason) {
+    char message[96];
+    snprintf(message, sizeof(message), "The %s %d %s", what, value, reason);
+    ffkSetError(message);
+}
+
+/** A session state, or NO and an error when the value is none of them. */
+static BOOL ffkSessionState(int value, SessionState *state) {
+    switch (value) {
+    case SessionStateCreated:
+    case SessionStateRunning:
+    case SessionStateFailed:
+    case SessionStateCompleted:
+        *state = (SessionState)value;
+        return YES;
+    }
+    ffkRejectEnum("state", value, "is not a session state.");
+    return NO;
+}
+
+/** A log redirection strategy, or NO and an error when the value is none. */
+static BOOL ffkLogRedirectionStrategy(int value,
+                                      LogRedirectionStrategy *strategy) {
+    switch (value) {
+    case LogRedirectionStrategyAlwaysPrintLogs:
+    case LogRedirectionStrategyPrintLogsWhenNoCallbacksDefined:
+    case LogRedirectionStrategyPrintLogsWhenGlobalCallbackNotDefined:
+    case LogRedirectionStrategyPrintLogsWhenSessionCallbackNotDefined:
+    case LogRedirectionStrategyNeverPrintLogs:
+        *strategy = (LogRedirectionStrategy)value;
+        return YES;
+    }
+    ffkRejectEnum("strategy", value, "is not a log redirection strategy.");
+    return NO;
+}
+
+/** A signal that the library can ignore, or NO and an error. */
+static BOOL ffkSignal(int value, Signal *signal) {
+    switch (value) {
+    case SignalInt:
+    case SignalQuit:
+    case SignalPipe:
+    case SignalTerm:
+    case SignalXcpu:
+        *signal = (Signal)value;
+        return YES;
+    }
+    ffkRejectEnum("signal", value, "cannot be ignored.");
+    return NO;
+}
+
+/** The strategy of a session create that selects the configured strategy. */
+static const int ffkUseConfiguredStrategy = -1;
+
+/**
+ * The strategy of a session create: ffkUseConfiguredStrategy means "whatever
+ * FFmpegKitConfig is set to", and anything else has to be a log redirection
+ * strategy, or the result is NO and an error.
+ */
+static BOOL ffkStrategy(int value, LogRedirectionStrategy *strategy) {
+    if (value == ffkUseConfiguredStrategy) {
+        *strategy = [FFmpegKitConfig getLogRedirectionStrategy];
+        return YES;
+    }
+    return ffkLogRedirectionStrategy(value, strategy);
 }
 
 FFKSession *ffk_abstract_session_create(
@@ -890,10 +960,14 @@ FFKSession *ffk_abstract_session_create(
     if (list == nil) {
         return NULL;
     }
+    LogRedirectionStrategy strategy;
+    if (!ffkStrategy(log_redirection_strategy, &strategy)) {
+        return NULL;
+    }
     return (FFKSession *)ffkRetain([[AbstractSession alloc]
                           init:list
                withLogCallback:log
-    withLogRedirectionStrategy:ffkStrategy(log_redirection_strategy)]);
+    withLogRedirectionStrategy:strategy]);
     FFK_END(NULL)
 }
 
@@ -915,12 +989,16 @@ FFKSession *ffk_ffmpeg_session_create(
     if (list == nil) {
         return NULL;
     }
+    LogRedirectionStrategy strategy;
+    if (!ffkStrategy(log_redirection_strategy, &strategy)) {
+        return NULL;
+    }
     return (FFKSession *)ffkRetain([FFmpegSession
                        create:list
           withCompleteCallback:complete
                withLogCallback:log
         withStatisticsCallback:statistics
-    withLogRedirectionStrategy:ffkStrategy(log_redirection_strategy)]);
+    withLogRedirectionStrategy:strategy]);
     FFK_END(NULL)
 }
 
@@ -938,11 +1016,15 @@ FFKSession *ffk_ffprobe_session_create(
     if (list == nil) {
         return NULL;
     }
+    LogRedirectionStrategy strategy;
+    if (!ffkStrategy(log_redirection_strategy, &strategy)) {
+        return NULL;
+    }
     return (FFKSession *)ffkRetain([FFprobeSession
                        create:list
           withCompleteCallback:complete
                withLogCallback:log
-    withLogRedirectionStrategy:ffkStrategy(log_redirection_strategy)]);
+    withLogRedirectionStrategy:strategy]);
     FFK_END(NULL)
 }
 
@@ -2064,7 +2146,11 @@ int ffk_config_set_environment_variable(const char *variable_name,
 
 void ffk_config_ignore_signal(int signal) {
     FFK_BEGIN
-    [FFmpegKitConfig ignoreSignal:(Signal)signal];
+    Signal value;
+    if (!ffkSignal(signal, &value)) {
+        return;
+    }
+    [FFmpegKitConfig ignoreSignal:value];
     FFK_END_VOID
 }
 
@@ -2321,8 +2407,12 @@ FFKSessionList *ffk_config_get_media_information_sessions(void) {
 
 FFKSessionList *ffk_config_get_sessions_by_state(int state) {
     FFK_BEGIN
+    SessionState value;
+    if (!ffkSessionState(state, &value)) {
+        return NULL;
+    }
     return (FFKSessionList *)ffkRetainList(
-        [FFmpegKitConfig getSessionsByState:(SessionState)state]);
+        [FFmpegKitConfig getSessionsByState:value]);
     FFK_END(NULL)
 }
 
@@ -2334,7 +2424,11 @@ int ffk_config_get_log_redirection_strategy(void) {
 
 void ffk_config_set_log_redirection_strategy(int strategy) {
     FFK_BEGIN
-    [FFmpegKitConfig setLogRedirectionStrategy:(LogRedirectionStrategy)strategy];
+    LogRedirectionStrategy value;
+    if (!ffkLogRedirectionStrategy(strategy, &value)) {
+        return;
+    }
+    [FFmpegKitConfig setLogRedirectionStrategy:value];
     FFK_END_VOID
 }
 
@@ -2346,7 +2440,11 @@ int ffk_config_messages_in_transmit(long session_id) {
 
 char *ffk_config_session_state_to_string(int state) {
     FFK_BEGIN
-    return ffkCopyString([FFmpegKitConfig sessionStateToString:(SessionState)state]);
+    SessionState value;
+    if (!ffkSessionState(state, &value)) {
+        return NULL;
+    }
+    return ffkCopyString([FFmpegKitConfig sessionStateToString:value]);
     FFK_END(NULL)
 }
 

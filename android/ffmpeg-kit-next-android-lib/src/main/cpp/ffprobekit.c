@@ -18,6 +18,7 @@
  */
 
 #include <pthread.h>
+#include <stdatomic.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -33,7 +34,7 @@ int ffprobe_execute(int argc, char **argv);
 /** Forward declaration for function defined in fftools/ffprobe.c */
 void ffprobe_set_media_information_buffer(AVBPrint *buffer);
 
-extern int configuredLogLevel;
+extern atomic_int configuredLogLevel;
 extern __thread long globalSessionId;
 extern void addSession(long sessionId);
 extern void removeSession(long sessionId);

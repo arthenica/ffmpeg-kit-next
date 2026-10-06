@@ -66,41 +66,51 @@ namespace internal = ffmpegkit::internal;
 /* Handle definitions                                                        */
 /* ------------------------------------------------------------------------ */
 
-struct FFKSession {
+/*
+ * The opaque handle types are named by the C header, so they live in the global
+ * namespace and cannot go in an anonymous one. On Linux they are hidden so
+ * that their template instantiations stay out of the dynamic symbol table. A
+ * DLL exports only what is marked dllexport, which here is the C API, so
+ * nothing needs hiding and the macro stays empty. It is kept so that this file
+ * has the same shape as the Linux one.
+ */
+#define FFK_HIDDEN
+
+struct FFK_HIDDEN FFKSession {
     std::shared_ptr<internal::Session> value;
 };
-struct FFKLog {
+struct FFK_HIDDEN FFKLog {
     std::shared_ptr<internal::Log> value;
 };
-struct FFKStatistics {
+struct FFK_HIDDEN FFKStatistics {
     std::shared_ptr<internal::Statistics> value;
 };
-struct FFKMediaInformation {
+struct FFK_HIDDEN FFKMediaInformation {
     std::shared_ptr<internal::MediaInformation> value;
 };
-struct FFKStreamInformation {
+struct FFK_HIDDEN FFKStreamInformation {
     std::shared_ptr<internal::StreamInformation> value;
 };
-struct FFKChapter {
+struct FFK_HIDDEN FFKChapter {
     std::shared_ptr<internal::Chapter> value;
 };
 
-struct FFKStringList {
+struct FFK_HIDDEN FFKStringList {
     std::vector<std::string> items;
 };
-struct FFKSessionList {
+struct FFK_HIDDEN FFKSessionList {
     std::vector<std::shared_ptr<internal::Session>> items;
 };
-struct FFKLogList {
+struct FFK_HIDDEN FFKLogList {
     std::vector<std::shared_ptr<internal::Log>> items;
 };
-struct FFKStatisticsList {
+struct FFK_HIDDEN FFKStatisticsList {
     std::vector<std::shared_ptr<internal::Statistics>> items;
 };
-struct FFKStreamInformationList {
+struct FFK_HIDDEN FFKStreamInformationList {
     std::vector<std::shared_ptr<internal::StreamInformation>> items;
 };
-struct FFKChapterList {
+struct FFK_HIDDEN FFKChapterList {
     std::vector<std::shared_ptr<internal::Chapter>> items;
 };
 
@@ -267,6 +277,70 @@ bool toTextOrFail(const char *value, const char *what, std::string &text) {
         setError(rejected.what());
         return false;
     }
+}
+
+/*
+ * Enumerations cross this API as plain int. A log level is any int, because
+ * FFmpeg compares every message with it as a threshold, so a level needs no
+ * check. The other enumerations have a closed set of values, and a value
+ * outside of it throws, naming the argument, the way text that is not valid
+ * UTF-8 does.
+ */
+
+/** The strategy of a session create that selects the configured strategy. */
+constexpr int useConfiguredStrategy = -1;
+
+/** Converts a session state: created, running, failed or completed. */
+internal::SessionState toSessionState(const int value) {
+    switch (value) {
+    case internal::SessionStateCreated:
+    case internal::SessionStateRunning:
+    case internal::SessionStateFailed:
+    case internal::SessionStateCompleted:
+        return static_cast<internal::SessionState>(value);
+    }
+    throw std::invalid_argument("The state " + std::to_string(value) +
+                                " is not a session state.");
+}
+
+/** Converts a log redirection strategy. */
+internal::LogRedirectionStrategy toLogRedirectionStrategy(const int value) {
+    switch (value) {
+    case internal::LogRedirectionStrategyAlwaysPrintLogs:
+    case internal::LogRedirectionStrategyPrintLogsWhenNoCallbacksDefined:
+    case internal::LogRedirectionStrategyPrintLogsWhenGlobalCallbackNotDefined:
+    case internal::LogRedirectionStrategyPrintLogsWhenSessionCallbackNotDefined:
+    case internal::LogRedirectionStrategyNeverPrintLogs:
+        return static_cast<internal::LogRedirectionStrategy>(value);
+    }
+    throw std::invalid_argument("The strategy " + std::to_string(value) +
+                                " is not a log redirection strategy.");
+}
+
+/**
+ * Converts the log redirection strategy of a session create.
+ * useConfiguredStrategy selects the strategy that FFmpegKitConfig is set to,
+ * which is what the C++ create functions without the parameter use. Anything
+ * else has to be a log redirection strategy.
+ */
+internal::LogRedirectionStrategy toStrategy(const int value) {
+    return value == useConfiguredStrategy
+               ? internal::FFmpegKitConfig::getLogRedirectionStrategy()
+               : toLogRedirectionStrategy(value);
+}
+
+/** Converts a signal: one of the signals that the library can ignore. */
+internal::Signal toSignal(const int value) {
+    switch (value) {
+    case internal::SignalInt:
+    case internal::SignalQuit:
+    case internal::SignalPipe:
+    case internal::SignalTerm:
+    case internal::SignalXcpu:
+        return static_cast<internal::Signal>(value);
+    }
+    throw std::invalid_argument("The signal " + std::to_string(value) +
+                                " cannot be ignored.");
 }
 
 /**
@@ -548,7 +622,10 @@ std::mutex &sessionDeleteListenerMutex() {
 
 std::map<long, std::shared_ptr<SessionDeleteListenerAdapter>> &
 sessionDeleteListeners() {
-    static std::map<long, std::shared_ptr<SessionDeleteListenerAdapter>> listeners;
+    // Never destroyed: the adapters own consumer cookies, and releasing them
+    // during static destruction at process exit could call into consumer code
+    // that is already gone.
+    static auto &listeners = *new std::map<long, std::shared_ptr<SessionDeleteListenerAdapter>>();
     return listeners;
 }
 
@@ -703,11 +780,7 @@ FFKSession *ffk_abstract_session_create(const char *const *arguments,
                                         const int logRedirectionStrategy) {
     return guard([&]() -> FFKSession * {
         const auto log = makeLogCallback(logCallback, logUserData, logFree);
-        const auto strategy =
-            logRedirectionStrategy < 0
-                ? internal::FFmpegKitConfig::getLogRedirectionStrategy()
-                : static_cast<internal::LogRedirectionStrategy>(
-                      logRedirectionStrategy);
+        const auto strategy = toStrategy(logRedirectionStrategy);
         return makeHandle<FFKSession>(std::make_shared<internal::AbstractSession>(
             toArgumentList(arguments, argumentCount), log, strategy));
     });
@@ -730,16 +803,9 @@ FFKSession *ffk_ffmpeg_session_create(
             statisticsCallback, statisticsUserData, statisticsFree);
         const auto argumentList = toArgumentList(arguments, argumentCount);
 
-        // A negative strategy means "whatever FFmpegKitConfig is set to",
-        // which is what the C++ overload without the parameter does
-        if (logRedirectionStrategy < 0) {
-            return makeHandle<FFKSession>(internal::FFmpegSession::create(
-                argumentList, complete, log, statistics));
-        }
         return makeHandle<FFKSession>(internal::FFmpegSession::create(
             argumentList, complete, log, statistics,
-            static_cast<internal::LogRedirectionStrategy>(
-                logRedirectionStrategy)));
+            toStrategy(logRedirectionStrategy)));
     });
 }
 
@@ -756,14 +822,8 @@ FFKSession *ffk_ffprobe_session_create(
         const auto log = makeLogCallback(logCallback, logUserData, logFree);
         const auto argumentList = toArgumentList(arguments, argumentCount);
 
-        if (logRedirectionStrategy < 0) {
-            return makeHandle<FFKSession>(
-                internal::FFprobeSession::create(argumentList, complete, log));
-        }
         return makeHandle<FFKSession>(internal::FFprobeSession::create(
-            argumentList, complete, log,
-            static_cast<internal::LogRedirectionStrategy>(
-                logRedirectionStrategy)));
+            argumentList, complete, log, toStrategy(logRedirectionStrategy)));
     });
 }
 
@@ -1823,8 +1883,7 @@ int ffk_config_set_environment_variable(const char *variableName,
 
 void ffk_config_ignore_signal(const int signal) {
     guard([&]() {
-        internal::FFmpegKitConfig::ignoreSignal(
-            static_cast<internal::Signal>(signal));
+        internal::FFmpegKitConfig::ignoreSignal(toSignal(signal));
     });
 }
 
@@ -2089,7 +2148,7 @@ FFKSessionList *ffk_config_get_sessions_by_state(const int state) {
     return guard([&]() -> FFKSessionList * {
         return makeList<FFKSessionList>(
             internal::FFmpegKitConfig::getSessionsByState(
-                static_cast<internal::SessionState>(state)));
+                toSessionState(state)));
     });
 }
 
@@ -2103,7 +2162,7 @@ int ffk_config_get_log_redirection_strategy(void) {
 void ffk_config_set_log_redirection_strategy(const int strategy) {
     guard([&]() {
         internal::FFmpegKitConfig::setLogRedirectionStrategy(
-            static_cast<internal::LogRedirectionStrategy>(strategy));
+            toLogRedirectionStrategy(strategy));
     });
 }
 
@@ -2116,7 +2175,7 @@ int ffk_config_messages_in_transmit(const long sessionId) {
 char *ffk_config_session_state_to_string(const int state) {
     return guard([&]() -> char * {
         return duplicateString(internal::FFmpegKitConfig::sessionStateToString(
-            static_cast<internal::SessionState>(state)));
+            toSessionState(state)));
     });
 }
 

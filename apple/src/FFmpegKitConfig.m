@@ -84,10 +84,23 @@ static FFprobeSessionCompleteCallback ffprobeSessionCompleteCallback;
 static MediaInformationSessionCompleteCallback
     mediaInformationSessionCompleteCallback;
 
-static LogRedirectionStrategy globalLogRedirectionStrategy;
+/**
+ * Guards the five global callbacks above. A consumer can replace them from any
+ * thread while the log and statistics delivery thread and the session worker
+ * threads read them. Callbacks are invoked and replaced callbacks are released
+ * outside the lock. Setters copy replacement blocks before locking and keep
+ * replaced blocks alive until unlocking, so C cookie cleanup can re-enter.
+ */
+static NSRecursiveLock *globalCallbackLock;
+
+/**
+ * Atomic, like the other settings below that the delivery thread and the
+ * worker threads read while a consumer can change them.
+ */
+static _Atomic(LogRedirectionStrategy) globalLogRedirectionStrategy;
 
 /** Redirection control variables */
-static int redirectionEnabled;
+static atomic_int redirectionEnabled;
 /**
  * Counts the loops that deliver the asynchronous messages. A loop belongs to
  * the redirection that started it, so once the redirection is switched off and
@@ -110,7 +123,7 @@ volatile int handleSIGPIPE = 1;
 __thread long globalSessionId = 0;
 
 /** Holds the default log level */
-int configuredLogLevel = LevelAVLogInfo;
+atomic_int configuredLogLevel = LevelAVLogInfo;
 
 #define FFKIT_RESOURCE_INPUT 1
 #define FFKIT_RESOURCE_OUTPUT 2
@@ -225,13 +238,15 @@ void ffprobe_set_media_information_buffer(AVBPrint *buffer);
 
 typedef NS_ENUM(NSUInteger, CallbackType) { LogType, StatisticsType };
 
-NSArray *deleteExpiredSessionsLocked() {
+NSArray *deleteExpiredSessionsLocked(NSMutableArray *retiredSessions) {
     NSMutableArray *deletedSessionIds = [[NSMutableArray alloc] init];
 
     while ([sessionHistoryList count] > sessionHistorySize) {
         id<Session> first = [sessionHistoryList firstObject];
         if (first != nil) {
             long sessionId = [first getSessionId];
+            // Hold the session until the caller has unlocked the history.
+            [retiredSessions addObject:first];
             [sessionHistoryList removeObjectAtIndex:0];
             [sessionHistoryMap
                 removeObjectForKey:[NSNumber
@@ -270,6 +285,7 @@ void addSessionToSessionHistory(id<Session> session) {
     NSNumber *sessionIdNumber =
         [NSNumber numberWithLong:[session getSessionId]];
     NSArray *deletedSessionIds = @[];
+    NSMutableArray *retiredSessions = [[NSMutableArray alloc] init];
 
     [sessionHistoryLock lock];
 
@@ -280,11 +296,12 @@ void addSessionToSessionHistory(id<Session> session) {
     if ([sessionHistoryMap objectForKey:sessionIdNumber] == nil) {
         [sessionHistoryMap setObject:session forKey:sessionIdNumber];
         [sessionHistoryList addObject:session];
-        deletedSessionIds = deleteExpiredSessionsLocked();
+        deletedSessionIds = deleteExpiredSessionsLocked(retiredSessions);
     }
 
     [sessionHistoryLock unlock];
 
+    [retiredSessions removeAllObjects];
     notifySessionsDeleted(deletedSessionIds);
 }
 
@@ -1286,7 +1303,9 @@ void process_log(long sessionId, int levelValue, AVBPrint *logMessage) {
         }
     }
 
+    [globalCallbackLock lock];
     LogCallback globalLogCallback = logCallback;
+    [globalCallbackLock unlock];
     if (globalLogCallback != nil) {
         globalCallbackDefined = TRUE;
 
@@ -1368,7 +1387,9 @@ void process_statistics(long sessionId, int videoFrameNumber, float videoFps,
         }
     }
 
+    [globalCallbackLock lock];
     StatisticsCallback globalStatisticsCallback = statisticsCallback;
+    [globalCallbackLock unlock];
     if (globalStatisticsCallback != nil) {
         @try {
             globalStatisticsCallback(statistics);
@@ -1572,6 +1593,7 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
     asyncDispatchQueue =
         dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
 
+    globalCallbackLock = [[NSRecursiveLock alloc] init];
     logCallback = nil;
     statisticsCallback = nil;
     ffmpegSessionCompleteCallback = nil;
@@ -1982,8 +2004,9 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
     // INSTEAD OF RUNNING NEXT TO THE NEW ONE
     const int generationId = atomic_fetch_add(&redirectionGenerationId, 1) + 1;
 
-    [lock unlock];
-
+    // THE FLAG, THE LOOP AND THE HOOKS OF FFMPEG CHANGE TOGETHER, SO THREADS
+    // THAT ENABLE AND DISABLE AT THE SAME TIME CANNOT LEAVE THE HOOKS OUT OF
+    // STEP WITH THE FLAG
     dispatch_async(
         dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
           callbackBlockFunction(generationId);
@@ -1991,6 +2014,8 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
 
     av_log_set_callback(ffmpegkit_log_callback_function);
     set_report_callback(ffmpegkit_statistics_callback_function);
+
+    [lock unlock];
 }
 
 + (void)disableRedirection {
@@ -2002,10 +2027,10 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
     }
     redirectionEnabled = 0;
 
-    [lock unlock];
-
     av_log_set_callback(ffmpegkit_log_callback_default);
     set_report_callback(nil);
+
+    [lock unlock];
 
     callbackNotify();
 }
@@ -2418,39 +2443,76 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
 }
 
 + (void)enableLogCallback:(LogCallback)callback {
-    logCallback = callback;
+    LogCallback replacement = [callback copy];
+    __attribute__((objc_precise_lifetime)) LogCallback retired;
+    [globalCallbackLock lock];
+    retired = logCallback;
+    logCallback = replacement;
+    [globalCallbackLock unlock];
+    retired = nil;
 }
 
 + (void)enableStatisticsCallback:(StatisticsCallback)callback {
-    statisticsCallback = callback;
+    StatisticsCallback replacement = [callback copy];
+    __attribute__((objc_precise_lifetime)) StatisticsCallback retired;
+    [globalCallbackLock lock];
+    retired = statisticsCallback;
+    statisticsCallback = replacement;
+    [globalCallbackLock unlock];
+    retired = nil;
 }
 
 + (void)enableFFmpegSessionCompleteCallback:
     (FFmpegSessionCompleteCallback)completeCallback {
-    ffmpegSessionCompleteCallback = completeCallback;
+    FFmpegSessionCompleteCallback replacement = [completeCallback copy];
+    __attribute__((objc_precise_lifetime)) FFmpegSessionCompleteCallback retired;
+    [globalCallbackLock lock];
+    retired = ffmpegSessionCompleteCallback;
+    ffmpegSessionCompleteCallback = replacement;
+    [globalCallbackLock unlock];
+    retired = nil;
 }
 
 + (FFmpegSessionCompleteCallback)getFFmpegSessionCompleteCallback {
-    return ffmpegSessionCompleteCallback;
+    [globalCallbackLock lock];
+    FFmpegSessionCompleteCallback callback = ffmpegSessionCompleteCallback;
+    [globalCallbackLock unlock];
+    return callback;
 }
 
 + (void)enableFFprobeSessionCompleteCallback:
     (FFprobeSessionCompleteCallback)completeCallback {
-    ffprobeSessionCompleteCallback = completeCallback;
+    FFprobeSessionCompleteCallback replacement = [completeCallback copy];
+    __attribute__((objc_precise_lifetime)) FFprobeSessionCompleteCallback retired;
+    [globalCallbackLock lock];
+    retired = ffprobeSessionCompleteCallback;
+    ffprobeSessionCompleteCallback = replacement;
+    [globalCallbackLock unlock];
+    retired = nil;
 }
 
 + (FFprobeSessionCompleteCallback)getFFprobeSessionCompleteCallback {
-    return ffprobeSessionCompleteCallback;
+    [globalCallbackLock lock];
+    FFprobeSessionCompleteCallback callback = ffprobeSessionCompleteCallback;
+    [globalCallbackLock unlock];
+    return callback;
 }
 
-+ (void)enableMediaInformationSessionCompleteCallback:
-    (MediaInformationSessionCompleteCallback)completeCallback {
-    mediaInformationSessionCompleteCallback = completeCallback;
++ (void)enableMediaInformationSessionCompleteCallback:(MediaInformationSessionCompleteCallback)completeCallback {
+    MediaInformationSessionCompleteCallback replacement = [completeCallback copy];
+    __attribute__((objc_precise_lifetime)) MediaInformationSessionCompleteCallback retired;
+    [globalCallbackLock lock];
+    retired = mediaInformationSessionCompleteCallback;
+    mediaInformationSessionCompleteCallback = replacement;
+    [globalCallbackLock unlock];
+    retired = nil;
 }
 
-+ (MediaInformationSessionCompleteCallback)
-    getMediaInformationSessionCompleteCallback {
-    return mediaInformationSessionCompleteCallback;
++ (MediaInformationSessionCompleteCallback)getMediaInformationSessionCompleteCallback {
+    [globalCallbackLock lock];
+    MediaInformationSessionCompleteCallback callback = mediaInformationSessionCompleteCallback;
+    [globalCallbackLock unlock];
+    return callback;
 }
 
 + (int)getLogLevel {
@@ -2489,7 +2551,10 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
 }
 
 + (int)getSessionHistorySize {
-    return sessionHistorySize;
+    [sessionHistoryLock lock];
+    int size = sessionHistorySize;
+    [sessionHistoryLock unlock];
+    return size;
 }
 
 + (void)setSessionHistorySize:(int)pSessionHistorySize {
@@ -2505,12 +2570,14 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
                                      userInfo:nil]);
     } else if (pSessionHistorySize > 0) {
         NSArray *deletedSessionIds;
+        NSMutableArray *retiredSessions = [[NSMutableArray alloc] init];
 
         [sessionHistoryLock lock];
         sessionHistorySize = pSessionHistorySize;
-        deletedSessionIds = deleteExpiredSessionsLocked();
+        deletedSessionIds = deleteExpiredSessionsLocked(retiredSessions);
         [sessionHistoryLock unlock];
 
+        [retiredSessions removeAllObjects];
         notifySessionsDeleted(deletedSessionIds);
     }
 }
@@ -2531,7 +2598,7 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
 
     [sessionHistoryLock lock];
 
-    id<Session> session = [sessionHistoryMap objectForKey:[NSNumber numberWithLong:sessionId]];
+    __attribute__((objc_precise_lifetime)) id<Session> session = [sessionHistoryMap objectForKey:[NSNumber numberWithLong:sessionId]];
     if (session != nil) {
         [sessionHistoryMap removeObjectForKey:[NSNumber numberWithLong:sessionId]];
         [sessionHistoryList removeObject:session];
@@ -2539,6 +2606,7 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
     }
 
     [sessionHistoryLock unlock];
+    session = nil;
 
     if (deletedSessionId != nil) {
         notifySessionDeleted([deletedSessionId longValue]);
@@ -2606,6 +2674,11 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
 + (void)clearSessions {
     NSMutableArray *deletedSessionIds = [[NSMutableArray alloc] init];
 
+    NSMutableArray *emptyList = [[NSMutableArray alloc] init];
+    NSMutableDictionary *emptyMap = [[NSMutableDictionary alloc] init];
+    NSMutableArray *retiredList;
+    volatile NSMutableDictionary *retiredMap;
+
     [sessionHistoryLock lock];
 
     for (int i = 0; i < [sessionHistoryList count]; i++) {
@@ -2613,11 +2686,16 @@ int executeFFprobe(long sessionId, NSArray *arguments) {
         [deletedSessionIds addObject:[NSNumber numberWithLong:[session getSessionId]]];
     }
 
-    [sessionHistoryList removeAllObjects];
-    [sessionHistoryMap removeAllObjects];
+    retiredList = sessionHistoryList;
+    retiredMap = sessionHistoryMap;
+    sessionHistoryList = emptyList;
+    sessionHistoryMap = emptyMap;
 
     [sessionHistoryLock unlock];
 
+    // Consumer cookie cleanup can re-enter after the live history is consistent.
+    [retiredList removeAllObjects];
+    [retiredMap removeAllObjects];
     notifySessionsDeleted(deletedSessionIds);
 }
 

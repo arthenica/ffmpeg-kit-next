@@ -72,7 +72,7 @@ static pthread_mutex_t monitorMutex;
 static pthread_cond_t monitorCondition;
 
 pthread_t callbackThread;
-int redirectionEnabled;
+atomic_int redirectionEnabled;
 /**
  * Counts the loops that deliver the asynchronous messages. A loop belongs to
  * the redirection that started it, so once the redirection is switched off and
@@ -80,6 +80,15 @@ int redirectionEnabled;
  * one.
  */
 static atomic_int redirectionGenerationId;
+/**
+ * Serializes enabling and disabling the redirection. The flag, the callback
+ * thread with its handle and the log and statistics hooks of FFmpeg change
+ * together, so threads that enable and disable at the same time cannot detach
+ * the wrong thread or leave the hooks out of step with the flag. It is not the
+ * lock of the message queue, so threads that log do not wait while a thread is
+ * created.
+ */
+static pthread_mutex_t redirectionMutex = PTHREAD_MUTEX_INITIALIZER;
 
 struct CallbackData *callbackDataHead;
 struct CallbackData *callbackDataTail;
@@ -125,7 +134,7 @@ volatile int handleSIGPIPE = 1;
 __thread long globalSessionId = 0;
 
 /** Holds the default log level */
-int configuredLogLevel = AV_LOG_INFO;
+atomic_int configuredLogLevel = AV_LOG_INFO;
 
 #define FFKIT_RESOURCE_INPUT 1
 #define FFKIT_RESOURCE_OUTPUT 2
@@ -1445,10 +1454,10 @@ static int ffkit_stream_close(void *opaque) {
  * Used by JNI methods to enable redirection.
  */
 static void enableNativeRedirection() {
-    mutexLock();
+    pthread_mutex_lock(&redirectionMutex);
 
     if (redirectionEnabled != 0) {
-        mutexUnlock();
+        pthread_mutex_unlock(&redirectionMutex);
         return;
     }
     redirectionEnabled = 1;
@@ -1457,17 +1466,23 @@ static void enableNativeRedirection() {
     // INSTEAD OF RUNNING NEXT TO THE NEW ONE
     const int generationId = atomic_fetch_add(&redirectionGenerationId, 1) + 1;
 
-    mutexUnlock();
-
     int rc = pthread_create(&callbackThread, 0, callbackThreadFunction,
                             (void *)(intptr_t)generationId);
     if (rc != 0) {
         LOGE("Failed to create callback thread (rc=%d).\n", rc);
+
+        // NO THREAD WAS STARTED, SO THE REDIRECTION MUST NOT STAY ENABLED.
+        // OTHERWISE disableNativeRedirection() WOULD DETACH A THREAD THAT DOES
+        // NOT EXIST
+        redirectionEnabled = 0;
+        pthread_mutex_unlock(&redirectionMutex);
         return;
     }
 
     av_log_set_callback(ffmpegkit_log_callback_function);
     set_report_callback(ffmpegkit_statistics_callback_function);
+
+    pthread_mutex_unlock(&redirectionMutex);
 }
 
 /**
@@ -1623,18 +1638,21 @@ JNIEXPORT void JNICALL
 Java_com_arthenica_ffmpegkit_FFmpegKitConfig_disableNativeRedirection(
     JNIEnv *env, jclass object) {
 
-    mutexLock();
+    pthread_mutex_lock(&redirectionMutex);
 
     if (redirectionEnabled != 1) {
-        mutexUnlock();
+        pthread_mutex_unlock(&redirectionMutex);
         return;
     }
     redirectionEnabled = 0;
 
-    mutexUnlock();
+    // THE LOOP ENDS BY ITSELF, SO ITS RESOURCES MUST BE RELEASED WITHOUT A JOIN
+    pthread_detach(callbackThread);
 
     av_log_set_callback(ffmpegkit_log_callback_default);
     set_report_callback(NULL);
+
+    pthread_mutex_unlock(&redirectionMutex);
 
     monitorNotify();
 }
