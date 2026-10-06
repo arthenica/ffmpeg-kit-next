@@ -1005,9 +1005,19 @@ private:
 
 void FFmpegKitFlutterPluginRegisterWithRegistrar(
     FlutterDesktopPluginRegistrarRef registrar) {
-  auto *wrapper =
-      flutter::PluginRegistrarManager::GetInstance()
-          ->GetRegistrar<flutter::PluginRegistrarWindows>(registrar);
-  wrapper->AddPlugin(
-      std::make_unique<ffmpeg_kit_windows::WindowsPlugin>(wrapper));
+  try {
+    auto *wrapper =
+        flutter::PluginRegistrarManager::GetInstance()
+            ->GetRegistrar<flutter::PluginRegistrarWindows>(registrar);
+    wrapper->AddPlugin(
+        std::make_unique<ffmpeg_kit_windows::WindowsPlugin>(wrapper));
+  } catch (const std::exception &error) {
+    std::fprintf(stderr,
+                 "Failed to register ffmpeg-kit-next-flutter Windows plugin: %s\n",
+                 error.what());
+  } catch (...) {
+    std::fprintf(stderr,
+                 "Failed to register ffmpeg-kit-next-flutter Windows plugin: "
+                 "unknown exception.\n");
+  }
 }
