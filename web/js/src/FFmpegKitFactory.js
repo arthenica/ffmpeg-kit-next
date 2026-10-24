@@ -140,7 +140,12 @@ class FFmpegKitFactory {
         this._executionWaiters = new Set();
         // Fixed by the first shutdown call; retries never reopen callback admission.
         this._shutdownGraceDeadline = 0;
+        // Counts lost runtimes. A local file mounted in an earlier runtime is already gone,
+        // so closing it must not start a worker; see FFmpegKitLocalFile.close().
+        this._runtimeGeneration = 0;
     }
+
+    get runtimeGeneration() { return this._runtimeGeneration; }
 
     initialize(printLoadConfirmation = true) {
         if (this._initPromise) return this._initPromise;
@@ -219,6 +224,7 @@ class FFmpegKitFactory {
     // a callback, or a log redirection strategy - would be handed to an unrelated session
     // that happens to be assigned the same id.
     _failRuntime(err) {
+        this._runtimeGeneration++;
         this._rejectInit?.(err);
         for (const pending of this._pending.values()) {
             this._failPending(pending, err);
@@ -773,21 +779,7 @@ class FFmpegKitFactory {
         return msg.result ? msg.result.media : null;
     }
 
-    // ---- Web-only virtual filesystem I/O (MEMFS lives inside the worker) ----------
-    async writeFile(path, data) {
-        const copiedData = copyUint8Array(data);
-        await this._call(
-            'writeFile',
-            {path, data: copiedData},
-            transferForUint8Array(copiedData)
-        );
-    }
-
-    async readFile(path) {
-        const msg = await this._call('readFile', {path});
-        return msg.result ? msg.result.data : null;
-    }
-
+    // ---- Deprecated mount() (MEMFS and WORKERFS live inside the worker) ----------------
     /**
      * Mounts files/blobs read-only via WORKERFS at `mountPoint`, so FFmpeg reads them
      * by path without copying into the wasm heap. `files` are File objects; `blobs`
@@ -795,6 +787,65 @@ class FFmpegKitFactory {
      */
     async mount(mountPoint, {files = [], blobs = []} = {}) {
         await this._call('mount', {mountPoint, files, blobs});
+    }
+
+    // ---- Virtual filesystem requests (FFmpegKitVirtualFile/Directory, FFmpegKitLocalFile) ----
+    // A failure rejects with an Error whose `code` is the POSIX name (ENOENT, EISDIR, ...).
+
+    /** @returns {Promise<{kind: 'file'|'directory'|null, size: number}>} */
+    async fsStat(path) {
+        return (await this._call('fsStat', {path})).result;
+    }
+
+    async fsMkdir(path, recursive) {
+        await this._call('fsMkdir', {path, recursive});
+    }
+
+    /** @returns {Promise<number>} the size of a file; rejects ENOENT/EISDIR otherwise */
+    async fsLength(path) {
+        return (await this._call('fsLength', {path})).result.size;
+    }
+
+    /** @returns {Promise<string[]>} sorted names of the entries of the given kind */
+    async fsReaddir(path, kind) {
+        return (await this._call('fsReaddir', {path, kind})).result.names;
+    }
+
+    async fsRename(oldPath, newPath, kind) {
+        await this._call('fsRename', {oldPath, newPath, kind});
+    }
+
+    async fsDelete(path, kind) {
+        await this._call('fsDelete', {path, kind});
+    }
+
+    async fsWrite(path, data) {
+        const copiedData = copyUint8Array(data);
+        await this._call('fsWrite', {path, data: copiedData}, transferForUint8Array(copiedData));
+    }
+
+    /** @returns {Promise<Uint8Array>} */
+    async fsRead(path) {
+        return (await this._call('fsRead', {path})).result.data;
+    }
+
+    /** @returns {Promise<Blob>} */
+    async fsReadBlob(path, type) {
+        return (await this._call('fsReadBlob', {path, type})).result.blob;
+    }
+
+    /** @returns {Promise<string>} the path of the new empty file */
+    async fsCreateTemp(extension) {
+        return (await this._call('fsCreateTemp', {extension})).result.path;
+    }
+
+    /** @returns {Promise<{id: number, path: string}>} */
+    async localMount(file) {
+        return (await this._call('localMount', {file})).result;
+    }
+
+    async localUnmount(id) {
+        await this._call('localUnmount', {id});
     }
 
     // ---- ffkitmem:/ffkitstream: I/O objects (live in the worker; handled by id) ----
@@ -1161,7 +1212,9 @@ class FFmpegKitFactory {
 
     _settlePending(pending, msg) {
         if (msg.type === MSG_ERROR) {
-            this._failPending(pending, new Error(msg.message || 'worker error'));
+            const err = new Error(msg.message || 'worker error');
+            if (typeof msg.code === 'string') err.code = msg.code;
+            this._failPending(pending, err);
             return;
         }
         if (msg.type !== MSG_RESULT) {

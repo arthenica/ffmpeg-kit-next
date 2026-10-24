@@ -8,8 +8,8 @@
 - Runs the `FFmpeg` and `ffmpeg-kit` core inside a `Web Worker`, off the main (UI) thread
 - Native-compatible JavaScript API with TypeScript declarations, shipped as ES modules
 - Custom `FFmpegKit` protocols: `ffkitmem:` for finite in-memory input/output and `ffkitstream:` for memory-backed streaming input/output
-- Virtual filesystem helpers: `writeFile`/`readFile` (`MEMFS`) and `mount` (`WORKERFS`, for large inputs without a
-  heap copy)
+- Virtual filesystem classes: `FFmpegKitVirtualFile` and `FFmpegKitVirtualDirectory` for FFmpegKit's in-memory file
+  storage and `FFmpegKitLocalFile` to read a file on the user's computer without copying it
 - Supports both web linkage modes: dynamic builds load FFmpeg side modules at runtime, while static builds link the FFmpeg libraries into one main WebAssembly module
 
 ### 2 Building
@@ -263,22 +263,34 @@ import { FFmpegKit, FFprobeKit, FFmpegKitConfig } from 'ffmpeg-kit-next-web';
     FFmpegKit.cancel(sessionId);
     ```
 
-7. (Web) Make input files available to the module's virtual filesystem, and read outputs back out of it. Write
-   bytes into `MEMFS`, or mount large `File`/`Blob` inputs read-only through `WORKERFS` (no heap copy).
+7. (Web) FFmpeg commands can only use paths in FFmpegKit's virtual file storage, which lives in memory.
+   `FFmpegKitLocalFile` gives a file on the user's computer a read-only path there, without copying it.
+   `FFmpegKitVirtualFile` is a file in that storage.
 
     ```js
-    import { writeFile, readFile, mount } from 'ffmpeg-kit-next-web';
+    import { FFmpegKit, FFmpegKitLocalFile, FFmpegKitVirtualFile } from 'ffmpeg-kit-next-web';
 
-    // Small inputs: copy bytes into MEMFS.
-    await writeFile('file1.mp4', new Uint8Array(await file.arrayBuffer()));
+    // A file on the user's computer, e.g. from <input type="file">, gets a path FFmpeg can read.
+    const input = await FFmpegKitLocalFile.fromFile(fileInput.files[0]);
 
-    // Large inputs: mount a File read-only; FFmpeg reads it by path.
-    await mount('/mnt', { files: [file] }); // then use `/mnt/<file.name>` as -i
+    // Write bytes the app already holds into the storage.
+    await FFmpegKitVirtualFile.from('/watermark.png').writeAsBytes(pngBytes);
 
-    // Outputs: read the produced bytes back. Resolves null when the path does not exist.
-    const bytes = await readFile('file2.mp4');
-    const url = URL.createObjectURL(new Blob([bytes], { type: 'video/mp4' }));
+    const output = FFmpegKitVirtualFile.from('/out.mp4');
+    await FFmpegKit.executeWithArguments(
+      ['-i', input.getPath(), '-i', '/watermark.png', '-filter_complex', 'overlay', output.getPath()]);
+
+    // Take the result out: readAsBytes() for small data, readAsBlob() for large outputs.
+    const blob = await output.readAsBlob({ type: 'video/mp4' });
+
+    // Free the memory and release the user's file.
+    await output.delete();
+    await input.close();
     ```
+
+   See the [Web File System](https://github.com/arthenica/ffmpeg-kit-next/wiki/Web-File-System) wiki page for
+   folders, errors, getting output to the user, reserved folders and the deprecated `writeFile`/`readFile`/`mount`
+   helpers.
 
 8. (Web) Use in-memory (`ffkitmem:`) or streaming (`ffkitstream:`) I/O to avoid staging files in `MEMFS`. Pass
    `getUrl()` as an `-i` input or as an output target.

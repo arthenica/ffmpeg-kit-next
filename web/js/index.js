@@ -36,7 +36,11 @@
 //   runtime conduit          FFmpegKitFactory  (leaves + SessionRegistry only)
 //   sessions                 AbstractSession -> FFmpeg/FFprobe/MediaInformation
 //   facades                  FFmpegKit, FFprobeKit, FFmpegKitConfig, ArchDetect,
-//                            Packages, MediaInformationJsonParser, FileSystem, I/O
+//                            Packages, MediaInformationJsonParser, I/O,
+//                            FFmpegKitVirtualDirectory, FFmpegKitVirtualFile,
+//                            FFmpegKitLocalFile (factory only)
+//   deprecated facade        FileSystem (factory + FFmpegKitVirtualDirectory and
+//                            FFmpegKitVirtualFile, which it wraps)
 //
 // FFmpegKitFactory must never import a session class; it instantiates sessions
 // through SessionRegistry, which each session module writes to at module scope.
@@ -70,7 +74,12 @@ export {FFmpegKitConfig} from './src/FFmpegKitConfig.js';
 export {FFprobeKit} from './src/FFprobeKit.js';
 export {Packages} from './src/Packages.js';
 
-// ---- Web-only virtual filesystem helpers -------------------------------------
+// ---- Virtual filesystem ------------------------------------------------------
+export {FFmpegKitLocalFile} from './src/FFmpegKitLocalFile.js';
+export {FFmpegKitVirtualDirectory} from './src/FFmpegKitVirtualDirectory.js';
+export {FFmpegKitVirtualFile} from './src/FFmpegKitVirtualFile.js';
+
+// ---- Deprecated web-only filesystem helpers ----------------------------------
 export {mount, readFile, writeFile} from './src/FileSystem.js';
 
 // ---- ffkitmem:/ffkitstream: in-memory I/O ------------------------------------

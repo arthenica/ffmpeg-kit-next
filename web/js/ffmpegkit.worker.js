@@ -77,9 +77,274 @@ function mkdirTree(path) {
   }
 }
 
-function mkdirParent(path) {
-  const index = path.lastIndexOf('/');
-  if (index > 0) mkdirTree(path.slice(0, index));
+// ---- Virtual filesystem (FFmpegKitVirtualFile / Directory, FFmpegKitLocalFile) ----------
+
+// Emscripten 5.0.6 errno numbers (struct_info_generated.json) -> POSIX names reported to the page.
+const ERRNO_NAMES = {
+  2: 'EACCES',
+  8: 'EBADF',
+  10: 'EBUSY',
+  20: 'EEXIST',
+  28: 'EINVAL',
+  29: 'EIO',
+  31: 'EISDIR',
+  32: 'ELOOP',
+  37: 'ENAMETOOLONG',
+  44: 'ENOENT',
+  52: 'ENOSYS',
+  54: 'ENOTDIR',
+  55: 'ENOTEMPTY',
+  63: 'EPERM',
+  69: 'EROFS',
+  75: 'EXDEV',
+};
+
+// Library-managed folders. Each local file is mounted in a folder of its own under LOCAL_ROOT,
+// because a WORKERFS mount takes its files when it is created and a folder holds one mount.
+// Everything under LIBRARY_ROOT is reserved: apps may only read, write and delete the temp
+// files the library created under TEMP_ROOT.
+const LIBRARY_ROOT = '/ffmpegkit';
+const LOCAL_ROOT = LIBRARY_ROOT + '/local';
+const TEMP_ROOT = LIBRARY_ROOT + '/tmp';
+const PROTECTED_DIRECTORIES = new Set(['/', '/dev', '/proc', '/tmp', '/home', LIBRARY_ROOT, LOCAL_ROOT, TEMP_ROOT]);
+// Emscripten's device and process folders are protected as whole trees.
+const SYSTEM_ROOTS = ['/dev', '/proc'];
+
+// The public method each request serves, used in error messages.
+const METHOD_NAMES = {
+  fsMkdir: 'create',
+  fsRename: 'rename',
+  fsDelete: 'delete',
+  fsWrite: 'writeAsBytes',
+  fsRead: 'readAsBytes',
+  fsReadBlob: 'readAsBlob',
+  fsLength: 'length',
+  fsCreateTemp: 'createTemp',
+  localMount: 'fromFile',
+  localUnmount: 'close',
+};
+
+// mount id -> its folder under LOCAL_ROOT
+const localMounts = new Map();
+let localSeq = 0;
+let tempSeq = 0;
+
+function errnoName(err) {
+  return (err && ERRNO_NAMES[err.errno]) || null;
+}
+
+// Relative paths resolve from the root, which is Emscripten's working directory.
+function absolutePath(path) {
+  const parts = [];
+  for (const part of String(path).split('/')) {
+    if (part === '' || part === '.') continue;
+    if (part === '..') parts.pop();
+    else parts.push(part);
+  }
+  return '/' + parts.join('/');
+}
+
+function isUnder(absolute, root) {
+  return absolute === root || absolute.startsWith(root + '/');
+}
+
+function isSystemPath(path) {
+  const absolute = absolutePath(path);
+  return SYSTEM_ROOTS.some((root) => isUnder(absolute, root));
+}
+
+function isProtectedDirectory(path) {
+  const absolute = absolutePath(path);
+  return PROTECTED_DIRECTORIES.has(absolute) || absolute.startsWith(LOCAL_ROOT + '/') || isSystemPath(absolute);
+}
+
+function isReserved(path) {
+  return isUnder(absolutePath(path), LIBRARY_ROOT);
+}
+
+// A file the library created with createTemp(); apps may read, write and delete it.
+function isTempFile(path) {
+  const absolute = absolutePath(path);
+  return absolute.startsWith(TEMP_ROOT + '/') && !absolute.slice(TEMP_ROOT.length + 1).includes('/');
+}
+
+function fsFailure(method, path, code) {
+  return Object.assign(new Error(`${method} ${absolutePath(path)}: ${code}`), {code});
+}
+
+// Runs one filesystem request; an Emscripten errno becomes an Error carrying its POSIX name, or
+// ERRNO_<n> for a number missing from ERRNO_NAMES. FS.ErrnoError is checked first: in release builds
+// it is not an Error and has no message, and in debug builds it carries a `code` but no method or
+// path, so it must never reach the page as it is.
+function fsOp(method, path, fn) {
+  try {
+    return fn(absolutePath(path));
+  } catch (err) {
+    if (typeof err?.errno === 'number') throw fsFailure(method, path, errnoName(err) || `ERRNO_${err.errno}`);
+    throw err;
+  }
+}
+
+function fsKind(path) {
+  try {
+    const stat = Module.FS.stat(path);
+    if (Module.FS.isDir(stat.mode)) return {kind: 'directory', size: 0};
+    if (Module.FS.isFile(stat.mode)) return {kind: 'file', size: stat.size};
+    return {kind: null, size: 0};
+  } catch {
+    return {kind: null, size: 0};
+  }
+}
+
+// A file request on a folder fails with EISDIR, a folder request on a file with ENOTDIR,
+// a missing path with ENOENT.
+function requireKind(method, path, kind) {
+  const found = fsKind(path).kind;
+  if (found === kind) return;
+  if (found === null) throw fsFailure(method, path, 'ENOENT');
+  throw fsFailure(method, path, kind === 'file' ? 'EISDIR' : 'ENOTDIR');
+}
+
+function deleteTree(path) {
+  for (const name of Module.FS.readdir(path)) {
+    if (name === '.' || name === '..') continue;
+    const child = path === '/' ? '/' + name : path + '/' + name;
+    if (fsKind(child).kind === 'directory') deleteTree(child);
+    else Module.FS.unlink(child);
+  }
+  Module.FS.rmdir(path);
+}
+
+function fileBlob(path, type) {
+  const node = Module.FS.lookupPath(path, {follow: true}).node;
+  // WORKERFS keeps the picked File/Blob itself; MEMFS keeps a growable byte array.
+  if (typeof Blob !== 'undefined' && node.contents instanceof Blob) {
+    return node.contents.slice(0, node.contents.size, type);
+  }
+  const contents = node.contents || new Uint8Array(0);
+  return new Blob([contents.subarray(0, node.usedBytes ?? contents.length)], {type});
+}
+
+function fsRequest(op, args) {
+  const method = op === 'fsReaddir' ? (args.kind === 'file' ? 'listFiles' : 'listDirectories') : METHOD_NAMES[op];
+  switch (op) {
+    case 'fsStat':
+      return fsKind(absolutePath(args.path));
+    case 'fsLength':
+      return fsOp(method, args.path, (path) => {
+        requireKind(method, path, 'file');
+        return {size: fsKind(path).size};
+      });
+    case 'fsMkdir':
+      return fsOp(method, args.path, (path) => {
+        if (isReserved(path)) throw fsFailure(method, path, 'EPERM');
+        const kind = fsKind(path).kind;
+        if (kind === 'directory') return {ok: true};
+        if (kind !== null) throw fsFailure(method, path, 'EEXIST');
+        if (args.recursive) Module.FS.mkdirTree(path);
+        else Module.FS.mkdir(path);
+        return {ok: true};
+      });
+    case 'fsReaddir':
+      return fsOp(method, args.path, (path) => {
+        requireKind(method, path, 'directory');
+        const names = Module.FS.readdir(path)
+          .filter((name) => name !== '.' && name !== '..')
+          .filter((name) => fsKind(path === '/' ? '/' + name : path + '/' + name).kind === args.kind)
+          .sort();
+        return {names};
+      });
+    case 'fsRename':
+      return fsOp(method, args.oldPath, (oldPath) => {
+        const newPath = absolutePath(args.newPath);
+        if (isReserved(oldPath) || isReserved(newPath) || isSystemPath(oldPath) || isSystemPath(newPath)) {
+          throw fsFailure(method, oldPath, 'EPERM');
+        }
+        // An empty folder at the destination would be replaced by the rename.
+        if (args.kind === 'directory' && (isProtectedDirectory(oldPath) || isProtectedDirectory(newPath))) {
+          throw fsFailure(method, oldPath, 'EPERM');
+        }
+        requireKind(method, oldPath, args.kind);
+        Module.FS.rename(oldPath, newPath);
+        return {ok: true};
+      });
+    case 'fsDelete':
+      return fsOp(method, args.path, (path) => {
+        if (args.kind === 'directory' && isProtectedDirectory(path)) throw fsFailure(method, path, 'EPERM');
+        if (args.kind === 'file' && (isSystemPath(path) || (isReserved(path) && !isTempFile(path)))) {
+          throw fsFailure(method, path, 'EPERM');
+        }
+        requireKind(method, path, args.kind);
+        if (args.kind === 'directory') deleteTree(path);
+        else Module.FS.unlink(path);
+        return {ok: true};
+      });
+    case 'fsWrite':
+      return fsOp(method, args.path, (path) => {
+        // Local files are mounted read-only; WORKERFS itself would only answer EIO.
+        if (path.startsWith(LOCAL_ROOT + '/')) throw fsFailure(method, path, 'EROFS');
+        if (isSystemPath(path) || (isReserved(path) && !isTempFile(path))) throw fsFailure(method, path, 'EPERM');
+        if (fsKind(path).kind === 'directory') throw fsFailure(method, path, 'EISDIR');
+        // The page transferred a copy, so MEMFS may keep this buffer instead of copying it again.
+        Module.FS.writeFile(path, args.data, {canOwn: true});
+        return {ok: true};
+      });
+    case 'fsRead':
+      return fsOp(method, args.path, (path) => {
+        requireKind(method, path, 'file');
+        return {data: Module.FS.readFile(path)};
+      });
+    case 'fsReadBlob':
+      return fsOp(method, args.path, (path) => {
+        requireKind(method, path, 'file');
+        return {blob: fileBlob(path, args.type || '')};
+      });
+    case 'fsCreateTemp':
+      return fsOp(method, TEMP_ROOT, () => {
+        const extension = String(args.extension || '').replace(/^\./, '');
+        if (extension.includes('/')) throw fsFailure(method, TEMP_ROOT, 'EINVAL');
+        mkdirTree(TEMP_ROOT);
+        let path;
+        do {
+          path = `${TEMP_ROOT}/${++tempSeq}${extension ? '.' + extension : ''}`;
+        } while (fsKind(path).kind !== null);
+        Module.FS.writeFile(path, new Uint8Array(0));
+        return {path};
+      });
+    case 'localMount': {
+      const id = ++localSeq;
+      const folder = `${LOCAL_ROOT}/${id}`;
+      return fsOp(method, folder, () => {
+        const isFile = typeof File !== 'undefined' && args.file instanceof File;
+        const name = args.file.name;
+        mkdirTree(folder);
+        try {
+          Module.FS.mount(
+            Module.FS.filesystems.WORKERFS,
+            isFile ? {files: [args.file]} : {blobs: [{name, data: args.file.data}]},
+            folder
+          );
+        } catch (err) {
+          safe(() => Module.FS.rmdir(folder));
+          throw err;
+        }
+        localMounts.set(id, folder);
+        return {id, path: `${folder}/${name}`};
+      });
+    }
+    case 'localUnmount': {
+      const folder = localMounts.get(args.id);
+      if (folder === undefined) return {ok: true};
+      return fsOp(method, folder, () => {
+        Module.FS.unmount(folder);
+        localMounts.delete(args.id);
+        Module.FS.rmdir(folder);
+        return {ok: true};
+      });
+    }
+    default:
+      return undefined;
+  }
 }
 
 function setFontDirectoryList(args) {
@@ -1015,20 +1280,6 @@ self.onmessage = async (event) => {
         postMessage({ id, type: MSG_RESULT, result: { ok: true } });
         break;
       }
-      case 'writeFile': {
-        mkdirParent(args.path);
-        Module.FS.writeFile(args.path, new Uint8Array(args.data));
-        postMessage({ id, type: MSG_RESULT, result: { ok: true } });
-        break;
-      }
-      case 'readFile': {
-        const data = readOutput(args.path);
-        postMessage(
-          { id, type: MSG_RESULT, result: { data } },
-          data ? [data.buffer] : []
-        );
-        break;
-      }
       case 'getArch': {
         postMessage({
           id,
@@ -1183,21 +1434,23 @@ self.onmessage = async (event) => {
         postMessage({ id, type: MSG_RESULT, result: { ok: true } });
         break;
       }
-      default:
-        postMessage({ id, type: MSG_ERROR, message: 'Unknown op: ' + op });
+      default: {
+        const result = fsRequest(op, args);
+        if (result === undefined) {
+          postMessage({ id, type: MSG_ERROR, message: 'Unknown op: ' + op });
+        } else {
+          postMessage({ id, type: MSG_RESULT, result }, result.data ? [result.data.buffer] : []);
+        }
+      }
     }
   } catch (err) {
-    postMessage({ id, type: MSG_ERROR, message: errMessage(err) });
+    if (typeof err?.code === 'string') {
+      postMessage({ id, type: MSG_ERROR, message: errMessage(err), code: err.code });
+    } else {
+      postMessage({ id, type: MSG_ERROR, message: errMessage(err) });
+    }
   }
 };
-
-function readOutput(path) {
-  try {
-    return Module.FS.readFile(path); // Uint8Array
-  } catch {
-    return null;
-  }
-}
 
 function errMessage(err) {
   if (err && err.message) return err.message;

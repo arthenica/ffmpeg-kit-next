@@ -1276,31 +1276,163 @@ export declare class FFmpegKitStreamOutput {
 }
 
 // ---------------------------------------------------------------------------
-// Web-only helpers
+// Virtual filesystem (web only)
 // ---------------------------------------------------------------------------
 
 /**
- * Writes bytes into the module's virtual filesystem (MEMFS). Data is copied before
- * worker posting; the caller's buffer is not detached.
+ * A folder in FFmpegKit's virtual file storage. The storage lives in the library worker's
+ * memory: it is private to FFmpegKit and temporary (gone on page reload or uninit()). An object
+ * is only a path, like dart:io's Directory. Failures reject with an Error whose `code` is the
+ * POSIX name (ENOENT, ENOTDIR, EPERM, ...).
+ */
+export declare class FFmpegKitVirtualDirectory {
+    /** A reference to `path`. Does not create or check anything. Relative paths resolve from "/". */
+    static from(path: string): FFmpegKitVirtualDirectory;
+
+    getPath(): string;
+
+    /** True only when a directory exists at the path. */
+    exists(): Promise<boolean>;
+
+    /**
+     * Creates the directory. Succeeds if it already exists. Without `recursive`, rejects
+     * with ENOENT when the parent is missing; with `recursive: true`, creates missing parents.
+     */
+    create(options?: { recursive?: boolean }): Promise<FFmpegKitVirtualDirectory>;
+
+    /** Names of the files directly inside, sorted. */
+    listFiles(): Promise<string[]>;
+
+    /** Names of the directories directly inside, sorted, without "." and "..". */
+    listDirectories(): Promise<string[]>;
+
+    /** Moves the directory. Rejects with ENOENT when the parent of `newPath` is missing. */
+    rename(newPath: string): Promise<FFmpegKitVirtualDirectory>;
+
+    /** Deletes the directory and everything in it. */
+    delete(): Promise<void>;
+}
+
+/**
+ * A file in FFmpegKit's virtual file storage, the storage that paths in FFmpeg commands refer
+ * to. /ffmpegkit/ is reserved for the library's own folders: creating, writing, renaming or
+ * deleting there rejects with EPERM, except writing, reading and deleting createTemp() files. It lives in the library worker's memory: private to FFmpegKit and temporary (gone on page
+ * reload or uninit()). An object is only a path, like dart:io's File. Failures reject with an
+ * Error whose `code` is the POSIX name (ENOENT, EISDIR, ...).
+ */
+export declare class FFmpegKitVirtualFile {
+    /** A reference to `path`. Does not create or check anything. Relative paths resolve from "/". */
+    static from(path: string): FFmpegKitVirtualFile;
+
+    /**
+     * Creates an empty file at a unique path chosen by the library, under /ffmpegkit/tmp/,
+     * keeping `extension` (e.g. "/ffmpegkit/tmp/7.srt"). FFmpeg sometimes uses the extension
+     * to pick a format. The file can be written, read and deleted, but not renamed.
+     */
+    static createTemp(options?: { extension?: string }): Promise<FFmpegKitVirtualFile>;
+
+    getPath(): string;
+
+    /** True only when a regular file exists at the path. */
+    exists(): Promise<boolean>;
+
+    /** Size in bytes. */
+    length(): Promise<number>;
+
+    /** Copies the file's contents out. For small data used in app code. */
+    readAsBytes(): Promise<Uint8Array>;
+
+    /**
+     * Creates or replaces the file with a copy of `bytes`. Rejects with ENOENT when the
+     * parent directory is missing, and with a TypeError when `bytes` is not a Uint8Array.
+     * The caller keeps its own buffer.
+     */
+    writeAsBytes(bytes: Uint8Array): Promise<FFmpegKitVirtualFile>;
+
+    /**
+     * Returns the contents as a Blob made inside the worker and passed to the page by
+     * reference, so the bytes never pass through app memory. For saving, sharing and
+     * uploading large outputs.
+     */
+    readAsBlob(options?: { type?: string }): Promise<Blob>;
+
+    /**
+     * Moves the file; an existing file at `newPath` is replaced. Rejects with ENOENT when the
+     * parent of `newPath` is missing.
+     */
+    rename(newPath: string): Promise<FFmpegKitVirtualFile>;
+
+    delete(): Promise<void>;
+}
+
+/** A named Blob for local files that are not `File` objects. */
+export interface FFmpegKitNamedBlob {
+    name: string;
+    data: Blob;
+}
+
+/**
+ * A file on the user's computer, for example one chosen with <input type="file">. It gets a
+ * read-only path in FFmpegKit's virtual file storage; the file is not copied, and FFmpeg reads
+ * the parts it needs from the browser's File on demand. Two local files never share
+ * a folder; inputs that need files side by side (image sequences, concat lists, HLS) go in with
+ * FFmpegKitVirtualFile.writeAsBytes().
+ */
+export declare class FFmpegKitLocalFile {
+    /**
+     * Gives a file on the user's computer, for example one chosen with <input type="file">, a
+     * read-only path FFmpeg can read, without copying it. The file appears at a path chosen by
+     * the library, e.g. "/ffmpegkit/local/3/video.mp4". The path
+     * keeps the file's own name, which may contain spaces or quotes, so pass it to FFmpeg as an
+     * argument (FFmpegKit.executeWithArguments) rather than inside a command string. Rejects with
+     * a TypeError for a Blob without a usable name.
+     */
+    static fromFile(file: File | FFmpegKitNamedBlob): Promise<FFmpegKitLocalFile>;
+
+    getPath(): string;
+
+    /**
+     * Releases the file. Safe to call more than once. Call it only after every FFmpeg session
+     * that reads the file has finished; the library does not track that.
+     */
+    close(): Promise<void>;
+}
+
+/**
+ * Writes bytes into the module's virtual filesystem, creating missing parent folders.
+ *
+ * @deprecated Use FFmpegKitVirtualFile.from(path).writeAsBytes(data); create parent folders
+ * first with FFmpegKitVirtualDirectory.create({recursive: true}).
  */
 export declare function writeFile(path: string, data: Uint8Array): Promise<void>;
 
-/** Reads a file from the module's virtual filesystem, or null if it doesn't exist. */
+/**
+ * Reads a file from the module's virtual filesystem, or null if it doesn't exist.
+ *
+ * @deprecated Use FFmpegKitVirtualFile.from(path).readAsBytes(), which rejects for a missing file.
+ */
 export declare function readFile(path: string): Promise<Uint8Array | null>;
 
-/** A named blob for a WORKERFS mount. */
+/**
+ * A named blob for a WORKERFS mount.
+ *
+ * @deprecated Use FFmpegKitNamedBlob with FFmpegKitLocalFile.fromFile().
+ */
 export interface WorkerFsBlob {
     name: string;
     data: Blob;
 }
 
+/** @deprecated Use FFmpegKitLocalFile.fromFile(). */
 export interface MountOptions {
     files?: File[];
     blobs?: WorkerFsBlob[];
 }
 
 /**
- * Mounts File/Blob inputs read-only via WORKERFS at `mountPoint`, so FFmpeg reads
- * them by path without copying into the wasm heap — preferred for large inputs.
+ * Mounts File/Blob inputs read-only via WORKERFS at `mountPoint`. Mounting the same folder
+ * twice fails with EBUSY.
+ *
+ * @deprecated Use FFmpegKitLocalFile.fromFile(file).
  */
 export declare function mount(mountPoint: string, options?: MountOptions): Promise<void>;
