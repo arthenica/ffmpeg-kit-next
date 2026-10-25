@@ -98,6 +98,7 @@ class FFmpegKitFactory {
         this._seq = 0;
         this._pending = new Map();
         this._logCallback = null; // global
+        this._sessionDeleteListeners = new Set(); // global
         this._statisticsCallback = null; // global
         this._ffmpegSessionCompleteCallback = null;
         this._ffprobeSessionCompleteCallback = null;
@@ -998,6 +999,28 @@ class FFmpegKitFactory {
         }
     }
 
+    addSessionDeleteListener(listener) {
+        if (typeof listener === 'function') this._sessionDeleteListeners.add(listener);
+    }
+
+    removeSessionDeleteListener(listener) {
+        this._sessionDeleteListeners.delete(listener);
+    }
+
+    // Native removed a session from its history. Not reported after shutdown, like the global
+    // callbacks; a throwing listener must not stop the others or break message handling.
+    _notifySessionDeleted(sessionId) {
+        const id = Number(sessionId);
+        if (this._shutdown || !Number.isFinite(id)) return;
+        for (const listener of [...this._sessionDeleteListeners]) {
+            try {
+                listener(id);
+            } catch (e) {
+                console.error('session delete listener failed', e);
+            }
+        }
+    }
+
     _forgetAllSessions() {
         for (const registry of this._sessionRegistries()) registry.clear();
         for (const pending of this._pending.values()) pending.deleted = true;
@@ -1145,6 +1168,7 @@ class FFmpegKitFactory {
         }
         if (msg.type === MSG_SESSION_DELETED) {
             this._forgetSession(msg.sessionId);
+            this._notifySessionDeleted(msg.sessionId);
             return;
         }
 

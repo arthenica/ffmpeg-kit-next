@@ -36,6 +36,19 @@ export class FFmpegKitConfig {
         getFactory().setLogCallback(logCallback);
     }
 
+    /**
+     * Adds a listener called with the id of every session removed from the session history. Any
+     * number of listeners can be added; adding the same listener again has no effect.
+     */
+    static addSessionDeleteListener(listener) {
+        getFactory().addSessionDeleteListener(listener);
+    }
+
+    /** Removes a listener added with addSessionDeleteListener(). */
+    static removeSessionDeleteListener(listener) {
+        getFactory().removeSessionDeleteListener(listener);
+    }
+
     static enableStatisticsCallback(statisticsCallback = null) {
         getFactory().setStatisticsCallback(statisticsCallback);
     }

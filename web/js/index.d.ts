@@ -916,6 +916,15 @@ export declare class FFmpegKitConfig {
     /** Registers a global statistics callback (pass null or nothing to clear). */
     static enableStatisticsCallback(statisticsCallback?: StatisticsCallback | null): void;
 
+    /**
+     * Adds a listener called with the id of every session removed from the session history. Any
+     * number of listeners can be added; adding the same listener again has no effect.
+     */
+    static addSessionDeleteListener(listener: (sessionId: number) => void): void;
+
+    /** Removes a listener added with addSessionDeleteListener(). */
+    static removeSessionDeleteListener(listener: (sessionId: number) => void): void;
+
     /** Registers a global FFmpeg async completion callback (pass null or nothing to clear). */
     static enableFFmpegSessionCompleteCallback(
         completeCallback?: FFmpegSessionCompleteCallback | null
