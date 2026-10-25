@@ -12,17 +12,20 @@
 #               -> ios/ffmpeg_kit_next_flutter/Frameworks/
 #   macOS   : prebuilt/bundle-apple-xcframework-macos-*/*.xcframework
 #               -> macos/ffmpeg_kit_next_flutter/Frameworks/
-#   Linux   : prebuilt/bundle-linux/ffmpeg-kit-next/{include,lib}
+#   Linux   : prebuilt/bundle-linux/ffmpeg-kit-next/{include,lib,licenses}
 #               -> linux/Frameworks/ffmpeg-kit-next/
+#   Web     : prebuilt/bundle-web-wasm32/ffmpeg-kit-next/{dist,lib,LICENSE,SOURCE,licenses}
+#               -> web/ffmpeg-kit-next/ (web-only plugin assets; README.md placeholders are kept)
 #
 # Build the binaries first from the repository root, e.g.:
 #   ./nix-android.sh -p <profile>
 #   ./nix-ios.sh     -p <profile>
 #   ./nix-macos.sh   -p <profile>
 #   ./nix-linux.sh   -p <profile>
+#   ./nix-web.sh     -p <profile>
 #
 # Usage:
-#   ./copy_local_binaries.sh [android] [ios] [macos] [linux]
+#   ./copy_local_binaries.sh [android] [ios] [macos] [linux] [windows] [web]
 #
 # With no platform arguments, every platform that has a matching bundle in
 # prebuilt/ is copied. Set FFMPEG_KIT_PREBUILT_DIR to override the location of
@@ -112,11 +115,16 @@ copy_linux() {
     echo "error: libffmpegkit.so not found in: ${src}/lib" >&2
     return 1
   fi
+  if [[ ! -d "${src}/licenses" ]]; then
+    echo "error: licence texts not found in: ${src}/licenses" >&2
+    return 1
+  fi
   dest="${plugin_dir}/linux/Frameworks/ffmpeg-kit-next"
   rm -rf "${dest}"
   mkdir -p "${dest}"
   cp -R "${src}/include" "${dest}/include"
   cp -R "${src}/lib" "${dest}/lib"
+  cp -R "${src}/licenses" "${dest}/licenses"
   echo "linux: copied bundle-linux -> linux/Frameworks/ffmpeg-kit-next/"
 }
 
@@ -128,7 +136,8 @@ copy_windows() {
     echo "skip windows: no bundle-windows/ffmpeg-kit-next found in ${prebuilt_dir}" >&2
     return 0
   fi
-  if [[ ! -f "${src}/include/ffmpegkit_c.h" || ! -f "${src}/lib/ffmpegkit.lib" || ! -d "${src}/bin" ]]; then
+  if [[ ! -f "${src}/include/ffmpegkit_c.h" || ! -f "${src}/lib/ffmpegkit.lib" || ! -d "${src}/bin" ||
+        ! -d "${src}/licenses" ]]; then
     echo "error: incomplete Windows bundle: ${src}" >&2
     return 1
   fi
@@ -138,9 +147,36 @@ copy_windows() {
   echo "windows: copied bundle-windows -> windows/Frameworks/ffmpeg-kit-next/"
 }
 
+copy_web() {
+  local src dest folder
+  src="${prebuilt_dir}/bundle-web-wasm32/ffmpeg-kit-next"
+  dest="${plugin_dir}/web/ffmpeg-kit-next"
+  if [[ ! -d "${src}" ]]; then
+    echo "skip web: no bundle-web-wasm32/ffmpeg-kit-next found in ${prebuilt_dir}" >&2
+    return 0
+  fi
+  if [[ ! -f "${src}/dist/index.js" || ! -f "${src}/dist/ffmpegkit.worker.js" || ! -f "${src}/lib/libffmpegkit.wasm" ||
+        ! -f "${src}/LICENSE" || ! -f "${src}/SOURCE" || ! -d "${src}/licenses" ]]; then
+    echo "error: incomplete web bundle: ${src}" >&2
+    return 1
+  fi
+  # Remove the previous copy but keep the placeholders that the asset entries need.
+  for folder in dist/src dist lib licenses; do
+    mkdir -p "${dest}/${folder}"
+    find "${dest}/${folder}" -mindepth 1 -maxdepth 1 ! -name README.md ! -name src -exec rm -rf {} +
+  done
+  rm -f "${dest}/LICENSE" "${dest}/SOURCE"
+  cp -R "${src}/dist/." "${dest}/dist/"
+  cp -R "${src}/lib/." "${dest}/lib/"
+  # The licence texts ship with the binaries (web-only assets, like dist/ and lib/).
+  cp "${src}/LICENSE" "${src}/SOURCE" "${dest}/"
+  cp -R "${src}/licenses/." "${dest}/licenses/"
+  echo "web: copied bundle-web-wasm32 -> web/ffmpeg-kit-next/"
+}
+
 platforms=("$@")
 if ((${#platforms[@]} == 0)); then
-  platforms=(android ios macos linux windows)
+  platforms=(android ios macos linux windows web)
 fi
 
 for platform in "${platforms[@]}"; do
@@ -150,8 +186,9 @@ for platform in "${platforms[@]}"; do
     macos)   copy_apple macos 'bundle-apple-xcframework-macos-*' macos ;;
     linux)   copy_linux ;;
     windows) copy_windows ;;
+    web)     copy_web ;;
     *)
-      echo "error: unknown platform '${platform}' (expected android, ios, macos, linux or windows)" >&2
+      echo "error: unknown platform '${platform}' (expected android, ios, macos, linux, windows or web)" >&2
       exit 1
       ;;
   esac

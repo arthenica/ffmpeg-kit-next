@@ -47,6 +47,14 @@ abstract class FFmpegKitPlatform extends PlatformInterface {
     _instance = instance;
   }
 
+  /// Log, statistics, completion and session-deleted events, as maps keyed
+  /// like the native plugins' events: FFmpegKitLogCallbackEvent,
+  /// FFmpegKitStatisticsCallbackEvent, FFmpegKitCompleteCallbackEvent and
+  /// FFmpegKitSessionDeletedCallbackEvent.
+  Stream<Map<dynamic, dynamic>> get events {
+    throw UnimplementedError('events has not been implemented!');
+  }
+
   // AbstractSession
 
   Future<Map<dynamic, dynamic>?> abstractSessionCreateFFmpegSession(

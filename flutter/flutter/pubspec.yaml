@@ -1,5 +1,5 @@
 name: ffmpeg_kit_next_flutter
-description: FFmpeg Kit Next for Flutter. Supports Android, iOS, iPadOS, macOS, Linux and Windows platforms.
+description: FFmpeg Kit Next for Flutter. Supports Android, iOS, iPadOS, Linux, macOS, Web and Windows platforms.
 repository: https://github.com/arthenica/ffmpeg-kit-next
 issue_tracker: https://github.com/arthenica/ffmpeg-kit-next/issues
 homepage: https://github.com/arthenica/ffmpeg-kit-next
@@ -7,8 +7,8 @@ version: 9.0.2
 publish_to: none
 
 environment:
-  sdk: ">=2.12.0 <4.0.0"
-  flutter: ">=2.0.0"
+  sdk: ">=3.11.0 <4.0.0"
+  flutter: ">=3.41.0"
 
 flutter:
   plugin:
@@ -24,12 +24,33 @@ flutter:
         pluginClass: FFmpegKitFlutterPlugin
       windows:
         pluginClass: FFmpegKitFlutterPlugin
+      web:
+        pluginClass: FFmpegKitFlutterWeb
+        fileName: src/web/ffmpeg_kit_flutter_web.dart
+
+  # The web bundle, copied by ./copy_local_binaries.sh web. Web builds only; each folder keeps a
+  # README.md placeholder so these entries resolve when the bundle has not been copied. The bundle
+  # folder itself holds LICENSE and SOURCE, which ship with the binaries like licenses/.
+  assets:
+    - path: web/ffmpeg-kit-next/
+      platforms: [web]
+    - path: web/ffmpeg-kit-next/dist/
+      platforms: [web]
+    - path: web/ffmpeg-kit-next/dist/src/
+      platforms: [web]
+    - path: web/ffmpeg-kit-next/lib/
+      platforms: [web]
+    - path: web/ffmpeg-kit-next/licenses/
+      platforms: [web]
 
 dependencies:
   ffmpeg_kit_next_flutter_platform_interface:
     path: ../flutter_platform_interface
   flutter:
     sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+  web: ^1.1.0
 
 dev_dependencies:
   flutter_test:

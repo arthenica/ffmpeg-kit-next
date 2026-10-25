@@ -17,7 +17,7 @@
  * along with FFmpegKitNext. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import 'dart:io';
+import 'dart:async';
 
 import 'package:ffmpeg_kit_next_flutter_platform_interface/ffmpeg_kit_flutter_platform_interface.dart';
 import 'package:flutter/services.dart';
@@ -36,16 +36,16 @@ import '../session.dart';
 import '../statistics.dart';
 import '../statistics_callback.dart';
 import 'ffmpeg_kit_factory.dart';
+import 'log_output.dart';
 
 class FFmpegKitInitializer {
   static FFmpegKitPlatform _platform = FFmpegKitPlatform.instance;
-  static const EventChannel _eventChannel =
-      const EventChannel('flutter.arthenica.com/ffmpeg_kit_event');
 
   static FFmpegKitInitializer _instance = new FFmpegKitInitializer();
 
   static bool _initialized = false;
   static Future<bool>? _initializationFuture;
+  static StreamSubscription<Map<dynamic, dynamic>>? _eventSubscription;
 
   static Future<bool> initialize({bool printLoadConfirmation = true}) async {
     if (_initialized) {
@@ -213,7 +213,7 @@ class FFmpegKitInitializer {
         break;
       default:
         {
-          stdout.write(text);
+          writeLogOutput(text);
         }
     }
   }
@@ -354,7 +354,7 @@ class FFmpegKitInitializer {
   }
 
   Future<void> _initialize() async {
-    _eventChannel.receiveBroadcastStream().listen(_onEvent, onError: _onError);
+    _eventSubscription ??= _platform.events.listen(_onEvent, onError: _onError);
     await _platform.ffmpegKitConfigEnableRedirection();
   }
 

@@ -4,7 +4,7 @@
 
 - Includes both `FFmpeg` and `FFprobe`
 - Supports
-    - `Android`, `iOS`, `iPadOS`, `macOS`, `Linux` and `Windows`
+    - `Android`, `iOS`, `iPadOS`, `macOS`, `Linux`, `Web` and `Windows`
     - `arm-v7a`, `arm-v7a-neon`, `arm64-v8a`, `x86` and `x86_64` architectures on Android
     - `Android API Level 24` or later
     - `arm64`, `arm64-simulator`, `arm64e`, `x86_64`, `x86_64-mac-catalyst` and `arm64-mac-catalyst`
@@ -15,6 +15,7 @@
     - `macOS 10.15+` deployment targets
     - `arm64` and `x86_64` architectures on Linux
     - `arm64` and `x86_64` architectures on Windows
+    - `wasm32` (WebAssembly) on Web, in both JavaScript and WebAssembly Flutter web builds
     - Can process Storage Access Framework (SAF) Uris on Android
     - 39 external libraries
 
@@ -76,6 +77,11 @@ The path is derived from the plugin Flutter already resolved, so the same snippe
 `build.gradle`, not in `settings.gradle`'s `dependencyResolutionManagement` (that breaks Flutter's engine resolution —
 see [BUILD.md](BUILD.md)). iOS, iPadOS and macOS need no extra repository step.
 
+**Web requires two response headers.** Serve your app with `Cross-Origin-Opener-Policy: same-origin` and
+`Cross-Origin-Embedder-Policy: require-corp`. See
+[Flutter Web Requirements](https://github.com/arthenica/ffmpeg-kit-next/wiki/Flutter-Web-Requirements) for
+`flutter run`, production servers and loading the bundle from another URL.
+
 #### 2.1 Build Variants and External Libraries
 
 `FFmpeg` includes built-in encoders for some popular formats. Some formats/codecs require external libraries to be
@@ -87,8 +93,8 @@ separate `pub.dev` packages such as `min`, `https`, `audio`, `video`, `full`, or
 
 #### 2.2 Platform Support
 
-The following table shows Android API level, iOS/iPadOS deployment target and macOS deployment target requirements in
-`ffmpeg_kit_next_flutter`.
+The plugin requires Flutter 3.41 / Dart 3.11 or later on every platform. The following table shows Android API level,
+iOS/iPadOS deployment target and macOS deployment target requirements in `ffmpeg_kit_next_flutter`.
 
 <table>
 <thead>
@@ -255,7 +261,23 @@ The following table shows Android API level, iOS/iPadOS deployment target and ma
   });
   ```
 
-8. Get previous `FFmpeg`, `FFprobe` and `MediaInformation` sessions from the session history.
+8. (Web) Use files. On web, paths in commands refer to FFmpegKit's in-memory virtual file storage.
+
+  ```dart
+  final input = await FFmpegKitLocalFile.fromFile(file);   // a web.File, e.g. from <input type="file">
+  final output = FFmpegKitVirtualFile.from('/out.mp4');
+
+  await FFmpegKit.executeWithArguments(['-i', input.getPath(), '-c:v', 'mpeg4', output.getPath()]);
+
+  final blob = await output.readAsBlob(type: 'video/mp4');
+  await output.delete();
+  await input.close();
+  ```
+
+   See [Use the Virtual File Storage on Web](https://github.com/arthenica/ffmpeg-kit-next/wiki/Using-FFmpegKitNext-on-Flutter#8-use-the-virtual-file-storage-on-web) and
+   [Web File System](https://github.com/arthenica/ffmpeg-kit-next/wiki/Web-File-System) for details.
+
+9. Get previous `FFmpeg`, `FFprobe` and `MediaInformation` sessions from the session history.
 
     ```dart
     FFmpegKit.listSessions().then((sessionList) {
@@ -277,7 +299,7 @@ The following table shows Android API level, iOS/iPadOS deployment target and ma
     });
     ```
 
-9. Enable global callbacks.
+10. Enable global callbacks.
 
 - Session type specific Complete Callbacks, called when an async session has been completed
 
@@ -311,13 +333,13 @@ The following table shows Android API level, iOS/iPadOS deployment target and ma
   });
   ```
 
-10. Register system fonts and custom font directories.
+11. Register system fonts and custom font directories.
 
     ```dart
     FFmpegKitConfig.setFontDirectoryList(["/system/fonts", "/System/Library/Fonts", "<folder with fonts>"]);
     ```
 
-11. (Android) Get the camera ids supported by the native camera input.
+12. (Android) Get the camera ids supported by the native camera input.
 
     ```dart
     FFmpegKitConfig.getSupportedCameraIds().then((cameraIds) {
@@ -327,7 +349,7 @@ The following table shows Android API level, iOS/iPadOS deployment target and ma
     });
     ```
 
-12. Use the Flutter API from an isolate.
+13. Use the Flutter API from an isolate.
 
     ```dart
     import 'package:flutter/services.dart';

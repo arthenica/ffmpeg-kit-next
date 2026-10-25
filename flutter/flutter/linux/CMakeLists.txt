@@ -67,3 +67,13 @@ set_target_properties(${PLUGIN_NAME} PROPERTIES
 # Tell Flutter's Linux tooling to copy every shared object into the app bundle so
 # the plugin's $ORIGIN rpath resolves them at runtime.
 set(ffmpeg_kit_next_flutter_bundled_libraries "${FFMPEG_KIT_SHARED_LIBS}" PARENT_SCOPE)
+
+# The licence texts of the native libraries ship with them, in a folder of their own in the app
+# bundle. The destination is relative to the install prefix, which Flutter's app CMake sets to the
+# bundle folder after this file has run.
+if(NOT IS_DIRECTORY "${FFMPEG_KIT_DIR}/licenses")
+  message(FATAL_ERROR "Missing licence texts in ${FFMPEG_KIT_DIR}/licenses. Run copy_local_binaries.sh linux again with a complete bundle.")
+endif()
+install(DIRECTORY "${FFMPEG_KIT_DIR}/licenses/"
+  DESTINATION "ffmpeg-kit-next-licenses"
+  COMPONENT Runtime)

@@ -16,7 +16,8 @@ with the desired external libraries:
 ./nix-ios.sh     -p <profile>   # produces prebuilt/bundle-apple-xcframework-ios-*/... (covers both iOS and iPadOS)
 ./nix-macos.sh   -p <profile>   # produces prebuilt/bundle-apple-xcframework-macos-*/...
 ./nix-linux.sh   -p <profile>   # produces prebuilt/bundle-linux/... (native host architecture only)
-./windows.sh # run in MSYS2 CLANG64; produces prebuilt/bundle-windows/ffmpeg-kit-next/
+./nix-web.sh     -p <profile>   # produces prebuilt/bundle-web-wasm32/ffmpeg-kit-next/
+./windows.sh                    # produces prebuilt/bundle-windows/ffmpeg-kit-next/
 ```
 
 Then copy the built artifacts into this plugin:
@@ -28,6 +29,7 @@ cd flutter/flutter
 ./copy_local_binaries.sh android ios
 ./copy_local_binaries.sh linux
 ./copy_local_binaries.sh windows
+./copy_local_binaries.sh web
 ```
 
 This places:
@@ -37,11 +39,17 @@ This places:
 | Android  | `android/libs-maven/` (local Maven repository)           | `android/build.gradle`              |
 | iOS/iPadOS     | `ios/ffmpeg_kit_next_flutter/Frameworks/*.xcframework`   | `ios/*.podspec` + `Package.swift`   |
 | macOS    | `macos/ffmpeg_kit_next_flutter/Frameworks/*.xcframework` | `macos/*.podspec` + `Package.swift` |
-| Linux    | `linux/Frameworks/ffmpeg-kit-next/{include,lib}`         | `linux/CMakeLists.txt`              |
-| Windows  | `windows/Frameworks/ffmpeg-kit-next/{include,lib,bin}`   | `windows/CMakeLists.txt`            |
+| Linux    | `linux/Frameworks/ffmpeg-kit-next/{include,lib,licenses}` | `linux/CMakeLists.txt`             |
+| Windows  | `windows/Frameworks/ffmpeg-kit-next/{include,lib,bin,licenses}` | `windows/CMakeLists.txt`     |
+| Web      | `web/ffmpeg-kit-next/{dist,lib,licenses}`, `LICENSE`, `SOURCE` | `pubspec.yaml` (web-only assets) |
 
 The copied binaries are ignored by git on purpose — every consumer rebuilds and
 copies them. Re-run `copy_local_binaries.sh` whenever you rebuild.
+
+The licence texts of the native libraries ship with them. Linux and Windows apps
+get them in an `ffmpeg-kit-next-licenses` folder next to the executable; web
+builds get `LICENSE`, `SOURCE` and `licenses/` next to the web bundle. Android and
+Apple carry them inside the AAR and the xcframeworks.
 
 On Android the copy is a small local Maven repository at
 `android/libs-maven/com/arthenica/ffmpeg-kit-next/<version>/` (e.g.
@@ -74,9 +82,9 @@ The default bundle is LGPL without optional external libraries. It is created
 at `prebuilt/bundle-windows/ffmpeg-kit-next` and copied to the git-ignored
 `flutter/flutter/windows/Frameworks/ffmpeg-kit-next` directory.
 
-The plugin copies its runtime DLLs beside the app executable. Distribute the
-entire Release directory together with the bundle licenses. Rebuild the bundle
-and repeat the copy step above whenever its native sources change.
+The plugin copies its runtime DLLs beside the app executable and their licence
+texts into an `ffmpeg-kit-next-licenses` folder there. Distribute the entire
+Release directory. Rebuild the bundle and repeat the copy step above whenever its native sources change.
 
 After adding the local dependency below, run `flutter build windows --debug` or
 `flutter build windows --release` from the consuming app.

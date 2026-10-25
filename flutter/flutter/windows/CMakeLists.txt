@@ -53,3 +53,14 @@ file(GLOB FFMPEG_KIT_RUNTIME_DLLS CONFIGURE_DEPENDS
 set(ffmpeg_kit_next_flutter_bundled_libraries
   ${FFMPEG_KIT_RUNTIME_DLLS}
   PARENT_SCOPE)
+
+# The licence texts of the DLLs ship with them, in a folder of their own beside the runner.
+# Flutter's app CMake sets its install prefix to $<TARGET_FILE_DIR:${BINARY_NAME}> only after this
+# file has run, and a generator expression in the prefix is not evaluated for a relative
+# destination, so name the runner's folder the same way here.
+if(NOT IS_DIRECTORY "${FFMPEG_KIT_BUNDLE}/licenses")
+  message(FATAL_ERROR "Missing licence texts in ${FFMPEG_KIT_BUNDLE}/licenses. Run copy_local_binaries.sh windows again with a complete bundle.")
+endif()
+install(DIRECTORY "${FFMPEG_KIT_BUNDLE}/licenses/"
+  DESTINATION "$<TARGET_FILE_DIR:${BINARY_NAME}>/ffmpeg-kit-next-licenses"
+  COMPONENT Runtime)

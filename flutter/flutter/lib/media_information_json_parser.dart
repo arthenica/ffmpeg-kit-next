@@ -55,7 +55,7 @@ class MediaInformationJsonParser {
       await FFmpegKitConfig.init();
       return _platform
           .mediaInformationJsonParserFromWithError(ffprobeJsonOutput)
-          .then((properties) => new MediaInformation(properties));
+          .then(MediaInformation.new);
     } on PlatformException catch (e, stack) {
       print("Plugin fromWithError error: ${e.message}");
       return Future.error("fromWithError failed.", stack);

@@ -28,11 +28,18 @@ import 'ffmpeg_kit_flutter_platform_interface.dart';
 const MethodChannel _channel =
     const MethodChannel('flutter.arthenica.com/ffmpeg_kit');
 
+const EventChannel _eventChannel =
+    const EventChannel('flutter.arthenica.com/ffmpeg_kit_event');
+
 /// An implementation of [FFmpegKitPlatform] that uses method channels.
 class MethodChannelFFmpegKit extends FFmpegKitPlatform {
   /// The MethodChannel that is being used by this implementation of the plugin.
   @visibleForTesting
   MethodChannel get channel => _channel;
+
+  @override
+  Stream<Map<dynamic, dynamic>> get events =>
+      _eventChannel.receiveBroadcastStream().cast<Map<dynamic, dynamic>>();
 
   // AbstractSession
 

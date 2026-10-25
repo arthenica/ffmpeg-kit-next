@@ -1,0 +1,14 @@
+# The web bundle is copied here by ./copy_local_binaries.sh web; only the placeholders are tracked.
+/ffmpeg-kit-next/*
+!/ffmpeg-kit-next/dist/
+!/ffmpeg-kit-next/lib/
+!/ffmpeg-kit-next/licenses/
+/ffmpeg-kit-next/dist/*
+!/ffmpeg-kit-next/dist/README.md
+!/ffmpeg-kit-next/dist/src/
+/ffmpeg-kit-next/dist/src/*
+!/ffmpeg-kit-next/dist/src/README.md
+/ffmpeg-kit-next/lib/*
+!/ffmpeg-kit-next/lib/README.md
+/ffmpeg-kit-next/licenses/*
+!/ffmpeg-kit-next/licenses/README.md

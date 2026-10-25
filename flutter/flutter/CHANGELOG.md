@@ -1,3 +1,10 @@
+## development
+- Adds Web platform support (`wasm32`), built on the `ffmpeg-kit-next-web` WebAssembly package. Support both JavaScript and WebAssembly Flutter web builds
+- Adds the web-only `FFmpegKitVirtualFile`, `FFmpegKitVirtualDirectory`, `FFmpegKitLocalFile` and `FFmpegKitWebConfig` classes
+- Requires Flutter 3.41 / Dart 3.11 or later on all platforms
+- Requires `ffmpeg_kit_next_flutter_platform_interface` 0.4.0, which adds `FFmpegKitPlatform.events`. Custom `FFmpegKitPlatform` implementations and mocks must override it
+- Ships the native libraries' licence texts with Linux, Windows and web builds: an `ffmpeg-kit-next-licenses` folder next to the Linux and Windows executables, and `LICENSE`, `SOURCE` and `licenses/` next to the web bundle
+
 ## 9.0.2
 - Bugfix release based on native 9.0.2 (FFmpeg 9.0.2)
 - Deprecates named pipes in favour of FFmpegKit input/output buffers and streams
