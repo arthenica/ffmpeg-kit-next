@@ -36,8 +36,8 @@ architecture of the host machine. Building `arm64` libraries requires an `arm64`
 libraries requires an `x86_64` Linux host.
 
 Unlike the other platforms, the Linux profile is also published under a versioned name that depends on the
-architecture and the `glibc` version of your machine, for example `linux-x86_64-glibc-2_40` on an `x86_64` host or
-`linux-arm64-glibc-2_40` on an `arm64` host. Both names select the same toolchain, so use `--list-profiles` to see the
+architecture and the `glibc` version of your machine, for example `linux-x86_64-glibc-2_42` on an `x86_64` host or
+`linux-arm64-glibc-2_42` on an `arm64` host. Both names select the same toolchain, so use `--list-profiles` to see the
 versioned name available locally when you need to state the `glibc` version explicitly.
 
 The build downloads `FFmpeg`, `RapidJSON` and enabled external libraries when they are not already available locally.
