@@ -467,10 +467,30 @@ fi
 # emscripten gives side modules no system libraries or ports, so -lz cannot
 # resolve there. The zlib port is linked into the main module instead (see
 # create_web_main_module), which exports its symbols to the side modules.
+#
+# The global dedup alone still leaves copies across side modules: FFEXTRALIBS
+# also pulls in the EXTRALIBS line of every dependency, so libavdevice.so
+# whole-included the archives of avfilter, avformat and avcodec, and so on down
+# the chain. Every exported function costs a wasm table slot in every pthread
+# worker at load time (updateGOT), and the copies took the full bundle to ~99k
+# exports (~38k unique), enough to run workers out of memory. So each archive
+# on a library's own line is wrapped in $(if $(filter <lib>,$(NAME)),...): it
+# expands only while FFmpeg links that library. Libraries above it import the
+# symbols from its side module, which is one of their dylink dependencies.
 if [[ -f ffbuild/config.mak ]]; then
   awk '
+    # first pass: collect FFmpeg library names from the <lib>_FFLIBS lines
+    NR == FNR {
+      if ($0 ~ /^[a-z0-9]+_FFLIBS=/) {
+        ffmpeglib[substr($0, 1, index($0, "_FFLIBS=") - 1)] = 1
+      }
+      next
+    }
     /^EXTRALIBS/ {
+      # already rewritten by an earlier run
+      if (index($0, "$(if $(filter ")) { print; next }
       eq = index($0, "=")
+      lib = substr($0, 11, eq - 11)
       n = split(substr($0, eq + 1), tok, " ")
       out = ""
       delete lineseen
@@ -486,6 +506,8 @@ if [[ -f ffbuild/config.mak ]]; then
           if (t in globalseen) continue
           globalseen[t] = 1
           lineseen[t] = 1
+          # scope it to its own library so dependent libraries do not re-include it
+          if (lib in ffmpeglib) t = "$(if $(filter " lib ",$(NAME))," t ")"
         }
         out = (out == "" ? t : out " " t)
       }
@@ -493,7 +515,7 @@ if [[ -f ffbuild/config.mak ]]; then
       next
     }
     { print }
-  ' ffbuild/config.mak >ffbuild/config.mak.dedup && mv ffbuild/config.mak.dedup ffbuild/config.mak || exit 1
+  ' ffbuild/config.mak ffbuild/config.mak >ffbuild/config.mak.dedup && mv ffbuild/config.mak.dedup ffbuild/config.mak || exit 1
 fi
 
 if [[ -z ${NO_OUTPUT_REDIRECTION} ]]; then
