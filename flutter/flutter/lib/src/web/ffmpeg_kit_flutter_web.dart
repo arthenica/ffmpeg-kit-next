@@ -469,10 +469,11 @@ class FFmpegKitFlutterWeb extends FFmpegKitPlatform {
         _loadConfirmed = true;
         final packageName = (await m.packages.getPackageName().toDart).toDart;
         final arch = (await m.archDetect.getArch().toDart).toDart;
+        final buildDate = (await m.config.getBuildDate().toDart).toDart;
         final prefix = packageName.isEmpty ? '' : '$packageName-';
         final versionPart = version.isEmpty ? 'unknown' : version;
         web.console.log(
-            'Loaded ffmpeg-kit-next-flutter-${prefix}web-$arch-$versionPart.'
+            'Loaded ffmpeg-kit-next-flutter-${prefix}web-$arch-$versionPart-$buildDate.'
                 .toJS);
       });
 

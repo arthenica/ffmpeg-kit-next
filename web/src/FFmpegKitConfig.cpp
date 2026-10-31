@@ -1784,7 +1784,7 @@ void *ffmpegKitInitialize() {
         const std::string packageName = ffmpegkit::Packages::getPackageName();
         const std::string packageNamePart = packageName.empty() ? "" : packageName + "-";
 
-        printf("Loaded ffmpeg-kit-next-%s%s-%s-%s.\n", packageNamePart.c_str(), ffmpegkit::ArchDetect::getArch().c_str(), ffmpegkit::FFmpegKitConfig::getVersion().c_str(), ffmpegkit::FFmpegKitConfig::getBuildDate().c_str());
+        printf("Loaded ffmpeg-kit-next-%sweb-%s-%s-%s.\n", packageNamePart.c_str(), ffmpegkit::ArchDetect::getArch().c_str(), ffmpegkit::FFmpegKitConfig::getVersion().c_str(), ffmpegkit::FFmpegKitConfig::getBuildDate().c_str());
     });
 
     return NULL;

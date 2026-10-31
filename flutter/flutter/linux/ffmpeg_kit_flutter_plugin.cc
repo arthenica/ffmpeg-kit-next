@@ -1051,7 +1051,7 @@ static FlMethodResponse* handle_method_call(FfmpegKitNextFlutterPlugin* self,
             FlValue *version = lookup(args, "version");
             const char *versionText = version != nullptr && fl_value_get_type(version) == FL_VALUE_TYPE_STRING ? fl_value_get_string(version) : nullptr;
             const std::string versionPart = versionText != nullptr && versionText[0] != '\0' ? versionText : "unknown";
-            g_message("Loaded ffmpeg-kit-next-flutter-%s%s-%s-%s.", packageNamePart.c_str(), FFMPEG_KIT_PLATFORM_NAME, ffmpegkit::ArchDetect::getArch().c_str(), versionPart.c_str());
+            g_print("Loaded ffmpeg-kit-next-flutter-%s%s-%s-%s-%s.\n", packageNamePart.c_str(), FFMPEG_KIT_PLATFORM_NAME, ffmpegkit::ArchDetect::getArch().c_str(), versionPart.c_str(), ffmpegkit::FFmpegKitConfig::getBuildDate().c_str());
         }
         return resp_null();
 

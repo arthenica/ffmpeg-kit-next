@@ -636,7 +636,8 @@ Value Dispatch(const std::shared_ptr<PluginData> &state, const std::string &meth
             const auto package = ffmpegkit::Packages::getPackageName();
             const auto package_part = package.empty() ? "" : package + "-";
             const auto version_part = version.empty() ? std::string("unknown") : version;
-            std::fprintf(stderr, "Loaded ffmpeg-kit-next-flutter-%swindows-%s-%s.\n", package_part.c_str(), ffmpegkit::ArchDetect::getArch().c_str(), version_part.c_str());
+            std::fprintf(stdout, "Loaded ffmpeg-kit-next-flutter-%swindows-%s-%s-%s.\n", package_part.c_str(), ffmpegkit::ArchDetect::getArch().c_str(), version_part.c_str(), Config::getBuildDate().c_str());
+            std::fflush(stdout);
         });
         return Value();
     }

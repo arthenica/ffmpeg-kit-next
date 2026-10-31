@@ -1207,7 +1207,12 @@ static void UnregisterPluginStream(NSString *url) { [FFmpegKitConfig unregisterF
       NSString *packageName = [Packages getPackageName];
       NSString *packageNamePart = [packageName length] > 0 ? [NSString stringWithFormat:@"%@-", packageName] : @"";
       NSString *versionPart = ([version isKindOfClass:[NSString class]] && [version length] > 0) ? version : @"unknown";
-      NSLog(@"Loaded ffmpeg-kit-next-flutter-%@%@-%@-%@.", packageNamePart, PLATFORM_NAME, [ArchDetect getArch], versionPart);
+      #if TARGET_OS_MACCATALYST
+          NSString *osType = @"maccatalyst";
+      #else
+          NSString *osType = PLATFORM_NAME;
+      #endif
+      NSLog(@"Loaded ffmpeg-kit-next-flutter-%@%@%@-%@-%@-%@.", packageNamePart, osType, [ArchDetect getMinSdk], [ArchDetect getArch], versionPart, [FFmpegKitConfig getBuildDate]);
     });
 
     result(nil);

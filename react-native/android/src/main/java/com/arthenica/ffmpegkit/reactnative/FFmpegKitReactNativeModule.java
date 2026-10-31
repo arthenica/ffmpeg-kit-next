@@ -668,7 +668,7 @@ public class FFmpegKitReactNativeModule extends NativeFFmpegKitReactNativeModule
           final String packageName = Packages.getPackageName();
           final String packageNamePart = packageName.isEmpty() ? "" : packageName + "-";
           final String versionPart = version != null && !version.isEmpty() ? version : "unknown";
-          Log.d(LIBRARY_NAME, String.format("Loaded ffmpeg-kit-next-react-native-%s%s-%s-%s.", packageNamePart, PLATFORM_NAME, AbiDetect.getAbi(), versionPart));
+          Log.i(LIBRARY_NAME, String.format("Loaded ffmpeg-kit-next-react-native-%s%s%s-%s-%s-%s.", packageNamePart, PLATFORM_NAME, AbiDetect.getNativeMinSdk(), AbiDetect.getAbi(), versionPart, FFmpegKitConfig.getBuildDate()));
       }
 
       promise.resolve(null);

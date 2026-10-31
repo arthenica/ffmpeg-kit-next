@@ -1782,7 +1782,7 @@ void *ffmpegKitInitialize() {
         const std::string packageName = ffmpegkit::Packages::getPackageName();
         const std::string packageNamePart = packageName.empty() ? "" : packageName + "-";
 
-        std::cout << "Loaded ffmpeg-kit-next-" << packageNamePart << ffmpegkit::ArchDetect::getArch() << "-" << ffmpegkit::FFmpegKitConfig::getVersion() << "-" << ffmpegkit::FFmpegKitConfig::getBuildDate() << "." << std::endl;
+        std::cout << "Loaded ffmpeg-kit-next-" << packageNamePart << "linux-" << ffmpegkit::ArchDetect::getArch() << "-" << ffmpegkit::FFmpegKitConfig::getVersion() << "-" << ffmpegkit::FFmpegKitConfig::getBuildDate() << "." << std::endl;
     });
 
     return NULL;

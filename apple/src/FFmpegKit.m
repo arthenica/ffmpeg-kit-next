@@ -44,7 +44,7 @@
     NSString* packageName = [Packages getPackageName];
     NSString* packageNamePart = [packageName length] > 0 ? [NSString stringWithFormat:@"%@-", packageName] : @"";
 
-    NSLog(@"Loaded ffmpeg-kit-next-%@%@-%@-%@%@-%@.\n", packageNamePart, [ArchDetect getArch], [FFmpegKitConfig getVersion], osType, [ArchDetect getMinSdk], [FFmpegKitConfig getBuildDate]);
+    NSLog(@"Loaded ffmpeg-kit-next-%@%@%@-%@-%@-%@.", packageNamePart, osType, [ArchDetect getMinSdk], [ArchDetect getArch], [FFmpegKitConfig getVersion], [FFmpegKitConfig getBuildDate]);
 }
 
 + (FFmpegSession *)executeWithArguments:(NSArray *)arguments {

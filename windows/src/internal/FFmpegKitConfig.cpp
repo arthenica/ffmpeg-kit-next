@@ -1825,7 +1825,7 @@ void *ffmpegKitInitialize() {
         const std::string packageName = ffmpegkit::internal::Packages::getPackageName();
         const std::string packageNamePart = packageName.empty() ? "" : packageName + "-";
 
-        std::cout << "Loaded ffmpeg-kit-next-" << packageNamePart << ffmpegkit::internal::ArchDetect::getArch() << "-" << ffmpegkit::internal::FFmpegKitConfig::getVersion() << "-" << ffmpegkit::internal::FFmpegKitConfig::getBuildDate() << "." << std::endl;
+        std::cout << "Loaded ffmpeg-kit-next-" << packageNamePart << "windows-" << ffmpegkit::internal::ArchDetect::getArch() << "-" << ffmpegkit::internal::FFmpegKitConfig::getVersion() << "-" << ffmpegkit::internal::FFmpegKitConfig::getBuildDate() << "." << std::endl;
     });
 
     return NULL;

@@ -100,8 +100,9 @@ class FFmpegKitWebLoader {
         'rebuild the web bundle and run ./copy_local_binaries.sh web',
       );
     }
-    // The Dart initializer prints the load confirmation itself.
-    await module.config.init(false.toJS).toDart;
+    // Keep the native load confirmation, as on the other platforms; the Dart
+    // initializer prints the plugin's own line after it.
+    await module.config.init(true.toJS).toDart;
     return module;
   }
 

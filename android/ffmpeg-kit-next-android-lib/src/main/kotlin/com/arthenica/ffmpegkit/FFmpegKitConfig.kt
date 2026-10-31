@@ -164,11 +164,11 @@ open class FFmpegKitConfig private constructor() {
             android.util.Log.i(
                 TAG,
                 String.format(
-                    "Loaded ffmpeg-kit-next-%s%s-%s-api%s-%s.",
+                    "Loaded ffmpeg-kit-next-%sandroid%s-%s-%s-%s.",
                     packageNamePart,
+                    NativeLoader.loadMinSdk(),
                     NativeLoader.loadAbi(),
                     NativeLoader.loadVersion(),
-                    NativeLoader.loadMinSdk(),
                     NativeLoader.loadBuildDate()
                 )
             )
