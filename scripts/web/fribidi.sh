@@ -1,29 +1,31 @@
 #!/bin/bash
 
+# SET BUILD FLAGS
+CROSS_FILE="${BASEDIR}"/src/"${LIB_NAME}"/package/crossfiles/$ARCH-$FFMPEG_KIT_BUILD_TYPE.meson
+
+mkdir -p "$(dirname "$CROSS_FILE")" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+create_mason_cross_file "$CROSS_FILE" || return 1
+
 # ALWAYS CLEAN THE PREVIOUS BUILD
-make distclean 2>/dev/null 1>/dev/null
+rm -rf "${BUILD_DIR}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 
-# REGENERATE BUILD FILES IF NECESSARY OR REQUESTED
-if [[ ! -f "${BASEDIR}"/src/"${LIB_NAME}"/configure ]] || [[ ${RECONF_fribidi} -eq 1 ]]; then
-  autoreconf_library "${LIB_NAME}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
-fi
+"${MESON:-meson}" setup "${BUILD_DIR}" \
+  --cross-file="$CROSS_FILE" \
+  --buildtype=release \
+  --default-library=static \
+  -Db_staticpic=true \
+  -Db_lto=false \
+  -Db_ndebug=if-release \
+  -Ddeprecated=false \
+  -Dbin=false \
+  -Dtests=false \
+  -Ddocs=false 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 
-emconfigure ./configure \
-  --prefix="${LIB_INSTALL_PREFIX}" \
-  --with-pic \
-  --enable-static \
-  --disable-shared \
-  --disable-fast-install \
-  --disable-debug \
-  --disable-deprecated \
-  --host="${HOST}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+cd "${BUILD_DIR}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 
-# WORKAROUND TO DISABLE BUILDING OF doc FOLDER (doc depends on c2man which is not available on all platforms)
-${SED_INLINE} 's/ doc / /g' "${BASEDIR}"/src/"${LIB_NAME}"/Makefile 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+ninja -j$(get_cpu_count) 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 
-emmake make -j$(get_cpu_count) 1>>"${BASEDIR}"/build.log 2>&1 || return 1
-
-emmake make install 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+ninja install 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 
 # MANUALLY COPY PKG-CONFIG FILES
-cp ./*.pc "${INSTALL_PKG_CONFIG_DIR}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+cp "${BUILD_DIR}"/meson-private/fribidi.pc "${INSTALL_PKG_CONFIG_DIR}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
