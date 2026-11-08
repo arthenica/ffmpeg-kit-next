@@ -13,7 +13,7 @@ get_library_source() {
     ;;
   chromaprint)
     SOURCE_REPO_URL="https://github.com/arthenica/chromaprint"
-    SOURCE_ID="v1.6.0"
+    SOURCE_ID="v1.6.2"
     SOURCE_TYPE="TAG"
     ;;
   cpu-features)
@@ -48,7 +48,7 @@ get_library_source() {
     ;;
   fribidi)
     SOURCE_REPO_URL="https://github.com/arthenica/fribidi"
-    SOURCE_ID="v1.0.16"
+    SOURCE_ID="v1.0.18"
     SOURCE_TYPE="TAG"
     ;;
   giflib)
@@ -103,7 +103,7 @@ get_library_source() {
     ;;
   libass)
     SOURCE_REPO_URL="https://github.com/arthenica/libass"
-    SOURCE_ID="0.17.4"
+    SOURCE_ID="0.17.5"
     SOURCE_TYPE="TAG"
     ;;
   libiconv)
@@ -133,7 +133,7 @@ get_library_source() {
     ;;
   libpng)
     SOURCE_REPO_URL="https://github.com/arthenica/libpng"
-    SOURCE_ID="v1.6.58"
+    SOURCE_ID="v1.6.59"
     SOURCE_TYPE="TAG"
     ;;
   libsamplerate)
@@ -198,7 +198,7 @@ get_library_source() {
     ;;
   openssl)
     SOURCE_REPO_URL="https://github.com/arthenica/openssl"
-    SOURCE_ID="openssl-3.5.7"
+    SOURCE_ID="openssl-3.5.9"
     SOURCE_TYPE="TAG"
     ;;
   opus)
@@ -228,7 +228,7 @@ get_library_source() {
     ;;
   snappy)
     SOURCE_REPO_URL="https://github.com/arthenica/snappy"
-    SOURCE_ID="1.2.2"
+    SOURCE_ID="1.3.1"
     SOURCE_TYPE="TAG"
     ;;
   soxr)
@@ -243,7 +243,7 @@ get_library_source() {
     ;;
   srt)
     SOURCE_REPO_URL="https://github.com/arthenica/srt"
-    SOURCE_ID="v1.5.5"
+    SOURCE_ID="v1.5.7"
     SOURCE_TYPE="TAG"
     ;;
   tesseract)
@@ -253,7 +253,7 @@ get_library_source() {
     ;;
   tiff)
     SOURCE_REPO_URL="https://github.com/arthenica/libtiff"
-    SOURCE_ID="v4.7.1"
+    SOURCE_ID="v4.7.2"
     SOURCE_TYPE="TAG"
     ;;
   twolame)

@@ -21,7 +21,7 @@ esac
 
 # SELECT THE MOST ACCURATE OpenSSL CONFIGURE TARGET PER PLATFORM AND ARCH
 #
-# NOTE: OpenSSL 3.5.7 has no dedicated tvOS or mac-catalyst target. For those
+# NOTE: OpenSSL 3.5.9 has no dedicated tvOS or mac-catalyst target. For those
 # slices we fall back to the generic iphoneos-cross cross target; the real
 # arch, sysroot and minimum-version come from ffmpeg-kit's CC/CFLAGS, so the
 # target only needs to supply the correct asm/bn settings. Configure honors

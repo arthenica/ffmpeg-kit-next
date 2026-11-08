@@ -16,7 +16,7 @@ export PKG_CONFIG_LIBDIR="$(get_web_pkg_config_libdir)"
 export PKG_CONFIG_PATH="$(get_web_pkg_config_libdir)"
 export EM_PKG_CONFIG_PATH="$(get_web_pkg_config_libdir)"
 
-# SRT 1.5.5 does not recognize CMAKE_SYSTEM_NAME=Emscripten. Add a dedicated
+# SRT 1.5.7 does not recognize CMAKE_SYSTEM_NAME=Emscripten. Add a dedicated
 # platform shortcut/branch so the CMake platform check passes without routing
 # wasm through Linux-only epoll/SO_BINDTODEVICE code.
 if ! grep -Fq 'set_if(EMSCRIPTEN' "${BASEDIR}"/src/"${LIB_NAME}"/CMakeLists.txt; then
@@ -92,4 +92,4 @@ emmake make -j$(get_cpu_count) 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 emmake make install 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 
 # CREATE PACKAGE CONFIG MANUALLY
-create_srt_package_config "1.5.5" || return 1
+create_srt_package_config "1.5.7" || return 1

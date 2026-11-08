@@ -22,4 +22,4 @@ emmake make -j$(get_cpu_count) 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 emmake make install 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 
 # CREATE PACKAGE CONFIG MANUALLY
-create_chromaprint_package_config "1.6.0" || return 1
+create_chromaprint_package_config "1.6.2" || return 1

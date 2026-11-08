@@ -57,4 +57,4 @@ make -j$(get_cpu_count) || return 1
 make install || return 1
 
 # CREATE PACKAGE CONFIG MANUALLY
-create_libpng_package_config "1.6.40" || return 1
+create_libpng_package_config "1.6.59" || return 1
