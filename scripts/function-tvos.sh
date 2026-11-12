@@ -139,7 +139,7 @@ get_app_specific_cflags() {
   libwebp | xvidcore)
     APP_FLAGS="-std=gnu17 -fno-common -DPIC"
     ;;
-  openh264 | x265)
+  libplacebo | moltenvk | openh264 | x265)
     APP_FLAGS="-Wno-unused-function"
     ;;
   sdl)
@@ -228,8 +228,16 @@ get_cxxflags() {
   rubberband)
     echo "-fno-rtti -Wno-c++11-narrowing -include stddef.h ${BITCODE_FLAGS} ${COMMON_CFLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
     ;;
-  libjxl)
+  libjxl | shaderc)
     echo "-std=c++17 ${BITCODE_FLAGS} ${COMMON_CFLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
+    ;;
+  libplacebo)
+    # NO -std, libplacebo SETS ITS OWN C++ STANDARD (cpp_std=c++20)
+    echo "-fno-exceptions -fno-rtti ${BITCODE_FLAGS} ${COMMON_CFLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
+    ;;
+  moltenvk)
+    # NO -std, MOLTENVK SETS ITS OWN C++ STANDARD (C++17). EXCEPTIONS AND RTTI STAY ON, SPIRV-Cross THROWS
+    echo "${BITCODE_FLAGS} ${COMMON_CFLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
     ;;
   libsvtav1)
     echo "-std=c++11 ${BITCODE_FLAGS} ${COMMON_CFLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"

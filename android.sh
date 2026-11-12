@@ -206,7 +206,7 @@ for run_arch in {0..12}; do
     . "${SCRIPT_DIR}"/scripts/main-android.sh "${ENABLED_LIBRARIES[@]}" || exit 1
 
     # CLEAR FLAGS
-    for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3}; do
+    for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3} ${LIBRARY_VULKAN_HEADERS} ${LIBRARY_SHADERC} ${LIBRARY_LIBPLACEBO} ${LIBRARY_MOLTENVK}; do
       library_name=$(get_library_name ${library})
       unset "$(echo "OK_${library_name}" | sed "s/\-/\_/g")"
       unset "$(echo "DEPENDENCY_REBUILT_${library_name}" | sed "s/\-/\_/g")"
@@ -285,6 +285,13 @@ if [[ -n ${ANDROID_ARCHITECTURES} ]]; then
       fi
 
       echo -e "DEBUG: Copied the license file of ${ENABLED_LIBRARY} successfully\n" 1>>"${BASEDIR}"/build.log 2>&1
+
+      RC=$(copy_bundled_license_files "$(get_library_name ${library})" "${LICENSE_BASEDIR}" lowercase)
+
+      if [[ ${RC} -ne 0 ]]; then
+        echo -e "ERROR: Failed to copy the bundled license files of ${ENABLED_LIBRARY}\n" 1>>"${BASEDIR}"/build.log 2>&1
+        exit 1
+      fi
     fi
   done
 

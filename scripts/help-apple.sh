@@ -14,7 +14,8 @@ iphonesimulator, mac-catalyst, appletvos, appletvsimulator, macosx, xros, xrsimu
 the prebuilt folder.\n\nPlease note that this script is only responsible of packaging existing frameworks, created by \
 'ios.sh', 'tvos.sh', 'macos.sh' and 'visionos.sh'. Running it will not compile any of these libraries again. Top level build scripts \
 ('ios.sh', 'tvos.sh', 'macos.sh', 'visionos.sh') must be used to build ffmpeg with support for a specific external library first. \
-After that this script should be used to create an umbrella xcframework.\n"
+After that this script should be used to create an umbrella xcframework.\n\nAdditionally, remember that frameworks built with libplacebo or moltenvk need the higher minimum \
+deployment targets of MoltenVK; pass --ios-target=15.0 --mac-catalyst-target=15.0 --macos-target=12.0 --tvos-target=15.0 when packaging them.\n"
   echo -e "Usage: ./$COMMAND ${PROFILE_USAGE}[OPTION]...\n"
   echo -e "Specify environment variables as VARIABLE=VALUE to override default build options.\n"
 
@@ -27,10 +28,10 @@ After that this script should be used to create an umbrella xcframework.\n"
   fi
   echo -e "  -f, --force\t\t\tignore warnings"
   echo -e "  --spm\t\t\t\tcreate a local Swift package (Package.swift) for the umbrella xcframework [no]"
-  echo -e "  --ios-target=ios sdk version\t\toverride minimum deployment target for iOS [15.0 with SDK 27+; 12.1 with SDK 26]"
-  echo -e "  --mac-catalyst-target=ios sdk version\toverride minimum deployment target for Mac Catalyst [15.0 with SDK 27+; 14.0 with SDK 26]"
-  echo -e "  --macos-target=macos sdk version\toverride minimum deployment target for macOS [11.0 with SDK 27+; 10.15 with SDK 26]"
-  echo -e "  --tvos-target=tvos sdk version\toverride minimum deployment target for tvOS [15.0 with SDK 27+; 11.0 with SDK 26]"
+  echo -e "  --ios-target=ios sdk version\t\toverride minimum deployment target for iOS [12.1; 15.0 with SDK 27+]"
+  echo -e "  --mac-catalyst-target=ios sdk version\toverride minimum deployment target for Mac Catalyst [14.0; 15.0 with SDK 27+]"
+  echo -e "  --macos-target=macos sdk version\toverride minimum deployment target for macOS [10.15; 11.0 with SDK 27+]"
+  echo -e "  --tvos-target=tvos sdk version\toverride minimum deployment target for tvOS [11.0; 15.0 with SDK 27+]"
   echo -e "  --visionos-target=visionos sdk version\toverride minimum deployment target for visionOS [1.0]\n"
 
   echo -e "Architectures:"

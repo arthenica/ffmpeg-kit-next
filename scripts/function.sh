@@ -233,6 +233,10 @@ get_library_name() {
   96) echo "liblc3" ;;
   97) echo "web-libiconv" ;;
   98) echo "zlib" ;;
+  99) echo "vulkan-headers" ;;
+  100) echo "shaderc" ;;
+  101) echo "libplacebo" ;;
+  102) echo "moltenvk" ;;
   esac
 }
 
@@ -337,6 +341,10 @@ from_library_name() {
   liblc3) echo 96 ;;
   web-iconv) echo 97 ;;
   zlib) echo 98 ;;
+  vulkan-headers) echo 99 ;;
+  shaderc) echo 100 ;;
+  libplacebo) echo 101 ;;
+  moltenvk) echo 102 ;;
   esac
 }
 
@@ -351,6 +359,10 @@ get_common_library_indexes() {
   echo "${LIBRARY_LIBSVTAV1}"
   echo "${LIBRARY_LIBJXL}"
   echo "${LIBRARY_LIBLC3}"
+  echo "${LIBRARY_VULKAN_HEADERS}"
+  echo "${LIBRARY_SHADERC}"
+  echo "${LIBRARY_LIBPLACEBO}"
+  echo "${LIBRARY_MOLTENVK}"
 }
 
 #
@@ -476,6 +488,24 @@ is_library_supported_on_platform() {
       echo "1"
     fi
     ;;
+
+  # ALL EXCEPT WEB
+  99 | 100 | 101)
+    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "web" ]]; then
+      echo "1"
+    else
+      echo "0"
+    fi
+    ;;
+
+  # ONLY IOS, MACOS, TVOS AND VISIONOS
+  102)
+    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "ios" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "macos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then
+      echo "0"
+    else
+      echo "1"
+    fi
+    ;;
   *)
     echo "1"
     ;;
@@ -566,6 +596,10 @@ get_package_config_file_name() {
   94) echo "SvtAv1Enc" ;;
   95) echo "libjxl" ;;
   96) echo "lc3" ;;
+  99) echo "vulkan" ;;
+  100) echo "shaderc" ;;
+  101) echo "libplacebo" ;;
+  102) echo "vulkan" ;;
   *) echo "$(get_library_name "$1")" ;;
   esac
 }
@@ -1035,6 +1069,12 @@ display_help_common_libraries() {
   echo -e "  --enable-lib-libass\t\tbuild with libass [no]"
   echo -e "  --enable-lib-libjxl\t\tbuild with libjxl [no]"
   echo -e "  --enable-lib-liblc3\t\tbuild with liblc3 [no]"
+  case ${FFMPEG_KIT_BUILD_TYPE} in
+  web) ;;
+  *)
+    echo -e "  --enable-lib-libplacebo\tbuild with libplacebo [no]"
+    ;;
+  esac
   echo -e "  --enable-lib-libsvtav1\tbuild with libsvtav1 [no]"
 
   case ${FFMPEG_KIT_BUILD_TYPE} in
@@ -1044,17 +1084,16 @@ display_help_common_libraries() {
   esac
 
   echo -e "  --enable-lib-libilbc\t\tbuild with libilbc [no]"
-  case ${FFMPEG_KIT_BUILD_TYPE} in
-  web | windows)
-    echo -e "  --enable-lib-libsamplerate\tbuild with libsamplerate [no]"
-    echo -e "  --enable-lib-libsndfile\tbuild with libsndfile [no]"
-    ;;
-  esac
   echo -e "  --enable-lib-libtheora\tbuild with libtheora [no]"
   echo -e "  --enable-lib-libvorbis\tbuild with libvorbis [no]"
   echo -e "  --enable-lib-libvpx\t\tbuild with libvpx [no]"
   echo -e "  --enable-lib-libwebp\t\tbuild with libwebp [no]"
   echo -e "  --enable-lib-libxml2\t\tbuild with libxml2 [no]"
+  case ${FFMPEG_KIT_BUILD_TYPE} in
+  ios | macos | tvos | visionos)
+    echo -e "  --enable-lib-moltenvk\t\tbuild with moltenvk [no]"
+    ;;
+  esac
   echo -e "  --enable-lib-opencore-amr\tbuild with opencore-amr [no]"
   echo -e "  --enable-lib-openh264\t\tbuild with openh264 [no]"
   echo -e "  --enable-lib-openssl\t\tbuild with openssl [no]"
@@ -1068,6 +1107,12 @@ display_help_common_libraries() {
   echo -e "  --enable-lib-tesseract\tbuild with tesseract [no]"
   echo -e "  --enable-lib-twolame\t\tbuild with twolame [no]"
   echo -e "  --enable-lib-vo-amrwbenc\tbuild with vo-amrwbenc [no]"
+  case ${FFMPEG_KIT_BUILD_TYPE} in
+  web) ;;
+  *)
+    echo -e "  --enable-lib-vulkan-headers\tbuild with vulkan-headers [no]"
+    ;;
+  esac
   echo -e "  --enable-lib-vvenc\t\tbuild with vvenc [no]"
 
   case ${FFMPEG_KIT_BUILD_TYPE} in
@@ -1349,7 +1394,7 @@ disable_library() {
 }
 
 enable_all_libraries() {
-  for library in {0..98}; do
+  for library in {0..102}; do
     if [[ ${GPL_ENABLED} == "yes" ]] || [[ $(is_gpl_licensed "${library}") -eq 1 ]]; then
       enable_library "$(get_library_name "${library}")" 1
     fi
@@ -1478,12 +1523,28 @@ set_library() {
   liblc3)
     ENABLED_LIBRARIES[LIBRARY_LIBLC3]=$2
     ;;
+  libplacebo)
+    ENABLED_LIBRARIES[LIBRARY_LIBPLACEBO]=$2
+    set_library "vulkan-headers" $2
+    set_library "shaderc" $2
+    set_library "moltenvk" $2
+    ;;
   libpng)
     ENABLED_LIBRARIES[LIBRARY_LIBPNG]=$2
     set_virtual_library "zlib" $2
     ;;
   libsvtav1)
     ENABLED_LIBRARIES[LIBRARY_LIBSVTAV1]=$2
+    ;;
+  moltenvk)
+    ENABLED_LIBRARIES[LIBRARY_MOLTENVK]=$2
+    set_library "vulkan-headers" $2
+    ;;
+  shaderc)
+    ENABLED_LIBRARIES[LIBRARY_SHADERC]=$2
+    ;;
+  vulkan-headers)
+    ENABLED_LIBRARIES[LIBRARY_VULKAN_HEADERS]=$2
     ;;
   libtheora)
     ENABLED_LIBRARIES[LIBRARY_LIBTHEORA]=$2
@@ -1938,6 +1999,16 @@ check_if_dependency_rebuilt() {
     set_dependency_rebuilt_flag "fontconfig"
     set_dependency_rebuilt_flag "libass"
     ;;
+  moltenvk)
+    set_dependency_rebuilt_flag "libplacebo"
+    ;;
+  shaderc)
+    set_dependency_rebuilt_flag "libplacebo"
+    ;;
+  vulkan-headers)
+    set_dependency_rebuilt_flag "libplacebo"
+    set_dependency_rebuilt_flag "moltenvk"
+    ;;
   libvorbis)
     set_dependency_rebuilt_flag "libtheora"
     ;;
@@ -2023,7 +2094,7 @@ print_enabled_libraries() {
   let enabled=0
 
   # SUPPLEMENTARY LIBRARIES NOT PRINTED
-  for library in {50..57} {59..92} ${LIBRARY_WEB_LIBICONV} ${LIBRARY_ZLIB} {0..36} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3}; do
+  for library in {50..57} {59..92} ${LIBRARY_WEB_LIBICONV} ${LIBRARY_ZLIB} {0..36} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3} {99..102}; do
     if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
       if [[ ${enabled} -ge 1 ]]; then
         echo -n ", "
@@ -2209,8 +2280,8 @@ get_external_library_license_path() {
   28 | 38) echo "${BASEDIR}/src/$(get_library_name "$1")/LICENSE.md " ;;
   46) echo "${BASEDIR}/src/$(get_library_name "$1")/leptonica-license.txt" ;;
   93) echo "${BASEDIR}/src/$(get_library_name "$1")/LICENSE.txt" ;;
-  43 |94) echo "${BASEDIR}/src/$(get_library_name "$1")/LICENSE.md" ;;
-  4 | 10 | 13 | 17 | 21 | 27 | 31 | 32 | 36 | 40 | 49 | 95 | 96 | 98) echo "${BASEDIR}/src/$(get_library_name "$1")/LICENSE" ;;
+  43 |94 | 99) echo "${BASEDIR}/src/$(get_library_name "$1")/LICENSE.md" ;;
+  4 | 10 | 13 | 17 | 21 | 27 | 31 | 32 | 36 | 40 | 49 | 95 | 96 | 98 | 100 | 101 | 102) echo "${BASEDIR}/src/$(get_library_name "$1")/LICENSE" ;;
   *) echo "${BASEDIR}/src/$(get_library_name "$1")/COPYING" ;;
   esac
 }
@@ -2237,6 +2308,90 @@ copy_external_library_license_file() {
     echo 1
     return
   fi
+  echo 0
+}
+
+# THE LICENSES OF THE THIRD PARTY CODE THAT A LIBRARY BUNDLES STATICALLY, ONE LINE PER FILE AS
+# "<component suffix> <path under src/<library name>/>". THESE ARE SHIPPED NEXT TO THE LICENSE OF THE LIBRARY ITSELF
+#
+# 1. <library name>
+#
+get_bundled_license_files() {
+  case $1 in
+  shaderc)
+    echo "glslang third_party/glslang/LICENSE.txt"
+    echo "spirv-tools third_party/spirv-tools/LICENSE"
+    echo "spirv-headers third_party/spirv-headers/LICENSE"
+    ;;
+  libplacebo)
+    # fast_float IS OFFERED UNDER Apache-2.0 OR MIT OR BSL-1.0, ALL THREE TEXTS ARE SHIPPED
+    echo "fast-float-apache 3rdparty/fast_float/LICENSE-APACHE"
+    echo "fast-float-mit 3rdparty/fast_float/LICENSE-MIT"
+    echo "fast-float-boost 3rdparty/fast_float/LICENSE-BOOST"
+    ;;
+  moltenvk)
+    # THE DEPENDENCIES MOLTENVK CLONES INTO External/ (moltenvk.sh). SPIRV-Cross IS OFFERED UNDER Apache-2.0 OR MIT AND ITS
+    # BUNDLED KHRONOS HEADERS (spirv.hpp, GLSL.std.450.h, ...) UNDER LicenseRef-KhronosFreeUse, ALL THREE TEXTS ARE SHIPPED.
+    # THE Vulkan-Headers NOTICE (LICENSE.md) ONLY POINTS AT ITS TWO TEXTS
+    echo "cereal External/cereal/LICENSE"
+    echo "spirv-cross-apache-2.0 External/SPIRV-Cross/LICENSE"
+    echo "spirv-cross-mit External/SPIRV-Cross/LICENSES/MIT.txt"
+    echo "spirv-cross-khronos External/SPIRV-Cross/LICENSES/LicenseRef-KhronosFreeUse.txt"
+    echo "spirv-headers External/SPIRV-Headers/LICENSE"
+    echo "spirv-tools External/SPIRV-Tools/LICENSE"
+    echo "vulkan-headers-apache-2.0 External/Vulkan-Headers/LICENSES/Apache-2.0.txt"
+    echo "vulkan-headers-mit External/Vulkan-Headers/LICENSES/MIT.txt"
+    ;;
+  vulkan-headers)
+    # THE REGISTERED LICENSE (LICENSE.md) IS ONLY A NOTICE THAT POINTS AT THESE TEXTS
+    echo "apache-2.0 LICENSES/Apache-2.0.txt"
+    echo "mit LICENSES/MIT.txt"
+    ;;
+  esac
+}
+
+# COPIES THE LICENSE FILES OF THE THIRD PARTY CODE THAT A LIBRARY BUNDLES STATICALLY (get_bundled_license_files) INTO A
+# DIRECTORY. A MISSING FILE IS AN ERROR. PRINTS 0 ON SUCCESS AND 1 ON FAILURE
+#
+# 1. <library name>
+# 2. <destination directory>
+# 3. <naming style>: "uppercase" FOR LICENSE.<LIB>-<SUFFIX> (APPLE AND WEB), "lowercase" FOR license_<lib>_<suffix>.txt (LINUX,
+#    WINDOWS AND ANDROID: ONLY [a-z0-9_], AS ANDROID res/raw REQUIRES)
+#
+copy_bundled_license_files() {
+  local LIB_NAME="$1"
+  local DESTINATION_DIRECTORY="$2"
+  local NAMING_STYLE="$3"
+  local ENTRY SUFFIX RELATIVE_PATH SOURCE_PATH DESTINATION_NAME
+
+  while read -r ENTRY; do
+    [[ -z ${ENTRY} ]] && continue
+    read -r SUFFIX RELATIVE_PATH <<<"${ENTRY}"
+    SOURCE_PATH="${BASEDIR}/src/${LIB_NAME}/${RELATIVE_PATH}"
+
+    case ${NAMING_STYLE} in
+    uppercase)
+      DESTINATION_NAME="LICENSE.$(echo "${LIB_NAME}-${SUFFIX}" | tr '[a-z]' '[A-Z]')"
+      ;;
+    lowercase)
+      DESTINATION_NAME="license_$(echo "${LIB_NAME}_${SUFFIX}" | tr '[A-Z]' '[a-z]' | sed 's/[^a-z0-9_]/_/g').txt"
+      ;;
+    *)
+      echo -e "ERROR: Unknown license naming style ${NAMING_STYLE}\n" 1>>"${BASEDIR}"/build.log 2>&1
+      echo 1
+      return 1
+      ;;
+    esac
+
+    if ! cp "${SOURCE_PATH}" "${DESTINATION_DIRECTORY}/${DESTINATION_NAME}" 1>>"${BASEDIR}"/build.log 2>&1; then
+      echo -e "ERROR: Failed to copy the bundled license file ${SOURCE_PATH} of ${LIB_NAME}\n" 1>>"${BASEDIR}"/build.log 2>&1
+      echo 1
+      return 1
+    fi
+
+    echo -e "DEBUG: Copied the bundled license file ${RELATIVE_PATH} of ${LIB_NAME} as ${DESTINATION_NAME}\n" 1>>"${BASEDIR}"/build.log 2>&1
+  done < <(get_bundled_license_files "${LIB_NAME}")
+
   echo 0
 }
 
@@ -2440,6 +2595,232 @@ clone_git_repository_with_tag() {
   fi
 
   echo ${RC}
+}
+
+# POINTS EVERY GITHUB SUBMODULE URL OF A CLONED REPOSITORY AT THE ARTHENICA FORK OF THE SAME NAME
+# AND INITIALISES ONLY THE REQUESTED SUBMODULES. NON-GITHUB URLS ARE LEFT UNTOUCHED.
+# THE RESULT IS PRINTED (0 ON SUCCESS, 1 ON FAILURE) AND ALSO RETURNED
+#
+# 1. <local repository path>
+# 2... <submodule path>
+#
+init_submodules_from_arthenica() {
+  local RC
+  local REPOSITORY_PATH="$1"
+  shift
+
+  if [[ ! -f "${REPOSITORY_PATH}/.gitmodules" ]]; then
+    echo -e "\nERROR: ${REPOSITORY_PATH}/.gitmodules not found\n" 1>>"${BASEDIR}"/build.log 2>&1
+    echo 1
+    return 1
+  fi
+
+  echo -e "INFO: Rewriting submodule urls of ${REPOSITORY_PATH} to the arthenica forks\n" 1>>"${BASEDIR}"/build.log 2>&1
+
+  ${SED_INLINE} -E \
+    -e 's#^([[:space:]]*url[[:space:]]*=[[:space:]]*)https://github\.com/[^/[:space:]]+/([^/[:space:]]+)[[:space:]]*$#\1https://github.com/arthenica/\2#' \
+    -e 's#^([[:space:]]*url[[:space:]]*=[[:space:]]*https://github\.com/arthenica/[^[:space:]]+)\.git$#\1#' \
+    "${REPOSITORY_PATH}/.gitmodules" 1>>"${BASEDIR}"/build.log 2>&1
+
+  RC=$?
+
+  if [[ ${RC} -ne 0 ]]; then
+    echo -e "\nERROR: Failed to rewrite submodule urls in ${REPOSITORY_PATH}/.gitmodules\n" 1>>"${BASEDIR}"/build.log 2>&1
+    echo 1
+    return 1
+  fi
+
+  (git -C "${REPOSITORY_PATH}" submodule sync 1>>"${BASEDIR}"/build.log 2>&1)
+
+  RC=$?
+
+  if [[ ${RC} -ne 0 ]]; then
+    echo -e "\nERROR: Failed to sync submodules of ${REPOSITORY_PATH}\n" 1>>"${BASEDIR}"/build.log 2>&1
+    echo 1
+    return 1
+  fi
+
+  echo -e "INFO: Initialising submodules $* of ${REPOSITORY_PATH}\n" 1>>"${BASEDIR}"/build.log 2>&1
+
+  (git -C "${REPOSITORY_PATH}" submodule update --init "$@" 1>>"${BASEDIR}"/build.log 2>&1)
+
+  RC=$?
+
+  if [[ ${RC} -ne 0 ]]; then
+    echo -e "\nERROR: Failed to initialise submodules $* of ${REPOSITORY_PATH}\n" 1>>"${BASEDIR}"/build.log 2>&1
+    echo 1
+    return 1
+  fi
+
+  echo 0
+}
+
+#
+# CLONES THE THIRD PARTY SOURCES OF SHADERC (GLSLANG, SPIRV-TOOLS AND SPIRV-HEADERS) FROM THE ARTHENICA FORKS AT THE
+# COMMITS LISTED IN THE DEPS FILE OF SHADERC. THIS IS THE ONLY PLACE THE THREE PINS ARE KEPT, SO THE HOST SPIR-V
+# COMPILER (build_host_spirv_compiler) USES THEM TOO. BY DEFAULT THEY GO INTO third_party/ OF THE SHADERC CHECKOUT,
+# WHERE THE CMAKE OF SHADERC LOOKS. A DIRECTORY THAT ALREADY HOLDS THE RIGHT COMMIT FROM THE RIGHT FORK IS KEPT
+# THE RESULT IS PRINTED (0 ON SUCCESS, 1 ON FAILURE) AND ALSO RETURNED
+#
+# 1. <shaderc source path>
+# 2. <glslang destination path, optional>
+# 3. <spirv-tools destination path, optional>
+# 4. <spirv-headers destination path, optional>
+#
+clone_shaderc_third_party() {
+  local SHADERC_SOURCE_PATH="$1"
+  local THIRD_PARTY THIRD_PARTY_NAME THIRD_PARTY_URL THIRD_PARTY_COMMIT THIRD_PARTY_PATH
+  local GLSLANG_PATH="${2:-${SHADERC_SOURCE_PATH}/third_party/glslang}"
+  local SPIRV_TOOLS_PATH="${3:-${SHADERC_SOURCE_PATH}/third_party/spirv-tools}"
+  local SPIRV_HEADERS_PATH="${4:-${SHADERC_SOURCE_PATH}/third_party/spirv-headers}"
+
+  for THIRD_PARTY in \
+    "glslang https://github.com/arthenica/glslang e1b562a8bed273a02f30b59b66a5d499793cede5" \
+    "spirv-tools https://github.com/arthenica/SPIRV-Tools ef96ed763b43b59b33b31b362f09a02b729fa1c9" \
+    "spirv-headers https://github.com/arthenica/SPIRV-Headers 04fd3caa1e8267e4d95c806cad901181728e1006"; do
+    read -r THIRD_PARTY_NAME THIRD_PARTY_URL THIRD_PARTY_COMMIT <<<"${THIRD_PARTY}"
+    case "${THIRD_PARTY_NAME}" in
+    glslang) THIRD_PARTY_PATH="${GLSLANG_PATH}" ;;
+    spirv-tools) THIRD_PARTY_PATH="${SPIRV_TOOLS_PATH}" ;;
+    spirv-headers) THIRD_PARTY_PATH="${SPIRV_HEADERS_PATH}" ;;
+    esac
+
+    if [[ $(git -C "${THIRD_PARTY_PATH}" rev-parse HEAD 2>/dev/null) == "${THIRD_PARTY_COMMIT}" ]] &&
+      [[ $(git -C "${THIRD_PARTY_PATH}" remote get-url origin 2>/dev/null) == "${THIRD_PARTY_URL}" ]]; then
+      echo -e "INFO: ${THIRD_PARTY_PATH} already holds commit ${THIRD_PARTY_COMMIT}\n" 1>>"${BASEDIR}"/build.log 2>&1
+      continue
+    fi
+
+    if ! rm -rf "${THIRD_PARTY_PATH}" 1>>"${BASEDIR}"/build.log 2>&1; then
+      echo -e "\nERROR: Failed to delete ${THIRD_PARTY_PATH}\n" 1>>"${BASEDIR}"/build.log 2>&1
+      echo 1
+      return 1
+    fi
+
+    if [[ $(clone_git_repository_with_commit_id "${THIRD_PARTY_URL}" "${THIRD_PARTY_PATH}" "${THIRD_PARTY_COMMIT}") -ne 0 ]]; then
+      echo -e "\nERROR: Failed to clone ${THIRD_PARTY_URL} at ${THIRD_PARTY_COMMIT} into ${THIRD_PARTY_PATH}\n" 1>>"${BASEDIR}"/build.log 2>&1
+      echo 1
+      return 1
+    fi
+  done
+
+  echo 0
+}
+
+host_spirv_headers_include_dir() {
+  echo "${FFMPEG_KIT_TMPDIR}/source/glslang/External/spirv-tools/external/spirv-headers/include"
+}
+
+#
+# BUILDS GLSLANG FOR THE BUILD MACHINE, ONCE, AND PRINTS THE ABSOLUTE PATH OF THE glslang EXECUTABLE (RETURNS 1 ON FAILURE).
+# FFMPEG COMPILES ITS BUILT-IN VULKAN SHADERS WITH IT (--glslc=). THE OPTIMIZER IS ON BECAUSE --enable-small PASSES -Os.
+# THE SOURCES ARE THE ARTHENICA FORKS AT THE PINS OF SHADERC, IN ${FFMPEG_KIT_TMPDIR}/source/glslang. NOTHING IS INSTALLED.
+# AN EXISTING WORKING BUILD IS REUSED AS IS (NO STALENESS CHECK). EVERYTHING RUNS IN A CLEAN ENVIRONMENT, BECAUSE THE
+# CALLERS HOLD CROSS COMPILE STATE (CC, CFLAGS, SDKROOT, ...) THAT MUST NOT REACH A BUILD FOR THE BUILD MACHINE
+#
+build_host_spirv_compiler() {
+  local HOST_GLSLANG_SOURCE="${FFMPEG_KIT_TMPDIR}/source/glslang"
+  local HOST_GLSLANG_BUILD="${HOST_GLSLANG_SOURCE}/build-host"
+  local HOST_GLSLANG="${HOST_GLSLANG_BUILD}/StandAlone/glslang"
+  local HOST_ENV=(env -i "PATH=${PATH}" "HOME=${HOME}" "TMPDIR=${TMPDIR:-/tmp}")
+  local HOST_CMAKE_ARGS=()
+  local CANDIDATE
+  local HOST_CC_PATH="" HOST_CXX_PATH=""
+  local START_TIME
+  local HOST_IS_MSYS2=0
+
+  if [[ -x "${HOST_GLSLANG}" ]] && "${HOST_ENV[@]}" "${HOST_GLSLANG}" -v 1>/dev/null 2>&1; then
+    echo -e "INFO: The host SPIR-V compiler already exists at ${HOST_GLSLANG}\n" 1>>"${BASEDIR}"/build.log 2>&1
+    echo "${HOST_GLSLANG}"
+    return 0
+  fi
+
+  echo -e "INFO: Building the host SPIR-V compiler in ${HOST_GLSLANG_BUILD}\n" 1>>"${BASEDIR}"/build.log 2>&1
+
+  # ON MSYS2 THE HOST COMPILER AND CMAKE ARE NATIVE WINDOWS PROGRAMS, AND env -i DROPS THE VARIABLES THEY NEED: WITHOUT TEMP AND
+  # TMP NATIVE clang FALLS BACK TO C:\Temp, AND SYSTEMROOT IS REQUIRED BY SOME WINDOWS APIS. THE SAME MSYSTEM CHECK AS
+  # function-windows.sh. OTHER HOSTS (LINUX, macOS) KEEP THE ENVIRONMENT ABOVE UNCHANGED
+  case "${MSYSTEM}" in
+  CLANG64 | CLANGARM64)
+    HOST_IS_MSYS2=1
+    for CANDIDATE in TEMP TMP SYSTEMROOT MSYSTEM; do
+      if [[ -n "${!CANDIDATE}" ]]; then
+        HOST_ENV+=("${CANDIDATE}=${!CANDIDATE}")
+      fi
+    done
+    ;;
+  esac
+
+  # THE HOST COMPILER. ON MSYS2 THE BUILD IS NATIVE, SO HOST AND TARGET ARE THE SAME MACHINE AND TOOLCHAIN
+  if [[ ${HOST_IS_MSYS2} -eq 1 ]]; then
+    HOST_CC_PATH=$(add_exe_suffix "${CC}")
+    HOST_CXX_PATH=$(add_exe_suffix "${CXX}")
+  elif [[ "$(uname)" == "Darwin" ]]; then
+    [[ -n "${DEVELOPER_DIR}" ]] && HOST_ENV+=("DEVELOPER_DIR=${DEVELOPER_DIR}")
+    HOST_CC_PATH=$("${HOST_ENV[@]}" xcrun --sdk macosx -f clang 2>>"${BASEDIR}"/build.log)
+    HOST_CXX_PATH=$("${HOST_ENV[@]}" xcrun --sdk macosx -f clang++ 2>>"${BASEDIR}"/build.log)
+    HOST_ENV+=("SDKROOT=$("${HOST_ENV[@]}" xcrun --sdk macosx --show-sdk-path 2>>"${BASEDIR}"/build.log)")
+  else
+    for CANDIDATE in cc gcc clang; do
+      if [[ -z "${HOST_CC_PATH}" ]] && command -v "${CANDIDATE}" 1>/dev/null 2>&1; then HOST_CC_PATH=$(command -v "${CANDIDATE}"); fi
+    done
+    for CANDIDATE in c++ g++ clang++; do
+      if [[ -z "${HOST_CXX_PATH}" ]] && command -v "${CANDIDATE}" 1>/dev/null 2>&1; then HOST_CXX_PATH=$(command -v "${CANDIDATE}"); fi
+    done
+  fi
+
+  if [[ -z "${HOST_CC_PATH}" ]] || [[ -z "${HOST_CXX_PATH}" ]]; then
+    echo -e "\nERROR: No host C and C++ compiler found for the host SPIR-V compiler\n" 1>>"${BASEDIR}"/build.log 2>&1
+    return 1
+  fi
+  HOST_ENV+=("CC=${HOST_CC_PATH}" "CXX=${HOST_CXX_PATH}")
+
+  if command -v ninja 1>/dev/null 2>&1; then
+    HOST_CMAKE_ARGS+=(-G Ninja)
+  fi
+
+  if [[ $(clone_shaderc_third_party "${HOST_GLSLANG_SOURCE}" \
+    "${HOST_GLSLANG_SOURCE}" \
+    "${HOST_GLSLANG_SOURCE}/External/spirv-tools" \
+    "${HOST_GLSLANG_SOURCE}/External/spirv-tools/external/spirv-headers") -ne 0 ]]; then
+    echo -e "\nERROR: Failed to clone the sources of the host SPIR-V compiler\n" 1>>"${BASEDIR}"/build.log 2>&1
+    return 1
+  fi
+
+  START_TIME=$(date +%s)
+
+  rm -rf "${HOST_GLSLANG_BUILD}" 1>>"${BASEDIR}"/build.log 2>&1
+  mkdir -p "${HOST_GLSLANG_BUILD}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+
+  "${HOST_ENV[@]}" cmake -Wno-dev "${HOST_CMAKE_ARGS[@]}" \
+    -S "${HOST_GLSLANG_SOURCE}" \
+    -B "${HOST_GLSLANG_BUILD}" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DENABLE_OPT=ON \
+    -DENABLE_HLSL=OFF \
+    -DBUILD_EXTERNAL=ON \
+    -DGLSLANG_TESTS=OFF \
+    -DENABLE_GLSLANG_BINARIES=ON \
+    -DGLSLANG_ENABLE_INSTALL=OFF \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DSPIRV_SKIP_EXECUTABLES=ON \
+    -DSPIRV_SKIP_TESTS=ON 1>>"${BASEDIR}"/build.log 2>&1 || {
+    echo -e "\nERROR: Failed to configure the host SPIR-V compiler\n" 1>>"${BASEDIR}"/build.log 2>&1
+    return 1
+  }
+
+  "${HOST_ENV[@]}" cmake --build "${HOST_GLSLANG_BUILD}" --target glslang-standalone -j "$(get_cpu_count)" 1>>"${BASEDIR}"/build.log 2>&1 || {
+    echo -e "\nERROR: Failed to build the host SPIR-V compiler\n" 1>>"${BASEDIR}"/build.log 2>&1
+    return 1
+  }
+
+  if ! "${HOST_ENV[@]}" "${HOST_GLSLANG}" -v 1>/dev/null 2>&1; then
+    echo -e "\nERROR: The host SPIR-V compiler ${HOST_GLSLANG} does not run\n" 1>>"${BASEDIR}"/build.log 2>&1
+    return 1
+  fi
+
+  echo -e "INFO: Built the host SPIR-V compiler ${HOST_GLSLANG} in $(($(date +%s) - START_TIME)) seconds\n" 1>>"${BASEDIR}"/build.log 2>&1
+  echo "${HOST_GLSLANG}"
 }
 
 #
@@ -2832,17 +3213,51 @@ library_is_downloaded() {
   fi
 }
 
+#
+# LIBRARIES THAT INSTALL ONLY HEADERS AND A PACKAGE CONFIG FILE, NO lib DIRECTORY. PRINTS THE NAME OF THE PACKAGE
+# CONFIG FILE (WITHOUT .pc) THAT THE RECIPE WRITES INTO THE SHARED pkgconfig DIRECTORY, OR NOTHING FOR OTHER LIBRARIES
+#
+# 1. <library name>
+#
+get_header_only_library_package_config_name() {
+  case $1 in
+  vulkan-headers) echo "vulkan" ;;
+  esac
+}
+
 library_is_installed() {
   local INSTALL_PATH=$1
   local LIB_NAME=$2
   local HEADER_COUNT
   local LIB_COUNT
+  local HEADER_ONLY_PC_NAME
 
   echo -e "DEBUG: Checking if ${LIB_NAME} is already built and installed at ${INSTALL_PATH}/${LIB_NAME}\n" 1>>"${BASEDIR}"/build.log 2>&1
 
   if [ ! -d "${INSTALL_PATH}"/"${LIB_NAME}" ]; then
     echo -e "INFO: ${INSTALL_PATH}/${LIB_NAME} directory not found\n" 1>>"${BASEDIR}"/build.log 2>&1
     echo 0
+    return
+  fi
+
+  HEADER_ONLY_PC_NAME=$(get_header_only_library_package_config_name "${LIB_NAME}")
+  if [[ -n ${HEADER_ONLY_PC_NAME} ]]; then
+    echo -e "DEBUG: ${LIB_NAME} is a header only library, checking its headers and ${INSTALL_PATH}/pkgconfig/${HEADER_ONLY_PC_NAME}.pc\n" 1>>"${BASEDIR}"/build.log 2>&1
+
+    if [[ -z $(ls -A "${INSTALL_PATH}/${LIB_NAME}/include" 2>/dev/null) ]]; then
+      echo -e "INFO: No headers found under ${INSTALL_PATH}/${LIB_NAME}/include\n" 1>>"${BASEDIR}"/build.log 2>&1
+      echo 0
+      return
+    fi
+
+    if [[ ! -f "${INSTALL_PATH}/pkgconfig/${HEADER_ONLY_PC_NAME}.pc" ]]; then
+      echo -e "INFO: ${INSTALL_PATH}/pkgconfig/${HEADER_ONLY_PC_NAME}.pc not found\n" 1>>"${BASEDIR}"/build.log 2>&1
+      echo 0
+      return
+    fi
+
+    echo -e "INFO: ${LIB_NAME} header only library is already built and installed\n" 1>>"${BASEDIR}"/build.log 2>&1
+    echo 1
     return
   fi
 

@@ -39,6 +39,7 @@ open class Packages {
             "libass",
             "libjxl",
             "liblc3",
+            "libplacebo",
             "libsvtav1",
             "iconv",
             "libilbc",

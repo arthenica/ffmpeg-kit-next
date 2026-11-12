@@ -17,9 +17,11 @@
     - `arm64` and `x86_64` architectures on Windows
     - `wasm32` (WebAssembly) on Web, in both JavaScript and WebAssembly Flutter web builds
     - Can process Storage Access Framework (SAF) Uris on Android
-    - 39 external libraries
+    - 40 external libraries
 
-      `chromaprint`, `dav1d`, `fontconfig`, `freetype`, `fribidi`, `gmp`, `gnutls`, `harfbuzz`, `kvazaar`, `lame`, `libaom`, `libass`, `libiconv`, `libilbc`, `libjxl`, `liblc3`, `libsvtav1`, `libtheora`, `libvorbis`, `libvpx`, `libwebp`, `libxml2`, `opencore-amr`, `openh264`, `openssl`, `opus`, `sdl`, `shine`, `snappy`, `soxr`, `speex`, `srt`, `tesseract`, `twolame`, `vo-amrwbenc`, `vvenc`, `zimg`, `zlib`
+      `chromaprint`, `dav1d`, `fontconfig`, `freetype`, `fribidi`, `gmp`, `gnutls`, `harfbuzz`, `kvazaar`, `lame`, `libaom`, `libass`, `libiconv`, `libilbc`, `libjxl`, `liblc3`, `libplacebo`, `libsvtav1`, `libtheora`, `libvorbis`, `libvpx`, `libwebp`, `libxml2`, `opencore-amr`, `openh264`, `openssl`, `opus`, `sdl`, `shine`, `snappy`, `soxr`, `speex`, `srt`, `tesseract`, `twolame`, `vo-amrwbenc`, `vvenc`, `zimg`, `zlib`
+
+      `libplacebo` is not available on web. Commands that use the `libplacebo` filter must pass `-init_hw_device vulkan`. When included, it raises the Apple minimum deployment targets to `iOS 15.0` and `macOS 12.0`.
 
     - 5 external libraries with GPL license
 

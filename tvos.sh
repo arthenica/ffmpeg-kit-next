@@ -103,6 +103,7 @@ while [ ! $# -eq 0 ]; do
     TARGET="${1#--target=}"
 
     export TVOS_MIN_VERSION=${TARGET}
+    TVOS_TARGET_EXPLICIT="1"
     ;;
   --package-name=*)
     PACKAGE_NAME="${1#--package-name=}"
@@ -169,6 +170,10 @@ if [[ ${NO_FRAMEWORK} -ne 1 ]] && [[ -z ${FFMPEG_KIT_XCF_BUILD} ]] && [[ ${ENABL
   disable_arch "arm64-simulator"
 fi
 
+# RAISE THE MINIMUM OS VERSIONS TO THE FLOORS REQUIRED BY THE XCODE SDK AND THE ENABLED LIBRARIES
+# EXPLICIT TARGETS BELOW THEM ARE NOT ALLOWED
+apply_apple_min_version_floors tvos
+
 echo -e "\nBuilding ffmpeg-kit-next ${BUILD_TYPE_ID}shared library for tvOS\n"
 echo -e -n "INFO: Building ffmpeg-kit-next ${BUILD_VERSION} ${BUILD_TYPE_ID}for tvOS: " 1>>"${BASEDIR}"/build.log 2>&1
 echo -e "$(date)\n" 1>>"${BASEDIR}"/build.log 2>&1
@@ -193,6 +198,9 @@ for gpl_library in {$LIBRARY_X264,$LIBRARY_XVIDCORE,$LIBRARY_X265,$LIBRARY_LIBVI
     fi
   fi
 done
+
+# VALIDATE VULKAN LIBRARIES
+validate_apple_vulkan_libraries
 
 trap fail_operation EXIT
 echo -n -e "\nDownloading sources: "
@@ -221,7 +229,7 @@ for run_arch in {0..12}; do
     TARGET_ARCH_LIST+=("${FULL_ARCH}")
 
     # CLEAR FLAGS
-    for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3}; do
+    for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3} ${LIBRARY_VULKAN_HEADERS} ${LIBRARY_SHADERC} ${LIBRARY_LIBPLACEBO} ${LIBRARY_MOLTENVK}; do
       library_name=$(get_library_name "${library}")
       unset "$(echo "OK_${library_name}" | sed "s/\-/\_/g")"
       unset "$(echo "DEPENDENCY_REBUILT_${library_name}" | sed "s/\-/\_/g")"

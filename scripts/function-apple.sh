@@ -266,6 +266,10 @@ create_ffmpeg_universal_library() {
         RC=$(copy_external_library_license "${library}" "${FFMPEG_UNIVERSAL_LIBRARY_DIRECTORY}"/LICENSE.${ENABLED_LIBRARY_NAME_UPPERCASE})
 
         [[ ${RC} -ne 0 ]] && exit_universal_library "${LIBRARY_NAME}"
+
+        RC=$(copy_bundled_license_files "${ENABLED_LIBRARY_NAME}" "${FFMPEG_UNIVERSAL_LIBRARY_DIRECTORY}" uppercase)
+
+        [[ ${RC} -ne 0 ]] && exit_universal_library "${LIBRARY_NAME}"
     fi
   done
 
@@ -428,6 +432,10 @@ create_ffmpeg_framework() {
             local ENABLED_LIBRARY_NAME_UPPERCASE=$(echo "${ENABLED_LIBRARY_NAME}" | tr '[a-z]' '[A-Z]')
 
             RC=$(copy_external_library_license "${library}" ${FFMPEG_LIB_FRAMEWORK_RESOURCE_PATH}/LICENSE.${ENABLED_LIBRARY_NAME_UPPERCASE})
+
+            [[ ${RC} -ne 0 ]] && exit_universal_library "${LIBRARY_NAME}"
+
+            RC=$(copy_bundled_license_files "${ENABLED_LIBRARY_NAME}" "${FFMPEG_LIB_FRAMEWORK_RESOURCE_PATH}" uppercase)
 
             [[ ${RC} -ne 0 ]] && exit_universal_library "${LIBRARY_NAME}"
         fi
@@ -617,7 +625,7 @@ set_default_min_ios_platform_version() {
     export IOS_MIN_VERSION=$DETECTED_IOS_SDK_VERSION
   elif [[ $(compare_versions "$DETECTED_IOS_SDK_VERSION" "27.0") -ge 0 ]]; then
     # SDK 27 libc++ no longer supports iOS deployment targets below 15.0.
-    export IOS_MIN_VERSION=15.0
+    export IOS_MIN_VERSION=${APPLE_SDK27_MIN_IOS_VERSION}
   else
     export IOS_MIN_VERSION=12.1
   fi
@@ -625,7 +633,7 @@ set_default_min_ios_platform_version() {
   if [[ $(compare_versions "$DETECTED_IOS_SDK_VERSION" "14.0") -le 0 ]]; then
     export MAC_CATALYST_MIN_VERSION=13.1
   elif [[ $(compare_versions "$DETECTED_IOS_SDK_VERSION" "27.0") -ge 0 ]]; then
-    export MAC_CATALYST_MIN_VERSION=15.0
+    export MAC_CATALYST_MIN_VERSION=${APPLE_SDK27_MIN_MAC_CATALYST_VERSION}
   else
     export MAC_CATALYST_MIN_VERSION=14.0
   fi
@@ -636,7 +644,7 @@ set_default_min_macos_platform_version() {
     export MACOS_MIN_VERSION=$DETECTED_MACOS_SDK_VERSION
   elif [[ $(compare_versions "$DETECTED_MACOS_SDK_VERSION" "27.0") -ge 0 ]]; then
     # SDK 27 libc++ requires macOS 11.0 or newer.
-    export MACOS_MIN_VERSION=11.0
+    export MACOS_MIN_VERSION=${APPLE_SDK27_MIN_MACOS_VERSION}
   else
     export MACOS_MIN_VERSION=10.15
   fi
@@ -647,7 +655,7 @@ set_default_min_tvos_platform_version() {
     export TVOS_MIN_VERSION=$DETECTED_TVOS_SDK_VERSION
   elif [[ $(compare_versions "$DETECTED_TVOS_SDK_VERSION" "27.0") -ge 0 ]]; then
     # SDK 27 libc++ requires tvOS 15.0 or newer.
-    export TVOS_MIN_VERSION=15.0
+    export TVOS_MIN_VERSION=${APPLE_SDK27_MIN_TVOS_VERSION}
   else
     export TVOS_MIN_VERSION=11.0
   fi
@@ -659,6 +667,131 @@ set_default_min_visionos_platform_version() {
   else
     export VISIONOS_MIN_VERSION=1.0
   fi
+}
+
+# RAISES THE MINIMUM OS VERSION OF EACH GIVEN PLATFORM (ios, mac-catalyst, macos,
+# tvos, visionos) TO THE FLOOR REQUIRED BY THE XCODE SDK AND BY THE ENABLED
+# LIBRARIES, OR FAILS WHEN THE USER REQUESTED A LOWER TARGET EXPLICITLY.
+#
+# TWO FLOORS EXIST, THE HIGHER ONE THAT APPLIES WINS. NO FLOOR, NO CHECK.
+# 1. XCODE SDK 27+ (APPLE_SDK27_MIN_*): SAME VALUES AS THE SDK 27 DEFAULTS
+# 2. MOLTENVK ENABLED, ALSO BY libplacebo (APPLE_MOLTENVK_MIN_*): MOLTENVK RUNTIME FLOORS
+#
+# OPTIONAL VARIABLES: APPLE_TARGET_FLAG_<PLATFORM> OVERRIDES THE OPTION NAME
+# (--target) USED IN MESSAGES, E.G. --ios-target IN apple.sh
+apply_apple_min_version_floors() {
+  local PLATFORM
+  for PLATFORM in "$@"; do
+    local SDK_VERSION FLAG_VARIABLE DEFAULT_FLAG MIN_VARIABLE EXPLICIT_VARIABLE SDK27_FLOOR MOLTENVK_FLOOR
+    case ${PLATFORM} in
+    ios)
+      SDK_VERSION=${DETECTED_IOS_SDK_VERSION}
+      MIN_VARIABLE=IOS_MIN_VERSION
+      EXPLICIT_VARIABLE=IOS_TARGET_EXPLICIT
+      FLAG_VARIABLE=APPLE_TARGET_FLAG_IOS
+      DEFAULT_FLAG=--target
+      SDK27_FLOOR=${APPLE_SDK27_MIN_IOS_VERSION}
+      MOLTENVK_FLOOR=${APPLE_MOLTENVK_MIN_IOS_VERSION}
+      ;;
+    mac-catalyst)
+      SDK_VERSION=${DETECTED_IOS_SDK_VERSION}
+      MIN_VARIABLE=MAC_CATALYST_MIN_VERSION
+      EXPLICIT_VARIABLE=MAC_CATALYST_TARGET_EXPLICIT
+      FLAG_VARIABLE=APPLE_TARGET_FLAG_MAC_CATALYST
+      DEFAULT_FLAG=--mac-catalyst-target
+      SDK27_FLOOR=${APPLE_SDK27_MIN_MAC_CATALYST_VERSION}
+      MOLTENVK_FLOOR=${APPLE_MOLTENVK_MIN_MAC_CATALYST_VERSION}
+      ;;
+    macos)
+      SDK_VERSION=${DETECTED_MACOS_SDK_VERSION}
+      MIN_VARIABLE=MACOS_MIN_VERSION
+      EXPLICIT_VARIABLE=MACOS_TARGET_EXPLICIT
+      FLAG_VARIABLE=APPLE_TARGET_FLAG_MACOS
+      DEFAULT_FLAG=--target
+      SDK27_FLOOR=${APPLE_SDK27_MIN_MACOS_VERSION}
+      MOLTENVK_FLOOR=${APPLE_MOLTENVK_MIN_MACOS_VERSION}
+      ;;
+    tvos)
+      SDK_VERSION=${DETECTED_TVOS_SDK_VERSION}
+      MIN_VARIABLE=TVOS_MIN_VERSION
+      EXPLICIT_VARIABLE=TVOS_TARGET_EXPLICIT
+      FLAG_VARIABLE=APPLE_TARGET_FLAG_TVOS
+      DEFAULT_FLAG=--target
+      SDK27_FLOOR=${APPLE_SDK27_MIN_TVOS_VERSION}
+      MOLTENVK_FLOOR=${APPLE_MOLTENVK_MIN_TVOS_VERSION}
+      ;;
+    visionos)
+      SDK_VERSION=${DETECTED_VISIONOS_SDK_VERSION}
+      MIN_VARIABLE=VISIONOS_MIN_VERSION
+      EXPLICIT_VARIABLE=VISIONOS_TARGET_EXPLICIT
+      FLAG_VARIABLE=APPLE_TARGET_FLAG_VISIONOS
+      DEFAULT_FLAG=--target
+      SDK27_FLOOR=""
+      MOLTENVK_FLOOR=${APPLE_MOLTENVK_MIN_VISIONOS_VERSION}
+      ;;
+    esac
+
+    # COLLECT THE FLOORS THAT APPLY
+    local SDK27_APPLIES=0 MOLTENVK_APPLIES=0 FLOOR=""
+    if [[ -n ${SDK27_FLOOR} && -n ${SDK_VERSION} && $(compare_versions "${SDK_VERSION}" "27.0") -ge 0 ]]; then
+      SDK27_APPLIES=1
+      FLOOR=${SDK27_FLOOR}
+    fi
+    if [[ ${ENABLED_LIBRARIES[$LIBRARY_MOLTENVK]:-0} -eq 1 ]]; then
+      MOLTENVK_APPLIES=1
+      if [[ -z ${FLOOR} || $(compare_versions "${MOLTENVK_FLOOR}" "${FLOOR}") -gt 0 ]]; then
+        FLOOR=${MOLTENVK_FLOOR}
+      fi
+    fi
+
+    # NO FLOOR, NO CHECK
+    if [[ -z ${FLOOR} ]]; then
+      continue
+    fi
+
+    # NAME THE FLOORS THAT SET THE EFFECTIVE FLOOR
+    local REASON=""
+    if [[ ${SDK27_APPLIES} -eq 1 && $(compare_versions "${SDK27_FLOOR}" "${FLOOR}") -eq 0 ]]; then
+      REASON="Xcode SDK ${SDK_VERSION}"
+    fi
+    if [[ ${MOLTENVK_APPLIES} -eq 1 && $(compare_versions "${MOLTENVK_FLOOR}" "${FLOOR}") -eq 0 ]]; then
+      REASON="${REASON:+${REASON} and }MoltenVK"
+    fi
+
+    local CURRENT=${!MIN_VARIABLE}
+    if [[ $(compare_versions "${CURRENT}" "${FLOOR}") -lt 0 ]]; then
+      if [[ -n ${!EXPLICIT_VARIABLE} ]]; then
+        local FLAG=${!FLAG_VARIABLE:-${DEFAULT_FLAG}}
+        echo -e "\n(*): Invalid value for ${FLAG}: '${CURRENT}' is below the minimum ${FLOOR} required for ${PLATFORM} by ${REASON}.\n"
+        echo -e "\n(*): Invalid value for ${FLAG}: '${CURRENT}' is below the minimum ${FLOOR} required for ${PLATFORM} by ${REASON}.\n" 1>>"${BASEDIR}"/build.log 2>&1
+        exit 1
+      fi
+
+      export "${MIN_VARIABLE}=${FLOOR}"
+      echo -e "INFO: Raised the minimum ${PLATFORM} deployment target from ${CURRENT} to ${FLOOR}, required by ${REASON}.\n"
+      echo -e "INFO: Raised the minimum ${PLATFORM} deployment target from ${CURRENT} to ${FLOOR}, required by ${REASON}.\n" 1>>"${BASEDIR}"/build.log 2>&1
+    fi
+  done
+}
+
+# FAILS WHEN LIBPLACEBO OR VULKAN-HEADERS IS ENABLED WITHOUT MOLTENVK
+validate_apple_vulkan_libraries() {
+  if [[ ${ENABLED_LIBRARIES[$LIBRARY_MOLTENVK]:-0} -eq 1 ]]; then
+    return
+  fi
+
+  local MESSAGE
+  if [[ ${ENABLED_LIBRARIES[$LIBRARY_LIBPLACEBO]:-0} -eq 1 ]]; then
+    MESSAGE="libplacebo on Apple platforms needs moltenvk, which provides the Vulkan driver. Do not disable moltenvk when libplacebo is enabled."
+  elif [[ ${ENABLED_LIBRARIES[$LIBRARY_VULKAN_HEADERS]:-0} -eq 1 ]]; then
+    MESSAGE="vulkan-headers on Apple platforms needs moltenvk, which provides the Vulkan driver. Use --enable-lib-moltenvk, which also enables vulkan-headers."
+  else
+    return
+  fi
+
+  echo -e "\n(*) Invalid configuration detected. ${MESSAGE}\n"
+  echo -e "\n(*) Invalid configuration detected. ${MESSAGE}\n" 1>>"${BASEDIR}"/build.log 2>&1
+  exit 1
 }
 
 #
@@ -1557,6 +1690,38 @@ Libs: -L\${libdir} -lpng
 EOF
 }
 
+create_libplacebo_package_config() {
+  local LIBPLACEBO_VERSION="$1"
+
+  # libplacebo HAS C++ SOURCES, SO IT ALSO NEEDS THE C++ RUNTIME. SHADERC ARRIVES THROUGH Requires
+  cat >"${INSTALL_PKG_CONFIG_DIR}/libplacebo.pc" <<EOF
+prefix=${LIB_INSTALL_BASE}/libplacebo
+exec_prefix=\${prefix}
+libdir=\${exec_prefix}/lib
+includedir=\${prefix}/include
+
+pl_has_d3d11=0
+pl_has_dovi=1
+pl_has_gl_proc_addr=1
+pl_has_glslang=0
+pl_has_lcms=0
+pl_has_libdovi=0
+pl_has_opengl=0
+pl_has_shaderc=1
+pl_has_vk_proc_addr=0
+pl_has_vulkan=1
+pl_has_xxhash=0
+
+Name: libplacebo
+Description: Reusable library for GPU-accelerated video/image rendering
+Version: ${LIBPLACEBO_VERSION}
+Requires: shaderc >= 2019.1
+Libs: -L\${libdir} -lplacebo -lm
+Libs.private: -lc++
+Cflags: -I\${includedir} -DPL_HAVE_PTHREAD -DPL_STATIC
+EOF
+}
+
 create_libvorbis_package_config() {
   local LIBVORBIS_VERSION="$1"
 
@@ -1626,6 +1791,81 @@ Libs: -L\${libdir} -lxml2
 Libs.private:   -lz -lm
 Cflags: -I\${includedir} -I\${includedir}/libxml2
 EOF
+}
+
+#
+# REWRITES THE vulkan.pc WRITTEN BY vulkan-headers (create_vulkan_package_config) SO IT ALSO LINKS THE STATIC MOLTENVK
+# LIBRARY, WHICH FFMPEG USES WITH --enable-vulkan-static. THE HEADERS STAY THE ONES OF vulkan-headers. EVERYTHING IS IN
+# Libs, NOT Libs.private, BECAUSE FFMPEG READS THIS FILE WITHOUT --static
+#
+# 1. <version>, THE VERSION OF THE VULKAN HEADERS
+#
+create_moltenvk_package_config() {
+  local VULKAN_VERSION="$1"
+  local MOLTENVK_FRAMEWORKS="-framework Metal -framework Foundation -framework QuartzCore -framework IOSurface -framework CoreGraphics"
+
+  case ${ARCH} in
+  *-mac-catalyst)
+    # MOLTENVK COMPILES ITS macOS IOKit CODE FOR MAC CATALYST TOO (MVK_MACOS COVERS TARGET_OS_MACCATALYST), BUT ITS VIEW
+    # CODE IS THE iOS ONE: THE CATALYST SDK DEFINES __IPHONE_OS_VERSION_MAX_ALLOWED, SO mvk_vulkan.h SETS
+    # VK_USE_PLATFORM_IOS_MVK AND MOLTENVK USES UIView AND UIScreen. ITS AppKit CODE IS FOR MVK_MACOS && !MVK_MACCAT ONLY
+    MOLTENVK_FRAMEWORKS+=" -framework IOKit -framework UIKit"
+    ;;
+  *)
+    case ${FFMPEG_KIT_BUILD_TYPE} in
+    macos)
+      MOLTENVK_FRAMEWORKS+=" -framework IOKit -framework AppKit"
+      ;;
+    *)
+      MOLTENVK_FRAMEWORKS+=" -framework UIKit"
+      ;;
+    esac
+    ;;
+  esac
+
+  cat >"${INSTALL_PKG_CONFIG_DIR}/vulkan.pc" <<EOF
+prefix=${LIB_INSTALL_BASE}/moltenvk
+exec_prefix=\${prefix}
+libdir=\${exec_prefix}/lib
+includedir=${LIB_INSTALL_BASE}/vulkan-headers/include
+
+Name: vulkan
+Description: Vulkan Headers and the static MoltenVK Vulkan implementation
+Version: ${VULKAN_VERSION}
+
+Libs: -L\${libdir} -lMoltenVK ${MOLTENVK_FRAMEWORKS} -lc++
+Cflags: -I\${includedir}
+EOF
+}
+
+#
+# 1. shaderc version
+# 2. library directory name (lib or lib64)
+#
+create_shaderc_package_config() {
+  local SHADERC_VERSION="$1"
+  local SHADERC_LIB_DIR_NAME="$2"
+  local SHADERC_PC_NAME
+
+  # BOTH FILES DESCRIBE THE STATIC BUNDLE OF SHADERC, GLSLANG AND SPIRV-TOOLS (libshaderc_combined.a), WHICH NEEDS THE
+  # C++ RUNTIME. libplacebo READS shaderc.pc
+  for SHADERC_PC_NAME in shaderc shaderc_combined; do
+    cat >"${INSTALL_PKG_CONFIG_DIR}/${SHADERC_PC_NAME}.pc" <<EOF || return 1
+prefix=${LIB_INSTALL_BASE}/shaderc
+exec_prefix=\${prefix}
+libdir=\${exec_prefix}/${SHADERC_LIB_DIR_NAME}
+includedir=\${prefix}/include
+
+Name: shaderc
+Description: Tools and libraries for Vulkan shader compilation
+Version: ${SHADERC_VERSION}
+URL: https://github.com/google/shaderc
+
+Libs: -L\${libdir} -lshaderc_combined
+Libs.private: -lc++
+Cflags: -I\${includedir}
+EOF
+  done
 }
 
 create_snappy_package_config() {
@@ -1704,6 +1944,23 @@ Version: ${UUID_VERSION}
 Requires:
 Cflags: -I\${includedir}
 Libs: -L\${libdir}
+EOF
+}
+
+create_vulkan_package_config() {
+  local VULKAN_VERSION="$1"
+
+  # HEADERS ONLY. moltenvk REWRITES THIS FILE WITH ITS STATIC LIBRARY (create_moltenvk_package_config)
+  cat >"${INSTALL_PKG_CONFIG_DIR}/vulkan.pc" <<EOF
+prefix=${LIB_INSTALL_BASE}/vulkan-headers
+exec_prefix=\${prefix}
+includedir=\${prefix}/include
+
+Name: vulkan
+Description: Vulkan Headers
+Version: ${VULKAN_VERSION}
+
+Cflags: -I\${includedir}
 EOF
 }
 

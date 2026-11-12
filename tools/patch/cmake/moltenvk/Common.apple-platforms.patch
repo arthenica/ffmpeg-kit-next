@@ -1,0 +1,20 @@
+--- a/Common/CMakeLists.txt
++++ b/Common/CMakeLists.txt
+@@ -17,8 +17,15 @@ target_include_directories(MoltenVK_Common PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+ 
+ find_library(FOUNDATION_LIBRARY Foundation REQUIRED)
+ find_library(METAL_LIBRARY Metal REQUIRED)
+-find_library(APPKIT_LIBRARY AppKit REQUIRED)
+-find_library(IOKIT_LIBRARY IOKit REQUIRED)
++if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
++	find_library(APPKIT_LIBRARY AppKit REQUIRED)
++else()
++	find_library(APPKIT_LIBRARY UIKit REQUIRED)
++endif()
++find_library(IOKIT_LIBRARY IOKit)
++if(NOT IOKIT_LIBRARY)
++	set(IOKIT_LIBRARY "")
++endif()
+ find_library(IOSURFACE_LIBRARY IOSurface REQUIRED)
+ find_library(QUARTZCORE_LIBRARY QuartzCore REQUIRED)
+ target_link_libraries(MoltenVK_Common PUBLIC

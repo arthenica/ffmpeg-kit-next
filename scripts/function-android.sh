@@ -31,7 +31,7 @@ set_default_min_android_platform_version() {
 }
 
 get_android_app_stl() {
-  if [[ ${ENABLED_LIBRARIES[$LIBRARY_X265]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_VVENC]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_LIBSVTAV1]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_LIBJXL]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_TESSERACT]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_OPENH264]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_SNAPPY]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_RUBBERBAND]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_ZIMG]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_SRT]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_CHROMAPRINT]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_LIBILBC]} -eq 1 ]] || [[ -n ${CUSTOM_LIBRARY_USES_CPP} ]]; then
+  if [[ ${ENABLED_LIBRARIES[$LIBRARY_X265]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_VVENC]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_LIBSVTAV1]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_LIBJXL]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_TESSERACT]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_OPENH264]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_SNAPPY]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_RUBBERBAND]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_ZIMG]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_SRT]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_CHROMAPRINT]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_LIBILBC]} -eq 1 ]] || [[ ${ENABLED_LIBRARIES[$LIBRARY_LIBPLACEBO]} -eq 1 ]] || [[ -n ${CUSTOM_LIBRARY_USES_CPP} ]]; then
     echo "c++_shared"
   else
     echo "none"
@@ -299,7 +299,7 @@ get_app_specific_cflags() {
   libuuid)
     APP_FLAGS="-std=gnu99 -Wno-unused-function -DHAVE_SYS_FILE_H=1"
     ;;
-  libvpx | openssl | shine | srt)
+  libplacebo | libvpx | openssl | shine | srt)
     APP_FLAGS="-Wno-unused-function"
     ;;
   openh264)
@@ -372,8 +372,12 @@ get_cxxflags() {
   opencore-amr)
     echo "${COMMON_FLAGS} ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
     ;;
-  libjxl)
+  libjxl | shaderc)
     echo "${COMMON_FLAGS} -std=c++17 ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
+    ;;
+  libplacebo)
+    # NO -std, libplacebo SETS ITS OWN C++ STANDARD (cpp_std=c++20)
+    echo "${COMMON_FLAGS} -fno-exceptions -fno-rtti ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
     ;;
   libsvtav1)
     echo "${COMMON_FLAGS} -std=c++11 ${OPTIMIZATION_FLAGS} ${EXTRA_CXXFLAGS}"
@@ -420,7 +424,7 @@ get_common_linked_libraries() {
   libvpx)
     echo "-lc -lm ${COMMON_LIBRARY_PATHS}"
     ;;
-  libjxl | libsvtav1 | srt | tesseract | vvenc | x265)
+  libjxl | libplacebo | libsvtav1 | shaderc | srt | tesseract | vvenc | x265)
     echo "-lc -lm -ldl -llog -lc++_shared ${COMMON_LIBRARY_PATHS}"
     ;;
   *)
@@ -695,6 +699,38 @@ Cflags: -I\${includedir}
 EOF
 }
 
+create_libplacebo_package_config() {
+  local LIBPLACEBO_VERSION="$1"
+
+  # libplacebo HAS C++ SOURCES, SO IT ALSO NEEDS THE C++ RUNTIME. SHADERC ARRIVES THROUGH Requires
+  cat >"${INSTALL_PKG_CONFIG_DIR}/libplacebo.pc" <<EOF
+prefix=${LIB_INSTALL_BASE}/libplacebo
+exec_prefix=\${prefix}
+libdir=\${exec_prefix}/lib
+includedir=\${prefix}/include
+
+pl_has_d3d11=0
+pl_has_dovi=1
+pl_has_gl_proc_addr=1
+pl_has_glslang=0
+pl_has_lcms=0
+pl_has_libdovi=0
+pl_has_opengl=0
+pl_has_shaderc=1
+pl_has_vk_proc_addr=0
+pl_has_vulkan=1
+pl_has_xxhash=0
+
+Name: libplacebo
+Description: Reusable library for GPU-accelerated video/image rendering
+Version: ${LIBPLACEBO_VERSION}
+Requires: shaderc >= 2019.1
+Libs: -L\${libdir} -lplacebo -lm -pthread
+Libs.private: -lc++_shared
+Cflags: -I\${includedir} -DPL_HAVE_PTHREAD -DPTHREAD_HAS_SETCLOCK -pthread -DPL_STATIC
+EOF
+}
+
 create_libvorbis_package_config() {
   local LIBVORBIS_VERSION="$1"
 
@@ -764,6 +800,36 @@ Libs: -L\${libdir} -lxml2
 Libs.private:   -lz -lm
 Cflags: -I\${includedir} -I\${includedir}/libxml2
 EOF
+}
+
+#
+# 1. shaderc version
+# 2. library directory name (lib or lib64)
+#
+create_shaderc_package_config() {
+  local SHADERC_VERSION="$1"
+  local SHADERC_LIB_DIR_NAME="$2"
+  local SHADERC_PC_NAME
+
+  # BOTH FILES DESCRIBE THE STATIC BUNDLE OF SHADERC, GLSLANG AND SPIRV-TOOLS (libshaderc_combined.a), WHICH NEEDS THE
+  # C++ RUNTIME. libplacebo READS shaderc.pc
+  for SHADERC_PC_NAME in shaderc shaderc_combined; do
+    cat >"${INSTALL_PKG_CONFIG_DIR}/${SHADERC_PC_NAME}.pc" <<EOF || return 1
+prefix=${LIB_INSTALL_BASE}/shaderc
+exec_prefix=\${prefix}
+libdir=\${exec_prefix}/${SHADERC_LIB_DIR_NAME}
+includedir=\${prefix}/include
+
+Name: shaderc
+Description: Tools and libraries for Vulkan shader compilation
+Version: ${SHADERC_VERSION}
+URL: https://github.com/google/shaderc
+
+Libs: -L\${libdir} -lshaderc_combined
+Libs.private: -lc++_shared -lm
+Cflags: -I\${includedir}
+EOF
+  done
 }
 
 create_snappy_package_config() {
@@ -899,6 +965,23 @@ Version: ${XVIDCORE_VERSION}
 
 Requires:
 Libs: -L\${libdir}
+Cflags: -I\${includedir}
+EOF
+}
+
+create_vulkan_package_config() {
+  local VULKAN_VERSION="$1"
+
+  # HEADERS ONLY, FFMPEG LOADS libvulkan.so AT RUNTIME
+  cat >"${INSTALL_PKG_CONFIG_DIR}/vulkan.pc" <<EOF
+prefix=${LIB_INSTALL_BASE}/vulkan-headers
+exec_prefix=\${prefix}
+includedir=\${prefix}/include
+
+Name: vulkan
+Description: Vulkan Headers
+Version: ${VULKAN_VERSION}
+
 Cflags: -I\${includedir}
 EOF
 }

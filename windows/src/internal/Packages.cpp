@@ -48,6 +48,7 @@ std::shared_ptr<std::set<std::string>> ffmpegkit::internal::Packages::getExterna
         "libass",
         "libjxl",
         "liblc3",
+        "libplacebo",
         "libsvtav1",
         "iconv",
         "libilbc",

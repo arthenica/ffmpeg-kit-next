@@ -1,0 +1,11 @@
+--- a/MoltenVK/CMakeLists.txt
++++ b/MoltenVK/CMakeLists.txt
+@@ -6,7 +6,7 @@
+ # easier to maintain in conjunction with the Xcode project file.
+ file(GLOB_RECURSE SOURCES "MoltenVK/*.c" "MoltenVK/*.cpp" "MoltenVK/*.m" "MoltenVK/*.mm")
+ 
+-add_library(MoltenVK SHARED ${SOURCES})
++add_library(MoltenVK STATIC ${SOURCES})
+ add_library(MoltenVK::MoltenVK ALIAS MoltenVK)
+ 
+ target_include_directories(MoltenVK

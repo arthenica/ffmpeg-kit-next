@@ -10,9 +10,11 @@
   - `iOS 12.1+` deployment targets
   - iPad devices and the iPad Simulator load `iOS` frameworks/xcframeworks
   - Can process Storage Access Framework (SAF) Uris on Android
-  - 38 external libraries
+  - 39 external libraries
 
-    `chromaprint`, `dav1d`, `fontconfig`, `freetype`, `fribidi`, `gmp`, `gnutls`, `harfbuzz`, `kvazaar`, `lame`, `libaom`, `libass`, `libiconv`, `libilbc`, `libjxl`, `liblc3`, `libsvtav1`, `libtheora`, `libvorbis`, `libvpx`, `libwebp`, `libxml2`, `opencore-amr`, `openh264`, `openssl`, `opus`, `sdl`, `shine`, `snappy`, `soxr`, `speex`, `srt`, `tesseract`, `twolame`, `vo-amrwbenc`, `vvenc`, `zimg`
+    `chromaprint`, `dav1d`, `fontconfig`, `freetype`, `fribidi`, `gmp`, `gnutls`, `harfbuzz`, `kvazaar`, `lame`, `libaom`, `libass`, `libiconv`, `libilbc`, `libjxl`, `liblc3`, `libplacebo`, `libsvtav1`, `libtheora`, `libvorbis`, `libvpx`, `libwebp`, `libxml2`, `opencore-amr`, `openh264`, `openssl`, `opus`, `sdl`, `shine`, `snappy`, `soxr`, `speex`, `srt`, `tesseract`, `twolame`, `vo-amrwbenc`, `vvenc`, `zimg`
+
+    `libplacebo` commands must pass `-init_hw_device vulkan`. When included, `libplacebo` raises the Apple minimum deployment target to `iOS 15.0`.
 
   - 5 external libraries with GPL license
 

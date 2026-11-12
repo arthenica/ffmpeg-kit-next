@@ -210,7 +210,7 @@ get_app_specific_cflags() {
   libaom)
     APP_FLAGS="-std=gnu99 -Wno-unused-function -Wno-implicit-function-declaration"
     ;;
-  libvpx | openssl | shine | srt)
+  libplacebo | libvpx | openssl | shine | srt)
     APP_FLAGS="-Wno-unused-function"
     ;;
   openh264)
@@ -281,8 +281,12 @@ get_cxxflags() {
   gnutls)
     echo "-std=c++11 ${COMMON_FLAGS} -fno-rtti"
     ;;
-  libjxl)
+  libjxl | shaderc)
     echo "-std=c++17 ${COMMON_FLAGS}"
+    ;;
+  libplacebo)
+    # NO -std, libplacebo SETS ITS OWN C++ STANDARD (cpp_std=c++20)
+    echo "${COMMON_FLAGS} -fno-exceptions -fno-rtti"
     ;;
   vvenc)
     echo "-std=c++14 ${COMMON_FLAGS}"
@@ -1438,6 +1442,13 @@ create_windows_bundle() {
       fi
 
       echo -e "DEBUG: Copied the license file of ${ENABLED_LIBRARY} successfully\n" 1>>"${BASEDIR}"/build.log 2>&1
+
+      RC=$(copy_bundled_license_files "$(get_library_name ${library})" "${LICENSE_BASEDIR}" lowercase)
+
+      if [[ ${RC} -ne 0 ]]; then
+        echo -e "ERROR: Failed to copy the bundled license files of ${ENABLED_LIBRARY}\n" 1>>"${BASEDIR}"/build.log 2>&1
+        exit 1
+      fi
     fi
   done
 
@@ -1636,6 +1647,39 @@ Cflags: -I\${includedir}
 EOF
 }
 
+create_libplacebo_package_config() {
+  local LIBPLACEBO_VERSION="$1"
+
+  # libplacebo HAS C++ SOURCES, SO IT ALSO NEEDS THE C++ RUNTIME: libc++, WHICH THE STATIC MinGW RUNTIME DIRECTORY
+  # (get_static_mingw_runtime_dir) RESOLVES TO libc++.a. SHADERC ARRIVES THROUGH Requires
+  cat >"${INSTALL_PKG_CONFIG_DIR}/libplacebo.pc" <<EOF
+prefix=$(get_native_path "${LIB_INSTALL_BASE}")/libplacebo
+exec_prefix=\${prefix}
+libdir=\${exec_prefix}/lib
+includedir=\${prefix}/include
+
+pl_has_d3d11=0
+pl_has_dovi=1
+pl_has_gl_proc_addr=1
+pl_has_glslang=0
+pl_has_lcms=0
+pl_has_libdovi=0
+pl_has_opengl=0
+pl_has_shaderc=1
+pl_has_vk_proc_addr=0
+pl_has_vulkan=1
+pl_has_xxhash=0
+
+Name: libplacebo
+Description: Reusable library for GPU-accelerated video/image rendering
+Version: ${LIBPLACEBO_VERSION}
+Requires: shaderc >= 2019.1
+Libs: -L\${libdir} -lplacebo -lm -lshlwapi
+Libs.private: -lc++
+Cflags: -I\${includedir} -DPL_STATIC
+EOF
+}
+
 create_libvorbis_package_config() {
   local LIBVORBIS_VERSION="$1"
 
@@ -1706,6 +1750,36 @@ Libs: -L\${libdir} -lxml2
 Libs.private:   -lm
 Cflags: -I\${includedir} -I\${includedir}/libxml2 -DLIBXML_STATIC
 EOF
+}
+
+#
+# 1. shaderc version
+# 2. library directory name (lib or lib64)
+#
+create_shaderc_package_config() {
+  local SHADERC_VERSION="$1"
+  local SHADERC_LIB_DIR_NAME="$2"
+  local SHADERC_PC_NAME
+
+  # BOTH FILES DESCRIBE THE STATIC BUNDLE OF SHADERC, GLSLANG AND SPIRV-TOOLS (libshaderc_combined.a), WHICH NEEDS THE
+  # C++ RUNTIME: libc++, WHICH THE STATIC MinGW RUNTIME DIRECTORY RESOLVES TO libc++.a. libplacebo READS shaderc.pc
+  for SHADERC_PC_NAME in shaderc shaderc_combined; do
+    cat >"${INSTALL_PKG_CONFIG_DIR}/${SHADERC_PC_NAME}.pc" <<EOF || return 1
+prefix=$(get_native_path "${LIB_INSTALL_BASE}")/shaderc
+exec_prefix=\${prefix}
+libdir=\${exec_prefix}/${SHADERC_LIB_DIR_NAME}
+includedir=\${prefix}/include
+
+Name: shaderc
+Description: Tools and libraries for Vulkan shader compilation
+Version: ${SHADERC_VERSION}
+URL: https://github.com/google/shaderc
+
+Libs: -L\${libdir} -lshaderc_combined
+Libs.private: -lc++ -lm
+Cflags: -I\${includedir}
+EOF
+  done
 }
 
 create_snappy_package_config() {
@@ -1823,6 +1897,23 @@ Version: ${XVIDCORE_VERSION}
 
 Requires:
 Libs: -L\${libdir} -lxvidcore
+Cflags: -I\${includedir}
+EOF
+}
+
+create_vulkan_package_config() {
+  local VULKAN_VERSION="$1"
+
+  # HEADERS ONLY, FFMPEG LOADS vulkan-1.dll AT RUNTIME
+  cat >"${INSTALL_PKG_CONFIG_DIR}/vulkan.pc" <<EOF
+prefix=$(get_native_path "${LIB_INSTALL_BASE}")/vulkan-headers
+exec_prefix=\${prefix}
+includedir=\${prefix}/include
+
+Name: vulkan
+Description: Vulkan Headers
+Version: ${VULKAN_VERSION}
+
 Cflags: -I\${includedir}
 EOF
 }

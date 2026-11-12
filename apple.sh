@@ -183,26 +183,31 @@ while [ ! $# -eq 0 ]; do
     TARGET="${1#--ios-target=}"
 
     export IOS_MIN_VERSION=${TARGET}
+    IOS_TARGET_EXPLICIT="1"
     ;;
   --mac-catalyst-target=*)
     TARGET="${1#--mac-catalyst-target=}"
 
     export MAC_CATALYST_MIN_VERSION=${TARGET}
+    MAC_CATALYST_TARGET_EXPLICIT="1"
     ;;
   --macos-target=*)
     TARGET="${1#--macos-target=}"
 
     export MACOS_MIN_VERSION=${TARGET}
+    MACOS_TARGET_EXPLICIT="1"
     ;;
   --tvos-target=*)
     TARGET="${1#--tvos-target=}"
 
     export TVOS_MIN_VERSION=${TARGET}
+    TVOS_TARGET_EXPLICIT="1"
     ;;
   --visionos-target=*)
     TARGET="${1#--visionos-target=}"
 
     export VISIONOS_MIN_VERSION=${TARGET}
+    VISIONOS_TARGET_EXPLICIT="1"
     ;;
   --disable-arch-*)
     DISABLED_ARCH_VARIANT="${1#--disable-arch-}"
@@ -232,6 +237,30 @@ if [[ -n ${DISPLAY_HELP} ]]; then
   display_help
   exit 0
 fi
+
+# EXPLICIT TARGETS BELOW THE FLOOR REQUIRED ARE NOT ALLOWED
+export APPLE_TARGET_FLAG_IOS=--ios-target
+export APPLE_TARGET_FLAG_MAC_CATALYST=--mac-catalyst-target
+export APPLE_TARGET_FLAG_MACOS=--macos-target
+export APPLE_TARGET_FLAG_TVOS=--tvos-target
+export APPLE_TARGET_FLAG_VISIONOS=--visionos-target
+PLATFORMS_TO_CHECK=()
+if [[ ${ENABLED_ARCHITECTURE_VARIANTS[ARCH_VAR_IPHONEOS]} == 1 || ${ENABLED_ARCHITECTURE_VARIANTS[ARCH_VAR_IPHONESIMULATOR]} == 1 ]]; then
+  PLATFORMS_TO_CHECK+=(ios)
+fi
+if [[ ${ENABLED_ARCHITECTURE_VARIANTS[ARCH_VAR_MAC_CATALYST]} == 1 ]]; then
+  PLATFORMS_TO_CHECK+=(mac-catalyst)
+fi
+if [[ ${ENABLED_ARCHITECTURE_VARIANTS[ARCH_VAR_MACOS]} == 1 ]]; then
+  PLATFORMS_TO_CHECK+=(macos)
+fi
+if [[ ${ENABLED_ARCHITECTURE_VARIANTS[ARCH_VAR_APPLETVOS]} == 1 || ${ENABLED_ARCHITECTURE_VARIANTS[ARCH_VAR_APPLETVSIMULATOR]} == 1 ]]; then
+  PLATFORMS_TO_CHECK+=(tvos)
+fi
+if [[ ${ENABLED_ARCHITECTURE_VARIANTS[ARCH_VAR_XROS]} == 1 || ${ENABLED_ARCHITECTURE_VARIANTS[ARCH_VAR_XRSIMULATOR]} == 1 ]]; then
+  PLATFORMS_TO_CHECK+=(visionos)
+fi
+apply_apple_min_version_floors "${PLATFORMS_TO_CHECK[@]}"
 
 echo -e "\nBuilding ffmpeg-kit-next ${BUILD_TYPE_ID}umbrella xcframework\n"
 echo -e -n "INFO: Building ffmpeg-kit-next ${BUILD_VERSION} ${BUILD_TYPE_ID}umbrella xcframework: " 1>>"${BASEDIR}"/build.log 2>&1

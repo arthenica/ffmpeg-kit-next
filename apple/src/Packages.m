@@ -41,6 +41,7 @@ static NSMutableArray *supportedExternalLibraries;
     [supportedExternalLibraries addObject:@"libass"];
     [supportedExternalLibraries addObject:@"libjxl"];
     [supportedExternalLibraries addObject:@"liblc3"];
+    [supportedExternalLibraries addObject:@"libplacebo"];
     [supportedExternalLibraries addObject:@"libsvtav1"];
     [supportedExternalLibraries addObject:@"iconv"];
     [supportedExternalLibraries addObject:@"libilbc"];

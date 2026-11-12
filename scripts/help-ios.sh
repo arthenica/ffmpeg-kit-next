@@ -18,7 +18,7 @@ libraries are created under the prebuilt folder.\n"
   echo -e "Usage: ./$COMMAND ${PROFILE_USAGE}[OPTION]...\n"
   echo -e "Specify environment variables as VARIABLE=VALUE to override default build options.\n"
 
-  display_help_options "${PROFILE_OPTION}" "  -x, --xcframework\t\tbuild xcframework bundles instead of framework bundles" "      --spm\t\t\t\t\tcreate a local Swift package (Package.swift) next to xcframeworks; requires -x" "      --jobs=N\t\t\t\t\tnumber of jobs to run [auto]" "      --target=ios sdk version\t\t\toverride minimum deployment target [15.0 with SDK 27+; 12.1 with SDK 26]" "      --mac-catalyst-target=ios sdk version\toverride minimum deployment target for Mac Catalyst [15.0 with SDK 27+; 14.0 with SDK 26]" "      --package-name=name\t\t\tset FFmpegKit package name in the native build [empty]" "      --no-ffmpeg-kit-protocols\t\t\tdisable custom ffmpeg-kit protocols (ffkitmem, ffkitstream) [no]"
+  display_help_options "${PROFILE_OPTION}" "  -x, --xcframework\t\tbuild xcframework bundles instead of framework bundles" "      --spm\t\t\t\t\tcreate a local Swift package (Package.swift) next to xcframeworks; requires -x" "      --jobs=N\t\t\t\t\tnumber of jobs to run [auto]" "      --target=ios sdk version\t\t\toverride minimum deployment target [12.1; 15.0 with SDK 27+, libplacebo or moltenvk]" "      --mac-catalyst-target=ios sdk version\toverride minimum deployment target for Mac Catalyst [14.0; 15.0 with SDK 27+, libplacebo or moltenvk]" "      --package-name=name\t\t\tset FFmpegKit package name in the native build [empty]" "      --no-ffmpeg-kit-protocols\t\t\tdisable custom ffmpeg-kit protocols (ffkitmem, ffkitstream) [no]"
   display_help_licensing
 
   echo -e "Architectures:"

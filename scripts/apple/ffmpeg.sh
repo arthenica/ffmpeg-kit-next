@@ -152,7 +152,7 @@ CONFIGURE_POSTFIX=""
 HIGH_PRIORITY_LDFLAGS=""
 
 # SET CONFIGURE OPTIONS
-for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3}; do
+for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3} ${LIBRARY_VULKAN_HEADERS} ${LIBRARY_SHADERC} ${LIBRARY_LIBPLACEBO} ${LIBRARY_MOLTENVK}; do
   if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
     ENABLED_LIBRARY=$(get_library_name ${library})
 
@@ -229,6 +229,11 @@ for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} $
       FFMPEG_LDFLAGS+=" $(pkg-config --libs --static lc3 2>>"${BASEDIR}"/build.log)"
       CONFIGURE_POSTFIX+=" --enable-liblc3"
       ;;
+    libplacebo)
+      FFMPEG_CFLAGS+=" $(pkg-config --cflags libplacebo 2>>"${BASEDIR}"/build.log)"
+      FFMPEG_LDFLAGS+=" $(pkg-config --libs --static libplacebo 2>>"${BASEDIR}"/build.log)"
+      CONFIGURE_POSTFIX+=" --enable-libplacebo"
+      ;;
     libsvtav1)
       FFMPEG_CFLAGS+=" $(pkg-config --cflags SvtAv1Enc 2>>"${BASEDIR}"/build.log)"
       FFMPEG_LDFLAGS+=" $(pkg-config --libs --static SvtAv1Enc 2>>"${BASEDIR}"/build.log)"
@@ -273,6 +278,11 @@ for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} $
       FFMPEG_CFLAGS+=" $(pkg-config --cflags libxml-2.0 2>>"${BASEDIR}"/build.log)"
       FFMPEG_LDFLAGS+=" $(pkg-config --libs --static libxml-2.0 2>>"${BASEDIR}"/build.log)"
       CONFIGURE_POSTFIX+=" --enable-libxml2"
+      ;;
+    moltenvk)
+      # vulkan.pc NOW DESCRIBES THE STATIC MOLTENVK (moltenvk.sh), SO FFMPEG LINKS IT. FFMPEG'S dlopen NAMES ARE BARE DYLIB
+      # NAMES, WHICH DO NOT RESOLVE FOR A LIBRARY INSIDE AN APP BUNDLE. THE vulkan-headers CASE ADDS --enable-vulkan
+      CONFIGURE_POSTFIX+=" --enable-vulkan-static"
       ;;
     opencore-amr)
       FFMPEG_CFLAGS+=" $(pkg-config --cflags opencore-amrnb 2>>"${BASEDIR}"/build.log)"
@@ -346,6 +356,19 @@ for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} $
       FFMPEG_CFLAGS+=" $(pkg-config --cflags vo-amrwbenc 2>>"${BASEDIR}"/build.log)"
       FFMPEG_LDFLAGS+=" $(pkg-config --libs --static vo-amrwbenc 2>>"${BASEDIR}"/build.log)"
       CONFIGURE_POSTFIX+=" --enable-libvo-amrwbenc"
+      ;;
+    vulkan-headers)
+      # FFMPEG COMPILES ITS BUILT-IN VULKAN SHADERS WITH A HOST glslang, WITHOUT IT 25 VULKAN COMPONENTS ARE SILENTLY DISABLED.
+      # THE HOST BUILD USES THE macosx SDK, WHATEVER SDK THIS BUILD TARGETS. WITHOUT moltenvk THERE IS NO
+      # --enable-vulkan-static AND FFMPEG LOADS A VULKAN LIBRARY AT RUNTIME
+      HOST_GLSLANG_PATH=$(build_host_spirv_compiler)
+      if [[ $? -ne 0 ]] || [[ -z "${HOST_GLSLANG_PATH}" ]]; then
+        echo -e "\nERROR: Failed to build the host SPIR-V compiler needed by --enable-vulkan, see build.log\n"
+        echo -e "\nERROR: Failed to build the host SPIR-V compiler needed by --enable-vulkan\n" 1>>"${BASEDIR}"/build.log 2>&1
+        exit 1
+      fi
+      FFMPEG_CFLAGS+=" $(pkg-config --cflags vulkan 2>>"${BASEDIR}"/build.log) -I$(host_spirv_headers_include_dir)"
+      CONFIGURE_POSTFIX+=" --enable-vulkan --glslc=${HOST_GLSLANG_PATH}"
       ;;
     x264)
       FFMPEG_CFLAGS+=" $(pkg-config --cflags x264 2>>"${BASEDIR}"/build.log)"
@@ -494,6 +517,10 @@ for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} $
       CONFIGURE_POSTFIX+=" --disable-zlib"
     elif [[ ${library} -eq ${LIBRARY_OPENSSL} ]]; then
       CONFIGURE_POSTFIX+=" --disable-openssl"
+    elif [[ ${library} -eq ${LIBRARY_LIBPLACEBO} ]]; then
+      CONFIGURE_POSTFIX+=" --disable-libplacebo"
+    elif [[ ${library} -eq ${LIBRARY_VULKAN_HEADERS} ]]; then
+      CONFIGURE_POSTFIX+=" --disable-vulkan"
     fi
   fi
 done
@@ -582,6 +609,10 @@ git checkout libavutil 1>>"${BASEDIR}"/build.log 2>&1
 
 # 1. Workaround to prevent adding of -mdynamic-no-pic flag
 ${SED_INLINE} 's/check_cflags -mdynamic-no-pic && add_asflags -mdynamic-no-pic;/check_cflags -mdynamic-no-pic;/g' "${BASEDIR}"/src/${LIB_NAME}/configure 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+
+# 1b. Workaround for the --enable-vulkan-static check, which passes "defined VK_VERSION_1_3" as a function name, so its
+# test never compiles and vulkan.pc is never used (it falls back to -lvulkan). Check vkGetInstanceProcAddr instead
+${SED_INLINE} 's#^\(    check_pkg_config vulkan "vulkan >= [0-9.]*" "vulkan/vulkan.h"\) "defined VK_VERSION_1_3" ||$#\1 vkGetInstanceProcAddr ||#' "${BASEDIR}"/src/${LIB_NAME}/configure 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 
 # 2. Workaround for videotoolbox on mac catalyst and visionOS
 if [[ ${ARCH} == *-mac-catalyst ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then

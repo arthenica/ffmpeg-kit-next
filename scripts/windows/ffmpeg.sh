@@ -65,7 +65,7 @@ esac
 CONFIGURE_POSTFIX=""
 
 # SET CONFIGURE OPTIONS
-for library in {0..98}; do
+for library in {0..98} {99..102}; do
   if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
     ENABLED_LIBRARY=$(get_library_name ${library})
 
@@ -151,6 +151,11 @@ for library in {0..98}; do
       CFLAGS+=" $(pkg-config --cflags lc3 2>>"${BASEDIR}"/build.log)"
       LDFLAGS+=" $(pkg-config --libs --static lc3 2>>"${BASEDIR}"/build.log)"
       CONFIGURE_POSTFIX+=" --enable-liblc3"
+      ;;
+    libplacebo)
+      CFLAGS+=" $(pkg-config --cflags libplacebo 2>>"${BASEDIR}"/build.log)"
+      LDFLAGS+=" $(pkg-config --libs --static libplacebo 2>>"${BASEDIR}"/build.log)"
+      CONFIGURE_POSTFIX+=" --enable-libplacebo"
       ;;
     libsvtav1)
       CFLAGS+=" $(pkg-config --cflags SvtAv1Enc 2>>"${BASEDIR}"/build.log)"
@@ -258,6 +263,17 @@ for library in {0..98}; do
       CFLAGS+=" $(pkg-config --cflags vo-amrwbenc 2>>"${BASEDIR}"/build.log)"
       LDFLAGS+=" $(pkg-config --libs --static vo-amrwbenc 2>>"${BASEDIR}"/build.log)"
       CONFIGURE_POSTFIX+=" --enable-libvo-amrwbenc"
+      ;;
+    vulkan-headers)
+      # FFMPEG COMPILES ITS BUILT-IN VULKAN SHADERS WITH A HOST glslang, WITHOUT IT 25 VULKAN COMPONENTS ARE SILENTLY DISABLED
+      HOST_GLSLANG_PATH=$(build_host_spirv_compiler)
+      if [[ $? -ne 0 ]] || [[ -z "${HOST_GLSLANG_PATH}" ]]; then
+        echo -e "\nERROR: Failed to build the host SPIR-V compiler needed by --enable-vulkan, see build.log\n"
+        echo -e "\nERROR: Failed to build the host SPIR-V compiler needed by --enable-vulkan\n" 1>>"${BASEDIR}"/build.log 2>&1
+        exit 1
+      fi
+      CFLAGS+=" $(pkg-config --cflags vulkan 2>>"${BASEDIR}"/build.log) -I$(get_native_path "$(host_spirv_headers_include_dir)")"
+      CONFIGURE_POSTFIX+=" --enable-vulkan --glslc=${HOST_GLSLANG_PATH}"
       ;;
     vvenc)
       CFLAGS+=" $(pkg-config --cflags libvvenc 2>>"${BASEDIR}"/build.log)"
@@ -369,6 +385,8 @@ for library in {0..98}; do
       CONFIGURE_POSTFIX+=" --disable-libjxl"
     elif [[ ${library} -eq ${LIBRARY_LIBLC3} ]]; then
       CONFIGURE_POSTFIX+=" --disable-liblc3"
+    elif [[ ${library} -eq ${LIBRARY_LIBPLACEBO} ]]; then
+      CONFIGURE_POSTFIX+=" --disable-libplacebo"
     elif [[ ${library} -eq ${LIBRARY_LIBSVTAV1} ]]; then
       CONFIGURE_POSTFIX+=" --disable-libsvtav1"
     elif [[ ${library} -eq ${LIBRARY_LIBTHEORA} ]]; then
@@ -411,6 +429,8 @@ for library in {0..98}; do
       CONFIGURE_POSTFIX+=" --disable-libtwolame"
     elif [[ ${library} -eq ${LIBRARY_VO_AMRWBENC} ]]; then
       CONFIGURE_POSTFIX+=" --disable-libvo-amrwbenc"
+    elif [[ ${library} -eq ${LIBRARY_VULKAN_HEADERS} ]]; then
+      CONFIGURE_POSTFIX+=" --disable-vulkan"
     elif [[ ${library} -eq ${LIBRARY_VVENC} ]]; then
       CONFIGURE_POSTFIX+=" --disable-libvvenc"
     elif [[ ${library} -eq ${LIBRARY_X264} ]]; then

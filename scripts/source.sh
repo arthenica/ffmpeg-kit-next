@@ -131,6 +131,11 @@ get_library_source() {
     SOURCE_ID="v1.3.6"
     SOURCE_TYPE="TAG"
     ;;
+  libplacebo)
+    SOURCE_REPO_URL="https://github.com/arthenica/libplacebo"
+    SOURCE_ID="v7.360.1"
+    SOURCE_TYPE="TAG"
+    ;;
   libpng)
     SOURCE_REPO_URL="https://github.com/arthenica/libpng"
     SOURCE_ID="v1.6.59"
@@ -181,6 +186,11 @@ get_library_source() {
     SOURCE_ID="v2.11.4"
     SOURCE_TYPE="TAG"
     ;;
+  moltenvk)
+    SOURCE_REPO_URL="https://github.com/arthenica/MoltenVK"
+    SOURCE_ID="v1.4.2"
+    SOURCE_TYPE="TAG"
+    ;;
   nettle)
     SOURCE_REPO_URL="https://github.com/arthenica/nettle"
     SOURCE_ID="nettle_3.8.1_release_20220727"
@@ -219,6 +229,11 @@ get_library_source() {
   sdl)
     SOURCE_REPO_URL="https://github.com/arthenica/SDL"
     SOURCE_ID="release-2.32.10"
+    SOURCE_TYPE="TAG"
+    ;;
+  shaderc)
+    SOURCE_REPO_URL="https://github.com/arthenica/shaderc"
+    SOURCE_ID="v2026.4"
     SOURCE_TYPE="TAG"
     ;;
   shine)
@@ -264,6 +279,11 @@ get_library_source() {
   vo-amrwbenc)
     SOURCE_REPO_URL="https://github.com/arthenica/vo-amrwbenc"
     SOURCE_ID="v0.1.3"
+    SOURCE_TYPE="TAG"
+    ;;
+  vulkan-headers)
+    SOURCE_REPO_URL="https://github.com/arthenica/Vulkan-Headers"
+    SOURCE_ID="vulkan-sdk-1.4.363.0"
     SOURCE_TYPE="TAG"
     ;;
   vvenc)

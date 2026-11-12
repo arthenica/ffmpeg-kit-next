@@ -37,9 +37,16 @@ done
 # BUILD ENABLED LIBRARIES AND THEIR DEPENDENCIES
 let completed=0
 while [ ${#enabled_library_list[@]} -gt $completed ]; do
+  completed_before_pass=${completed}
+
   for library in "${enabled_library_list[@]}"; do
     let run=0
     case $library in
+    libplacebo)
+      if [[ $OK_shaderc -eq 1 ]] && [[ $OK_vulkan_headers -eq 1 ]]; then
+        run=1
+      fi
+      ;;
     srt)
       if [[ $OK_openssl -eq 1 ]]; then
         run=1
@@ -87,6 +94,22 @@ while [ ${#enabled_library_list[@]} -gt $completed ]; do
       echo -e "INFO: Skipping $library, dependencies built=$run, already built=${!BUILD_COMPLETED_FLAG}\n" 1>>"${BASEDIR}"/build.log 2>&1
     fi
   done
+
+  # A PASS THAT BUILDS NOTHING WOULD REPEAT FOREVER. THE LIBRARIES LEFT WAIT FOR A DEPENDENCY THAT IS NOT ENABLED, E.G.
+  # AFTER --disable-lib-<dependency>, WHICH DISABLES THAT LIBRARY ONLY
+  if [[ ${completed} -eq ${completed_before_pass} ]]; then
+    waiting_library_list=()
+    for library in "${enabled_library_list[@]}"; do
+      BUILD_COMPLETED_FLAG=$(echo "OK_${library}" | sed "s/\-/\_/g")
+      if [[ "${!BUILD_COMPLETED_FLAG}" != "1" ]]; then
+        waiting_library_list+=("${library}")
+      fi
+    done
+
+    echo -e "\n(*) Invalid configuration detected. These libraries depend on a library that is not enabled, so they cannot be built: ${waiting_library_list[*]}. Enable that dependency again, or disable these libraries too.\n"
+    echo -e "\n(*) Invalid configuration detected. These libraries depend on a library that is not enabled, so they cannot be built: ${waiting_library_list[*]}. Enable that dependency again, or disable these libraries too.\n" 1>>"${BASEDIR}"/build.log 2>&1
+    exit 1
+  fi
 done
 
 # BUILD CUSTOM LIBRARIES

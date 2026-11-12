@@ -69,7 +69,7 @@ CONFIGURE_POSTFIX=""
 HIGH_PRIORITY_INCLUDES=""
 
 # SET CONFIGURE OPTIONS
-for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3}; do
+for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3} ${LIBRARY_VULKAN_HEADERS} ${LIBRARY_SHADERC} ${LIBRARY_LIBPLACEBO} ${LIBRARY_MOLTENVK}; do
   if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
     ENABLED_LIBRARY=$(get_library_name ${library})
 
@@ -206,6 +206,11 @@ for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} $
       LDFLAGS+=" $(pkg-config --libs --static libxml-2.0 2>>"${BASEDIR}"/build.log)"
       CONFIGURE_POSTFIX+=" --enable-libxml2"
       ;;
+    libplacebo)
+      CFLAGS+=" $(pkg-config --cflags libplacebo 2>>"${BASEDIR}"/build.log)"
+      LDFLAGS+=" $(pkg-config --libs --static libplacebo 2>>"${BASEDIR}"/build.log)"
+      CONFIGURE_POSTFIX+=" --enable-libplacebo"
+      ;;
     opencore-amr)
       CFLAGS+=" $(pkg-config --cflags opencore-amrnb 2>>"${BASEDIR}"/build.log)"
       LDFLAGS+=" $(pkg-config --libs --static opencore-amrnb 2>>"${BASEDIR}"/build.log)"
@@ -278,6 +283,18 @@ for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} $
       LDFLAGS+=" $(pkg-config --libs --static vo-amrwbenc 2>>"${BASEDIR}"/build.log)"
       CONFIGURE_POSTFIX+=" --enable-libvo-amrwbenc"
       ;;
+    vulkan-headers)
+      # FFMPEG COMPILES ITS BUILT-IN VULKAN SHADERS WITH A HOST glslang, WITHOUT IT 25 VULKAN COMPONENTS ARE SILENTLY DISABLED.
+      # NO --enable-vulkan-static, FFMPEG LOADS THE SYSTEM libvulkan.so AT RUNTIME
+      HOST_GLSLANG_PATH=$(build_host_spirv_compiler)
+      if [[ $? -ne 0 ]] || [[ -z "${HOST_GLSLANG_PATH}" ]]; then
+        echo -e "\nERROR: Failed to build the host SPIR-V compiler needed by --enable-vulkan, see build.log\n"
+        echo -e "\nERROR: Failed to build the host SPIR-V compiler needed by --enable-vulkan\n" 1>>"${BASEDIR}"/build.log 2>&1
+        exit 1
+      fi
+      CFLAGS+=" $(pkg-config --cflags vulkan 2>>"${BASEDIR}"/build.log) -I$(host_spirv_headers_include_dir)"
+      CONFIGURE_POSTFIX+=" --enable-vulkan --glslc=${HOST_GLSLANG_PATH}"
+      ;;
     x264)
       CFLAGS+=" $(pkg-config --cflags x264 2>>"${BASEDIR}"/build.log)"
       LDFLAGS+=" $(pkg-config --libs --static x264 2>>"${BASEDIR}"/build.log)"
@@ -341,6 +358,10 @@ for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} $
       CONFIGURE_POSTFIX+=" --disable-mediacodec"
     elif [[ ${library} -eq ${LIBRARY_OPENSSL} ]]; then
       CONFIGURE_POSTFIX+=" --disable-openssl"
+    elif [[ ${library} -eq ${LIBRARY_LIBPLACEBO} ]]; then
+      CONFIGURE_POSTFIX+=" --disable-libplacebo"
+    elif [[ ${library} -eq ${LIBRARY_VULKAN_HEADERS} ]]; then
+      CONFIGURE_POSTFIX+=" --disable-vulkan"
     fi
   fi
 done
