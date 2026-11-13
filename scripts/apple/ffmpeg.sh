@@ -631,7 +631,8 @@ fi
 # 2b. Workaround for FFmpeg 9.0.2 yadif_videotoolbox crashing during worker cleanup.
 if [[ ${ENABLED_LIBRARIES[$LIBRARY_APPLE_METAL]:-0} -eq 1 ]] && \
     ! grep -q '@autoreleasepool' libavfilter/vf_yadif_videotoolbox.m; then
-  patch -p1 <"${BASEDIR}/tools/patch/make/ffmpeg/yadif-videotoolbox-autorelease.patch" \
+  FFMPEG_PATCH_DIR=$(get_library_patch_dir "${LIB_NAME}") || return 1
+  patch -p1 <"${FFMPEG_PATCH_DIR}/yadif-videotoolbox-autorelease.patch" \
     1>>"${BASEDIR}/build.log" 2>&1 || return 1
 fi
 

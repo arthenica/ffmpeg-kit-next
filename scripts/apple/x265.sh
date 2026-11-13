@@ -46,7 +46,8 @@ ${SED_INLINE} 's/\.text/.equ g_lumaFilter, .-g_lumaFilter_bytes\
 .text/g' ${BASEDIR}/src/x265/source/common/arm/ipfilter8.S
 
 # WORKAROUND TO USE A CUSTOM BUILD FILE
-overwrite_file "${BASEDIR}"/tools/patch/cmake/x265/CMakeLists.txt "${BASEDIR}"/src/"${LIB_NAME}"/source/CMakeLists.txt || return 1
+X265_PATCH_DIR=$(get_library_patch_dir "${LIB_NAME}") || return 1
+overwrite_file "${X265_PATCH_DIR}/CMakeLists.txt" "${BASEDIR}"/src/"${LIB_NAME}"/source/CMakeLists.txt || return 1
 
 cmake -Wno-dev \
   -DCMAKE_VERBOSE_MAKEFILE=0 \

@@ -18,7 +18,8 @@ make distclean 2>/dev/null 1>/dev/null
 if [[ ! -f "${BASEDIR}"/src/"${LIB_NAME}"/configure ]] || [[ ${RECONF_nettle} -eq 1 ]]; then
 
   # WORKAROUND TO FIX BUILD SYSTEM COMPILER
-  overwrite_file "${BASEDIR}"/tools/patch/make/nettle/aclocal.m4 "${BASEDIR}"/src/"${LIB_NAME}"/aclocal.m4
+  NETTLE_PATCH_DIR=$(get_library_patch_dir "${LIB_NAME}") || return 1
+  overwrite_file "${NETTLE_PATCH_DIR}/aclocal.m4" "${BASEDIR}"/src/"${LIB_NAME}"/aclocal.m4
 
   autoreconf_library "${LIB_NAME}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 fi

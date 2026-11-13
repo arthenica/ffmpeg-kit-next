@@ -15,7 +15,8 @@ ${SED_INLINE} 's/gnu++98/c++11/g' "${BASEDIR}"/src/"${LIB_NAME}"/source/CMakeLis
 
 # WORKAROUND TO DISABLE RUNTIME DLOPEN ON EMSCRIPTEN; x265's RUNTIME dlopen() FAILURES BREAK THE BUILD
 if ! web_linkage_is_static; then
-  (cd "${BASEDIR}" && patch -p0 -i "${BASEDIR}"/tools/patch/emcmake/x265/disable-runtime-dlopen-on-emscripten.patch) 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+  X265_PATCH_DIR=$(get_library_patch_dir "${LIB_NAME}") || return 1
+  (cd "${BASEDIR}" && patch -p0 -i "${X265_PATCH_DIR}/disable-runtime-dlopen-on-emscripten.patch") 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 fi
 
 mkdir -p "${BUILD_DIR}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1

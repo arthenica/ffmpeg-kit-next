@@ -636,9 +636,11 @@ seed_gettext_autotools_aux() {
 # 1. po directory, relative to the current directory ["po"]
 seed_gettext_po_makevars() {
   local PO_DIR="${1:-po}"
+  local PATCH_DIR
+  PATCH_DIR=$(get_library_patch_dir "gnutls") || return 1
 
   mkdir -p "${PO_DIR}" 1>>"${BASEDIR}"/build.log 2>&1
-  overwrite_file "${BASEDIR}/tools/patch/gettext/Makevars.template" "${PO_DIR}/Makevars.template" || return 1
+  overwrite_file "${PATCH_DIR}/Makevars.template" "${PO_DIR}/Makevars.template" || return 1
 }
 
 get_clang_host() {

@@ -56,12 +56,13 @@ make distclean 2>/dev/null 1>/dev/null
 # NOTE THAT RECONFIGURE IS NOT SUPPORTED
 
 # WORKAROUND TO FIX BUILD OPTIONS DEFINED IN configure.sh
+LIBVPX_PATCH_DIR=$(get_library_patch_dir "${LIB_NAME}") || return 1
 case ${ARCH} in
 x86-64-mac-catalyst)
-  overwrite_file "${BASEDIR}"/tools/patch/make/libvpx/configure.x86_64_mac_catalyst.sh "${BASEDIR}"/src/"${LIB_NAME}"/build/make/configure.sh || return 1
+  overwrite_file "${LIBVPX_PATCH_DIR}/configure.x86_64_mac_catalyst.sh" "${BASEDIR}"/src/"${LIB_NAME}"/build/make/configure.sh || return 1
   ;;
 *)
-  overwrite_file "${BASEDIR}"/tools/patch/make/libvpx/configure.sh "${BASEDIR}"/src/"${LIB_NAME}"/build/make/configure.sh || return 1
+  overwrite_file "${LIBVPX_PATCH_DIR}/configure.sh" "${BASEDIR}"/src/"${LIB_NAME}"/build/make/configure.sh || return 1
   ;;
 esac
 

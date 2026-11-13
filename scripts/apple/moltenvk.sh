@@ -1,6 +1,7 @@
 #!/bin/bash
 
 MOLTENVK_SOURCE_DIR="${BASEDIR}/src/${LIB_NAME}"
+MOLTENVK_PATCH_DIR=$(get_library_patch_dir "${LIB_NAME}") || return 1
 MOLTENVK_EXTERNAL_DIR="${MOLTENVK_SOURCE_DIR}/External"
 MOLTENVK_CPM_VERSION="0.40.8"
 MOLTENVK_CPM_SOURCE_CACHE="${BUILD_DIR}/cpm-cache"
@@ -37,7 +38,7 @@ done
 # SIGNAL TO CHECK BOTH AGAIN
 apply_moltenvk_patch() {
   local PATCH_NAME="$1"
-  local PATCH_FILE="${BASEDIR}/tools/patch/cmake/moltenvk/${PATCH_NAME}"
+  local PATCH_FILE="${MOLTENVK_PATCH_DIR}/${PATCH_NAME}"
 
   if git -C "${MOLTENVK_SOURCE_DIR}" apply --check "${PATCH_FILE}" 2>/dev/null; then
     git -C "${MOLTENVK_SOURCE_DIR}" apply "${PATCH_FILE}" || return 1
@@ -61,7 +62,7 @@ if ! grep -q "^set(CPM_DOWNLOAD_VERSION ${MOLTENVK_CPM_VERSION})$" "${MOLTENVK_S
 fi
 
 mkdir -p "${MOLTENVK_CPM_SOURCE_CACHE}/cpm" || return 1
-cp "${BASEDIR}/tools/patch/cmake/moltenvk/CPM_${MOLTENVK_CPM_VERSION}.cmake" "${MOLTENVK_CPM_SOURCE_CACHE}/cpm/CPM_${MOLTENVK_CPM_VERSION}.cmake" || return 1
+cp "${MOLTENVK_PATCH_DIR}/CPM_${MOLTENVK_CPM_VERSION}.cmake" "${MOLTENVK_CPM_SOURCE_CACHE}/cpm/CPM_${MOLTENVK_CPM_VERSION}.cmake" || return 1
 
 # THE TARGET: CMAKE_SYSTEM_NAME (Darwin FOR macOS AND MAC CATALYST, iOS, tvOS, visionOS), CMAKE_OSX_SYSROOT (macosx, iphoneos,
 # iphonesimulator, appletvos, appletvsimulator, xros, xrsimulator; macosx FOR MAC CATALYST) AND CMAKE_OSX_ARCHITECTURES COME

@@ -2,6 +2,21 @@
 
 source "${BASEDIR}"/scripts/source.sh
 
+# Resolve patches using the same source reference as the library download.
+get_library_patch_dir() {
+  local LIB_NAME="$1"
+  local SOURCE_REF
+  SOURCE_REF=$(get_library_source "${LIB_NAME}" 2) || return 1
+  local PATCH_DIR="${BASEDIR}/tools/patch/${LIB_NAME}/${SOURCE_REF}"
+
+  if [[ -z "${SOURCE_REF}" ]] || [[ ! -d "${PATCH_DIR}" ]]; then
+    echo "ERROR: No patch directory for ${LIB_NAME} source '${SOURCE_REF}': ${PATCH_DIR}" >&2
+    return 1
+  fi
+
+  echo "${PATCH_DIR}"
+}
+
 get_arch_name() {
   case $1 in
   0) echo "arm-v7a" ;; # android

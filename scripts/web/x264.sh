@@ -4,9 +4,11 @@
 make distclean 2>/dev/null 1>/dev/null
 
 # PATCH X264 SOURCES
+X264_PATCH_DIR=$(get_library_patch_dir "${LIB_NAME}") || return 1
+
 apply_x264_patch() {
   local PATCH_NAME="$1"
-  local PATCH_FILE="${BASEDIR}/tools/patch/make/x264/${PATCH_NAME}"
+  local PATCH_FILE="${X264_PATCH_DIR}/${PATCH_NAME}"
 
   if git -C "${BASEDIR}"/src/"${LIB_NAME}" apply --check "${PATCH_FILE}" 2>/dev/null; then
     git -C "${BASEDIR}"/src/"${LIB_NAME}" apply "${PATCH_FILE}" || return 1

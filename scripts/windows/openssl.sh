@@ -3,13 +3,14 @@
 # SET BUILD OPTIONS
 #
 # OpenSSL ONLY SHIPS mingw (x86) AND mingw64 (x86_64) TARGETS. THERE IS NO
-# aarch64 MinGW TARGET UPSTREAM, SO ONE IS SUPPLIED THROUGH --config. SEE
-# tools/patch/openssl/mingw64-aarch64.conf FOR WHAT IT DEFINES.
+# aarch64 MinGW TARGET UPSTREAM, SO ONE IS SUPPLIED THROUGH --config USING
+# mingw64-aarch64.conf IN THE VERSION-SPECIFIC OpenSSL PATCH DIRECTORY.
 CONFIG_OPTIONS=""
 ASM_OPTIONS=""
 case ${ARCH} in
 arm64)
-  CONFIG_OPTIONS="--config=${BASEDIR}/tools/patch/openssl/mingw64-aarch64.conf"
+  OPENSSL_PATCH_DIR=$(get_library_patch_dir "${LIB_NAME}") || return 1
+  CONFIG_OPTIONS="--config=${OPENSSL_PATCH_DIR}/mingw64-aarch64.conf"
   ASM_OPTIONS="mingw64-aarch64"
   ;;
 x86-64)
