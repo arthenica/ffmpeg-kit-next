@@ -1383,15 +1383,18 @@ create_apple_metal_compiler() {
   METAL_TARGET="air64-${METAL_TARGET#*-}"
   METAL_TARGET="${METAL_TARGET/-apple-darwin/-apple-macos}"
 
+  echo -e "INFO: Probing the default Metal compiler (lookup and -v).\n" >>"${BASEDIR}/build.log"
   METAL_COMPILER_PATH=$(xcrun --sdk "${SDK_NAME}" --find metal 2>>"${BASEDIR}/build.log")
   if [[ -z ${METAL_COMPILER_PATH} ]] || ! "${METAL_COMPILER_PATH}" -v >>"${BASEDIR}/build.log" 2>&1; then
+    echo -e "\nWARN: Default Metal compiler probe failed; trying the explicit Metal toolchain.\n" >>"${BASEDIR}/build.log"
     METAL_COMPILER_PATH=$(xcrun --toolchain Metal --sdk "${SDK_NAME}" --find metal 2>>"${BASEDIR}/build.log")
     if [[ -z ${METAL_COMPILER_PATH} ]] || ! "${METAL_COMPILER_PATH}" -v >>"${BASEDIR}/build.log" 2>&1; then
-      echo "ERROR: Metal compiler unavailable. Install Apple's Metal Toolchain with: xcodebuild -downloadComponent MetalToolchain" >&2
+      echo -e "\nERROR: Metal compiler unavailable. Install Apple's Metal Toolchain with: xcodebuild -downloadComponent MetalToolchain\n" >&2
       return 1
     fi
   fi
 
+  echo -e "\nINFO: Using Metal compiler: ${METAL_COMPILER_PATH}\n" >>"${BASEDIR}/build.log"
   mkdir -p "${METAL_DIRECTORY}" || return 1
   printf '#!/bin/bash\nexec %q -target %q -isysroot %q "$@"\n' \
     "${METAL_COMPILER_PATH}" "${METAL_TARGET}" "${SDK_PATH}" >"${METAL_DIRECTORY}/metal" || return 1

@@ -1,0 +1,12 @@
+diff --git a/External/SPIRV-Cross/spirv_msl.cpp b/External/SPIRV-Cross/spirv_msl.cpp
+--- a/External/SPIRV-Cross/spirv_msl.cpp
++++ b/External/SPIRV-Cross/spirv_msl.cpp
+@@ -8302,7 +8302,7 @@
+ 			statement_no_indent("#define SPV_ASSUME(x) __builtin_assume(x);");
+ 			statement_no_indent("#endif");
+ 			statement_no_indent("#if !defined(SPV_EXPECT) && __has_builtin(__builtin_expect)");
+-			statement_no_indent("#define SPV_EXPECT(x, y) __builtin_expect(x, y);");
++			statement_no_indent("#define SPV_EXPECT(x, y) __builtin_expect(x, y)");
+ 			statement_no_indent("#endif");
+ 			statement_no_indent("#endif");
+ 
