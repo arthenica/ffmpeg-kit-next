@@ -456,13 +456,17 @@ static void avutil_log_format_line(void *avcl, int level, const char *fmt, va_li
     av_bprint_init(part + 3, 0, 65536);
 
     if (*print_prefix && avc) {
+        // FFmpeg permits classes without a custom item_name callback.
         if (avc->parent_log_context_offset) {
             AVClass **parent = *(AVClass ***)(((uint8_t *)avcl) + avc->parent_log_context_offset);
             if (parent && *parent) {
-                av_bprintf(part + 0, "[%s @ %p] ", (*parent)->item_name(parent), parent);
+                av_bprintf(part + 0, "[%s @ %p] ",
+                           (*parent)->item_name ? (*parent)->item_name(parent) : av_default_item_name(parent),
+                           parent);
             }
         }
-        av_bprintf(part + 1, "[%s @ %p] ", avc->item_name(avcl), avcl);
+        av_bprintf(part + 1, "[%s @ %p] ",
+                   avc->item_name ? avc->item_name(avcl) : av_default_item_name(avcl), avcl);
     }
 
     if (*print_prefix && (level > AV_LOG_QUIET) && (flags & AV_LOG_PRINT_LEVEL))
