@@ -1376,6 +1376,29 @@ get_sdk_name() {
   esac
 }
 
+create_apple_metal_compiler() {
+  local METAL_DIRECTORY="${FFMPEG_KIT_TMPDIR}/metal/$(get_build_directory)"
+  local METAL_TARGET="$(get_target)"
+  local METAL_COMPILER_PATH
+  METAL_TARGET="air64-${METAL_TARGET#*-}"
+  METAL_TARGET="${METAL_TARGET/-apple-darwin/-apple-macos}"
+
+  METAL_COMPILER_PATH=$(xcrun --sdk "${SDK_NAME}" --find metal 2>>"${BASEDIR}/build.log")
+  if [[ -z ${METAL_COMPILER_PATH} ]] || ! "${METAL_COMPILER_PATH}" -v >>"${BASEDIR}/build.log" 2>&1; then
+    METAL_COMPILER_PATH=$(xcrun --toolchain Metal --sdk "${SDK_NAME}" --find metal 2>>"${BASEDIR}/build.log")
+    if [[ -z ${METAL_COMPILER_PATH} ]] || ! "${METAL_COMPILER_PATH}" -v >>"${BASEDIR}/build.log" 2>&1; then
+      echo "ERROR: Metal compiler unavailable. Install Apple's Metal Toolchain with: xcodebuild -downloadComponent MetalToolchain" >&2
+      return 1
+    fi
+  fi
+
+  mkdir -p "${METAL_DIRECTORY}" || return 1
+  printf '#!/bin/bash\nexec %q -target %q -isysroot %q "$@"\n' \
+    "${METAL_COMPILER_PATH}" "${METAL_TARGET}" "${SDK_PATH}" >"${METAL_DIRECTORY}/metal" || return 1
+  chmod +x "${METAL_DIRECTORY}/metal" || return 1
+  echo "${METAL_DIRECTORY}/metal"
+}
+
 get_min_version_cflags() {
   case ${ARCH} in
   armv7 | armv7s | arm64e)

@@ -32,6 +32,7 @@ set explicitly. When compilation ends, libraries are created under the prebuilt 
   echo -e "  --enable-lib-tvos-audiotoolbox\tbuild with built-in Apple AudioToolbox support [no]"
   echo -e "  --enable-lib-tvos-bzip2\tbuild with built-in bzip2 support [no]"
   echo -e "  --enable-lib-tvos-videotoolbox\tbuild with built-in Apple VideoToolbox support [no]"
+  echo -e "  --enable-lib-tvos-metal\tbuild with built-in Apple Metal support [no]"
   echo -e "  --enable-lib-tvos-zlib\tbuild with built-in zlib [no]"
   echo -e "  --enable-lib-tvos-libiconv\tbuild with built-in libiconv [no]"
 

@@ -119,6 +119,8 @@ jobs:
         run: |
           xcodebuild -version
           echo "macosx SDK: $(xcrun --sdk macosx --show-sdk-version)"
+      - name: install Metal toolchain
+        run: xcodebuild -downloadComponent MetalToolchain
       - name: run the build script
         env:
           EXTRA_OPTIONS: ${{ inputs.extra-options }}

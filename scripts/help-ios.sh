@@ -37,6 +37,7 @@ libraries are created under the prebuilt folder.\n"
   echo -e "  --enable-lib-ios-avfoundation\tbuild with built-in Apple AVFoundation support [no]"
   echo -e "  --enable-lib-ios-bzip2\tbuild with built-in bzip2 support [no]"
   echo -e "  --enable-lib-ios-videotoolbox\tbuild with built-in Apple VideoToolbox support [no]"
+  echo -e "  --enable-lib-ios-metal\tbuild with built-in Apple Metal support [no]"
   echo -e "  --enable-lib-ios-zlib\t\tbuild with built-in zlib [no]"
   echo -e "  --enable-lib-ios-libiconv\tbuild with built-in libiconv [no]"
 

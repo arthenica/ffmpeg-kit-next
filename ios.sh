@@ -254,7 +254,7 @@ for run_arch in {0..12}; do
     TARGET_ARCH_LIST+=("${FULL_ARCH}")
 
     # CLEAR FLAGS
-    for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3} ${LIBRARY_VULKAN_HEADERS} ${LIBRARY_SHADERC} ${LIBRARY_LIBPLACEBO} ${LIBRARY_MOLTENVK}; do
+    for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3} ${LIBRARY_VULKAN_HEADERS} ${LIBRARY_SHADERC} ${LIBRARY_LIBPLACEBO} ${LIBRARY_MOLTENVK} ${LIBRARY_APPLE_METAL}; do
       library_name=$(get_library_name "${library}")
       unset "$(echo "OK_${library_name}" | sed "s/\-/\_/g")"
       unset "$(echo "DEPENDENCY_REBUILT_${library_name}" | sed "s/\-/\_/g")"

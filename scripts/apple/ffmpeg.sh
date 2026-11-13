@@ -152,7 +152,7 @@ CONFIGURE_POSTFIX=""
 HIGH_PRIORITY_LDFLAGS=""
 
 # SET CONFIGURE OPTIONS
-for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3} ${LIBRARY_VULKAN_HEADERS} ${LIBRARY_SHADERC} ${LIBRARY_LIBPLACEBO} ${LIBRARY_MOLTENVK}; do
+for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3} ${LIBRARY_VULKAN_HEADERS} ${LIBRARY_SHADERC} ${LIBRARY_LIBPLACEBO} ${LIBRARY_MOLTENVK} ${LIBRARY_APPLE_METAL}; do
   if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
     ENABLED_LIBRARY=$(get_library_name ${library})
 
@@ -445,6 +445,11 @@ for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} $
       *-opencl)
         CONFIGURE_POSTFIX+=" --enable-opencl"
         ;;
+      *-metal)
+        METAL_COMPILER=$(create_apple_metal_compiler) || return 1
+        METAL_LINKER=$(xcrun --sdk "${SDK_NAME}" --find metallib) || return 1
+        CONFIGURE_POSTFIX+=" --enable-metal --metalcc=${METAL_COMPILER} --metallib=${METAL_LINKER}"
+        ;;
       *-opengl)
         CONFIGURE_POSTFIX+=" --enable-opengl"
         ;;
@@ -511,6 +516,8 @@ for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} $
       CONFIGURE_POSTFIX+=" --disable-opencl"
     elif [[ ${library} -eq ${LIBRARY_APPLE_OPENGL} ]]; then
       CONFIGURE_POSTFIX+=" --disable-opengl"
+    elif [[ ${library} -eq ${LIBRARY_APPLE_METAL} ]]; then
+      CONFIGURE_POSTFIX+=" --disable-metal"
     elif [[ ${library} -eq ${LIBRARY_APPLE_VIDEOTOOLBOX} ]]; then
       CONFIGURE_POSTFIX+=" --disable-videotoolbox"
     elif [[ ${library} -eq ${LIBRARY_SYSTEM_ZLIB} ]]; then
@@ -619,6 +626,13 @@ if [[ ${ARCH} == *-mac-catalyst ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" 
   ${SED_INLINE} 's/    CFDictionarySetValue(buffer_attributes\, kCVPixelBufferOpenGLESCompatibilityKey/   \/\/ CFDictionarySetValue(buffer_attributes\, kCVPixelBufferOpenGLESCompatibilityKey/g' "${BASEDIR}"/src/${LIB_NAME}/libavcodec/videotoolbox.c || return 1
 else
   ${SED_INLINE} 's/   \/\/ CFDictionarySetValue(buffer_attributes\, kCVPixelBufferOpenGLESCompatibilityKey/    CFDictionarySetValue(buffer_attributes\, kCVPixelBufferOpenGLESCompatibilityKey/g' "${BASEDIR}"/src/${LIB_NAME}/libavcodec/videotoolbox.c || return 1
+fi
+
+# 2b. Workaround for FFmpeg 9.0.2 yadif_videotoolbox crashing during worker cleanup.
+if [[ ${ENABLED_LIBRARIES[$LIBRARY_APPLE_METAL]:-0} -eq 1 ]] && \
+    ! grep -q '@autoreleasepool' libavfilter/vf_yadif_videotoolbox.m; then
+  patch -p1 <"${BASEDIR}/tools/patch/make/ffmpeg/yadif-videotoolbox-autorelease.patch" \
+    1>>"${BASEDIR}/build.log" 2>&1 || return 1
 fi
 
 # 3. Enable ffmpeg-kit protocols

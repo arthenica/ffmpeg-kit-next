@@ -240,6 +240,11 @@ get_library_name() {
   103) echo "windows-d3d11va" ;;
   104) echo "windows-d3d12va" ;;
   105) echo "windows-mediafoundation" ;;
+  106)
+    case ${FFMPEG_KIT_BUILD_TYPE} in
+    ios | macos | tvos | visionos) echo "${FFMPEG_KIT_BUILD_TYPE}-metal" ;;
+    esac
+    ;;
   esac
 }
 
@@ -351,6 +356,7 @@ from_library_name() {
   windows-d3d11va) echo 103 ;;
   windows-d3d12va) echo 104 ;;
   windows-mediafoundation) echo 105 ;;
+  ios-metal | macos-metal | tvos-metal | visionos-metal) echo 106 ;;
   esac
 }
 
@@ -451,7 +457,7 @@ is_library_supported_on_platform() {
     ;;
 
   # IOS, MACOS, TVOS AND VISIONOS
-  53 | 54 | 55 | 57 | 58)
+  53 | 54 | 55 | 57 | 58 | 106)
     if [[ ${FFMPEG_KIT_BUILD_TYPE} == "ios" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "macos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then
       echo "0"
     else
@@ -1409,7 +1415,7 @@ disable_library() {
 }
 
 enable_all_libraries() {
-  for library in {0..105}; do
+  for library in {0..106}; do
     if [[ ${GPL_ENABLED} == "yes" ]] || [[ $(is_gpl_licensed "${library}") -eq 1 ]]; then
       enable_library "$(get_library_name "${library}")" 1
     fi
@@ -1444,6 +1450,9 @@ set_library() {
     ;;
   ios-videotoolbox | macos-videotoolbox | tvos-videotoolbox | visionos-videotoolbox)
     ENABLED_LIBRARIES[LIBRARY_APPLE_VIDEOTOOLBOX]=$2
+    ;;
+  ios-metal | macos-metal | tvos-metal | visionos-metal)
+    ENABLED_LIBRARIES[LIBRARY_APPLE_METAL]=$2
     ;;
   ios-avfoundation | macos-avfoundation)
     ENABLED_LIBRARIES[LIBRARY_APPLE_AVFOUNDATION]=$2
@@ -2119,7 +2128,7 @@ print_enabled_libraries() {
   let enabled=0
 
   # SUPPLEMENTARY LIBRARIES NOT PRINTED
-  for library in {50..57} {59..92} ${LIBRARY_WEB_LIBICONV} ${LIBRARY_ZLIB} {0..36} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3} {99..105}; do
+  for library in {50..57} {59..92} ${LIBRARY_WEB_LIBICONV} ${LIBRARY_ZLIB} {0..36} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3} {99..106}; do
     if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
       if [[ ${enabled} -ge 1 ]]; then
         echo -n ", "

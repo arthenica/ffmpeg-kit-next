@@ -94,7 +94,7 @@ Some parts of `FFmpeg` and some external libraries are licensed under the `GPL`.
 </tr>
 <tr>
 <td align="center"><sup>ios/ipados system libraries</sup></td>
-<td align="center"><sup>bzip2</sup><br><sup>AudioToolbox</sup><br><sup>AVFoundation</sup><br><sup>libiconv</sup><br><sup>VideoToolbox</sup><br><sup>zlib</sup></td>
+<td align="center"><sup>bzip2</sup><br><sup>AudioToolbox</sup><br><sup>AVFoundation</sup><br><sup>libiconv</sup><br><sup>VideoToolbox</sup><br><sup>Metal</sup><br><sup>zlib</sup></td>
 </tr>
 <tr>
 <td align="center"><sup>linux system libraries</sup></td>
@@ -102,15 +102,15 @@ Some parts of `FFmpeg` and some external libraries are licensed under the `GPL`.
 </tr>
 <tr>
 <td align="center"><sup>macos system libraries</sup></td>
-<td align="center"><sup>bzip2</sup><br><sup>AudioToolbox</sup><br><sup>AVFoundation</sup><br><sup>Core Image</sup><br><sup>libiconv</sup><br><sup>OpenCL</sup><br><sup>OpenGL</sup><br><sup>VideoToolbox</sup><br><sup>zlib</sup></td>
+<td align="center"><sup>bzip2</sup><br><sup>AudioToolbox</sup><br><sup>AVFoundation</sup><br><sup>Core Image</sup><br><sup>libiconv</sup><br><sup>OpenCL</sup><br><sup>OpenGL</sup><br><sup>VideoToolbox</sup><br><sup>Metal</sup><br><sup>zlib</sup></td>
 </tr>
 <tr>
 <td align="center"><sup>tvos system libraries</sup></td>
-<td align="center"><sup>bzip2</sup><br><sup>AudioToolbox</sup><br><sup>libiconv</sup><br><sup>VideoToolbox</sup><br><sup>zlib</sup></td>
+<td align="center"><sup>bzip2</sup><br><sup>AudioToolbox</sup><br><sup>libiconv</sup><br><sup>VideoToolbox</sup><br><sup>Metal</sup><br><sup>zlib</sup></td>
 </tr>
 <tr>
 <td align="center"><sup>visionos system libraries</sup></td>
-<td align="center"><sup>bzip2</sup><br><sup>AudioToolbox</sup><br><sup>libiconv</sup><br><sup>VideoToolbox</sup><br><sup>zlib</sup></td>
+<td align="center"><sup>bzip2</sup><br><sup>AudioToolbox</sup><br><sup>libiconv</sup><br><sup>VideoToolbox</sup><br><sup>Metal</sup><br><sup>zlib</sup></td>
 </tr>
 <tr>
 <td align="center"><sup>web system libraries</sup></td>

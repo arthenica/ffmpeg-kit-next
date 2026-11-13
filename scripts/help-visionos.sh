@@ -31,6 +31,7 @@ set explicitly. When compilation ends, libraries are created under the prebuilt 
   echo -e "  --enable-lib-visionos-audiotoolbox\tbuild with built-in Apple AudioToolbox support [no]"
   echo -e "  --enable-lib-visionos-bzip2\tbuild with built-in bzip2 support [no]"
   echo -e "  --enable-lib-visionos-videotoolbox\tbuild with built-in Apple VideoToolbox support [no]"
+  echo -e "  --enable-lib-visionos-metal\tbuild with built-in Apple Metal support [no]"
   echo -e "  --enable-lib-visionos-zlib\tbuild with built-in zlib [no]"
   echo -e "  --enable-lib-visionos-libiconv\tbuild with built-in libiconv [no]"
 
