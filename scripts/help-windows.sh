@@ -22,6 +22,9 @@ under the prebuilt folder.\n"
 
   echo -e "Libraries:"
   echo -e "  --enable-lib-all\t\tenable all libraries allowed by the selected license policy"
+  echo -e "  --enable-lib-windows-d3d11va\tbuild with built-in Windows D3D11VA hardware decode support [no]"
+  echo -e "  --enable-lib-windows-d3d12va\tbuild with built-in Windows D3D12VA hardware decode support [no]"
+  echo -e "  --enable-lib-windows-mediafoundation\tbuild with built-in Windows Media Foundation encoders (enables d3d11va) [no]"
 
   display_help_common_libraries
   display_help_gpl_libraries

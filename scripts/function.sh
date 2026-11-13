@@ -237,6 +237,9 @@ get_library_name() {
   100) echo "shaderc" ;;
   101) echo "libplacebo" ;;
   102) echo "moltenvk" ;;
+  103) echo "windows-d3d11va" ;;
+  104) echo "windows-d3d12va" ;;
+  105) echo "windows-mediafoundation" ;;
   esac
 }
 
@@ -345,6 +348,9 @@ from_library_name() {
   shaderc) echo 100 ;;
   libplacebo) echo 101 ;;
   moltenvk) echo 102 ;;
+  windows-d3d11va) echo 103 ;;
+  windows-d3d12va) echo 104 ;;
+  windows-mediafoundation) echo 105 ;;
   esac
 }
 
@@ -501,6 +507,15 @@ is_library_supported_on_platform() {
   # ONLY IOS, MACOS, TVOS AND VISIONOS
   102)
     if [[ ${FFMPEG_KIT_BUILD_TYPE} == "ios" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "macos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "tvos" ]] || [[ ${FFMPEG_KIT_BUILD_TYPE} == "visionos" ]]; then
+      echo "0"
+    else
+      echo "1"
+    fi
+    ;;
+
+  # ONLY WINDOWS
+  103 | 104 | 105)
+    if [[ ${FFMPEG_KIT_BUILD_TYPE} == "windows" ]]; then
       echo "0"
     else
       echo "1"
@@ -1394,7 +1409,7 @@ disable_library() {
 }
 
 enable_all_libraries() {
-  for library in {0..102}; do
+  for library in {0..105}; do
     if [[ ${GPL_ENABLED} == "yes" ]] || [[ $(is_gpl_licensed "${library}") -eq 1 ]]; then
       enable_library "$(get_library_name "${library}")" 1
     fi
@@ -1545,6 +1560,16 @@ set_library() {
     ;;
   vulkan-headers)
     ENABLED_LIBRARIES[LIBRARY_VULKAN_HEADERS]=$2
+    ;;
+  windows-d3d11va)
+    ENABLED_LIBRARIES[LIBRARY_WINDOWS_D3D11VA]=$2
+    ;;
+  windows-d3d12va)
+    ENABLED_LIBRARIES[LIBRARY_WINDOWS_D3D12VA]=$2
+    ;;
+  windows-mediafoundation)
+    ENABLED_LIBRARIES[LIBRARY_WINDOWS_MEDIAFOUNDATION]=$2
+    set_library "windows-d3d11va" $2
     ;;
   libtheora)
     ENABLED_LIBRARIES[LIBRARY_LIBTHEORA]=$2
@@ -2094,7 +2119,7 @@ print_enabled_libraries() {
   let enabled=0
 
   # SUPPLEMENTARY LIBRARIES NOT PRINTED
-  for library in {50..57} {59..92} ${LIBRARY_WEB_LIBICONV} ${LIBRARY_ZLIB} {0..36} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3} {99..102}; do
+  for library in {50..57} {59..92} ${LIBRARY_WEB_LIBICONV} ${LIBRARY_ZLIB} {0..36} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} ${LIBRARY_LIBLC3} {99..105}; do
     if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
       if [[ ${enabled} -ge 1 ]]; then
         echo -n ", "

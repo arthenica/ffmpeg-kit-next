@@ -1481,7 +1481,7 @@ Name: chromaprint
 Description: Audio fingerprint library
 URL: http://acoustid.org/chromaprint
 Version: ${CHROMAPRINT_VERSION}
-Libs: -L\${libdir} -lchromaprint -lstdc++
+Libs: -L\${libdir} -lchromaprint -lc++
 Cflags: -I\${includedir} -DCHROMAPRINT_NODLL
 EOF
 }
@@ -1796,7 +1796,7 @@ Description: a fast compressor/decompressor
 Version: ${SNAPPY_VERSION}
 
 Requires:
-Libs: -L\${libdir} -lsnappy -lstdc++
+Libs: -L\${libdir} -lsnappy -lc++
 Cflags: -I\${includedir}
 EOF
 }
@@ -1834,7 +1834,7 @@ Description: SRT library set
 Version: ${SRT_VERSION}
 
 Libs: -L\${libdir} -lsrt
-Libs.private: -lm -lstdc++ -lpthread -lws2_32
+Libs.private: -lm -lc++ -lpthread -lws2_32
 Cflags: -I\${includedir} -I\${includedir}/srt
 Requires: openssl libcrypto
 EOF
@@ -1858,7 +1858,7 @@ URL: https://github.com/tesseract-ocr/tesseract
 Version: ${TESSERACT_VERSION}
 
 Requires: lept, libjpeg, libpng, giflib, zlib, libwebp, libtiff-4
-Libs: -L\${libdir} -ltesseract -lstdc++
+Libs: -L\${libdir} -ltesseract -lc++
 Cflags: -I\${includedir}
 EOF
 }
@@ -1877,7 +1877,7 @@ Description: H.265/HEVC video encoder
 Version: ${X265_VERSION}
 
 Libs: -L\${libdir} -lx265
-Libs.private: -lm -lstdc++
+Libs.private: -lm -lc++
 Cflags: -I\${includedir}
 EOF
 }
@@ -1931,7 +1931,7 @@ Name: zimg
 Description: Scaling, colorspace conversion, and dithering library
 Version: ${ZIMG_VERSION}
 
-Libs: -L\${libdir} -lzimg -lstdc++
+Libs: -L\${libdir} -lzimg -lc++
 Cflags: -I\${includedir}
 EOF
 }

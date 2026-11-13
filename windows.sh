@@ -144,6 +144,13 @@ for gpl_library in {$LIBRARY_X264,$LIBRARY_X265,$LIBRARY_XVIDCORE,$LIBRARY_LIBVI
   fi
 done
 
+# VALIDATE MEDIA FOUNDATION DEPENDS ON D3D11VA
+if [[ ${ENABLED_LIBRARIES[$LIBRARY_WINDOWS_MEDIAFOUNDATION]} -eq 1 ]] && [[ ${ENABLED_LIBRARIES[$LIBRARY_WINDOWS_D3D11VA]} -ne 1 ]]; then
+  echo -e "\n(*) Invalid configuration detected. windows-mediafoundation requires windows-d3d11va, which is disabled. Enable windows-d3d11va, or disable windows-mediafoundation too.\n"
+  echo -e "\n(*) Invalid configuration detected. windows-mediafoundation requires windows-d3d11va, which is disabled. Enable windows-d3d11va, or disable windows-mediafoundation too.\n" 1>>"${BASEDIR}"/build.log 2>&1
+  exit 1
+fi
+
 trap fail_operation EXIT
 echo -n -e "\nDownloading sources: "
 echo -e "INFO: Downloading the source code of ffmpeg and external libraries.\n" 1>>"${BASEDIR}"/build.log 2>&1
@@ -172,7 +179,7 @@ for run_arch in {0..12}; do
     TARGET_ARCH_LIST+=("${FULL_ARCH}")
 
     # CLEAR FLAGS
-    for library in {0..98} {99..102}; do
+    for library in {0..98} {99..105}; do
       library_name=$(get_library_name "${library}")
       unset "$(echo "OK_${library_name}" | sed "s/\-/\_/g")"
       unset "$(echo "DEPENDENCY_REBUILT_${library_name}" | sed "s/\-/\_/g")"

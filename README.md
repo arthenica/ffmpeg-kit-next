@@ -124,6 +124,10 @@ Some parts of `FFmpeg` and some external libraries are licensed under the `GPL`.
 <td align="center"><sup>web system libraries</sup></td>
 <td align="center"><sup>iconv</sup><br><sup>zlib</sup></td>
 </tr>
+<tr>
+<td align="center"><sup>windows system libraries</sup></td>
+<td align="center"><sup>D3D11VA</sup><br><sup>D3D12VA</sup><br><sup>Media Foundation</sup></td>
+</tr>
 </tbody>
 </table>
 

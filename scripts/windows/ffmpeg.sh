@@ -65,7 +65,7 @@ esac
 CONFIGURE_POSTFIX=""
 
 # SET CONFIGURE OPTIONS
-for library in {0..98} {99..102}; do
+for library in {0..98} {99..105}; do
   if [[ ${ENABLED_LIBRARIES[$library]} -eq 1 ]]; then
     ENABLED_LIBRARY=$(get_library_name ${library})
 
@@ -347,6 +347,15 @@ for library in {0..98} {99..102}; do
       LDFLAGS+=" $(pkg-config --libs --static zlib 2>>"${BASEDIR}"/build.log)"
       CONFIGURE_POSTFIX+=" --enable-zlib"
       ;;
+    windows-d3d11va)
+      CONFIGURE_POSTFIX+=" --enable-d3d11va"
+      ;;
+    windows-d3d12va)
+      CONFIGURE_POSTFIX+=" --enable-d3d12va"
+      ;;
+    windows-mediafoundation)
+      CONFIGURE_POSTFIX+=" --enable-mediafoundation"
+      ;;
     esac
   else
 
@@ -441,6 +450,12 @@ for library in {0..98} {99..102}; do
       CONFIGURE_POSTFIX+=" --disable-libxvid"
     elif [[ ${library} -eq ${LIBRARY_ZIMG} ]]; then
       CONFIGURE_POSTFIX+=" --disable-libzimg"
+    elif [[ ${library} -eq ${LIBRARY_WINDOWS_D3D11VA} ]]; then
+      CONFIGURE_POSTFIX+=" --disable-d3d11va"
+    elif [[ ${library} -eq ${LIBRARY_WINDOWS_D3D12VA} ]]; then
+      CONFIGURE_POSTFIX+=" --disable-d3d12va"
+    elif [[ ${library} -eq ${LIBRARY_WINDOWS_MEDIAFOUNDATION} ]]; then
+      CONFIGURE_POSTFIX+=" --disable-mediafoundation"
     fi
   fi
 done
@@ -521,6 +536,15 @@ else
   "${BASEDIR}/scripts/windows/ffmpeg-kit-protocols-test.sh" "${BASEDIR}" "${BASEDIR}/src/${LIB_NAME}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 fi
 
+# 3. Make the gfxcapture filter name the C++ runtime that is actually linked (libc++), not libstdc++, which does not exist in CLANG64/CLANGARM64
+${SED_INLINE} 's#^gfxcapture_filter_extralibs="-lstdc++"$#gfxcapture_filter_extralibs="-lc++"#' "${BASEDIR}"/src/${LIB_NAME}/configure 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+
+# sed exits 0 even when it matches nothing, so confirm the patched line is present
+if ! grep -q '^gfxcapture_filter_extralibs="-lc++"$' "${BASEDIR}"/src/${LIB_NAME}/configure; then
+  echo -e "\n(*) Failed to patch gfxcapture_filter_extralibs in FFmpeg configure: the expected line is gone, so the FFmpeg source likely changed. Update the sed in scripts/windows/ffmpeg.sh.\n" 1>>"${BASEDIR}"/build.log 2>&1
+  return 1
+fi
+
 ###################################################################
 
 ./configure \
@@ -565,6 +589,7 @@ fi
   --disable-cuvid \
   --disable-nvenc \
   --disable-vaapi \
+  --disable-dxva2 \
   --disable-vdpau \
   --disable-videotoolbox \
   --disable-audiotoolbox \
