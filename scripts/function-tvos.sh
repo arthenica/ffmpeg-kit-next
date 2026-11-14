@@ -139,11 +139,8 @@ get_app_specific_cflags() {
   libwebp | xvidcore)
     APP_FLAGS="-std=gnu17 -fno-common -DPIC"
     ;;
-  libplacebo | moltenvk | openh264 | x265)
+  libplacebo | moltenvk | openh264 | sdl | x265)
     APP_FLAGS="-Wno-unused-function"
-    ;;
-  sdl)
-    APP_FLAGS="-DPIC -Wno-unused-function -D__TVOS__"
     ;;
   shine)
     APP_FLAGS="-Wno-unused-function"

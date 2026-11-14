@@ -56,7 +56,7 @@ static NSMutableArray *supportedExternalLibraries;
     [supportedExternalLibraries addObject:@"openssl"];
     [supportedExternalLibraries addObject:@"opus"];
     [supportedExternalLibraries addObject:@"rubberband"];
-    [supportedExternalLibraries addObject:@"sdl2"];
+    [supportedExternalLibraries addObject:@"sdl3"];
     [supportedExternalLibraries addObject:@"shine"];
     [supportedExternalLibraries addObject:@"snappy"];
     [supportedExternalLibraries addObject:@"soxr"];

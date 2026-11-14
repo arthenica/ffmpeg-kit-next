@@ -217,11 +217,6 @@ for library in {0..98} {99..105}; do
       LDFLAGS+=" $(pkg-config --libs --static rubberband 2>>"${BASEDIR}"/build.log)"
       CONFIGURE_POSTFIX+=" --enable-librubberband"
       ;;
-    sdl)
-      CFLAGS+=" $(pkg-config --cflags sdl2 2>>"${BASEDIR}"/build.log)"
-      LDFLAGS+=" $(pkg-config --libs --static sdl2 2>>"${BASEDIR}"/build.log)"
-      CONFIGURE_POSTFIX+=" --enable-sdl2"
-      ;;
     shine)
       CFLAGS+=" $(pkg-config --cflags shine 2>>"${BASEDIR}"/build.log)"
       LDFLAGS+=" $(pkg-config --libs --static shine 2>>"${BASEDIR}"/build.log)"
@@ -420,8 +415,6 @@ for library in {0..98} {99..105}; do
       CONFIGURE_POSTFIX+=" --disable-libopus"
     elif [[ ${library} -eq ${LIBRARY_RUBBERBAND} ]]; then
       CONFIGURE_POSTFIX+=" --disable-librubberband"
-    elif [[ ${library} -eq ${LIBRARY_SDL} ]]; then
-      CONFIGURE_POSTFIX+=" --disable-sdl2"
     elif [[ ${library} -eq ${LIBRARY_SHINE} ]]; then
       CONFIGURE_POSTFIX+=" --disable-libshine"
     elif [[ ${library} -eq ${LIBRARY_SNAPPY} ]]; then
@@ -577,6 +570,7 @@ fi
   ${DEBUG_OPTIONS} \
   --disable-neon-clobber-test \
   --disable-programs \
+  --disable-sdl2 \
   --disable-doc \
   --disable-htmlpages \
   --disable-manpages \

@@ -228,7 +228,7 @@ get_library_source() {
     ;;
   sdl)
     SOURCE_REPO_URL="https://github.com/arthenica/SDL"
-    SOURCE_ID="release-2.32.10"
+    SOURCE_ID="release-3.4.20"
     SOURCE_TYPE="TAG"
     ;;
   shaderc)

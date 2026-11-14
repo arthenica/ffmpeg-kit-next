@@ -299,7 +299,7 @@ get_app_specific_cflags() {
   libuuid)
     APP_FLAGS="-std=gnu99 -Wno-unused-function -DHAVE_SYS_FILE_H=1"
     ;;
-  libplacebo | libvpx | openssl | shine | srt)
+  libplacebo | libvpx | openssl | sdl | shine | srt)
     APP_FLAGS="-Wno-unused-function"
     ;;
   openh264)
@@ -307,9 +307,6 @@ get_app_specific_cflags() {
     ;;
   rubberband)
     APP_FLAGS="-std=c99 -Wno-unused-function"
-    ;;
-  sdl)
-    APP_FLAGS="-std=c99 -Wno-unused-function -Wno-incompatible-function-pointer-types"
     ;;
   soxr | snappy | libwebp)
     APP_FLAGS="-std=gnu99 -Wno-unused-function -DPIC"

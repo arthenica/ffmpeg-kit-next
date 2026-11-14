@@ -1,0 +1,23 @@
+--- a/cmake/sdlplatform.cmake
++++ b/cmake/sdlplatform.cmake
+@@ -6,7 +6,19 @@ function(SDL_DetectCMakePlatform)
+     set(sdl_cmake_platform psp)
+   elseif(APPLE)
+     if(CMAKE_SYSTEM_NAME MATCHES ".*(Darwin|MacOS).*")
+-      set(sdl_cmake_platform macOS)
++      # Catalyst uses the macOS SDK with an iOS/macabi compiler target. Select
++      # UIKit/CoreAudio rather than Cocoa/IOKit, matching SDL_platform_defines.h.
++      check_c_source_compiles("
++        #include <TargetConditionals.h>
++        #if !TARGET_OS_MACCATALYST
++        #error Not Mac Catalyst
++        #endif
++        int main(void) { return 0; }" SDL_TARGET_MACCATALYST)
++      if(SDL_TARGET_MACCATALYST)
++        set(sdl_cmake_platform iOS)
++      else()
++        set(sdl_cmake_platform macOS)
++      endif()
+     elseif(CMAKE_SYSTEM_NAME MATCHES ".*tvOS.*")
+       set(sdl_cmake_platform tvOS)
+     elseif(CMAKE_SYSTEM_NAME MATCHES ".*iOS.*")

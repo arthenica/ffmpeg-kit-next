@@ -1059,7 +1059,7 @@ get_static_archive_name() {
   23) echo "libilbc" ;;
   27) echo "libaom" ;;
   29) echo "libtwolame" ;;
-  30) echo "libSDL2" ;;
+  30) echo "libSDL3" ;;
   31) echo "libtesseract" ;;
   34) echo "libgif" ;;
   36) echo "libogg" ;;

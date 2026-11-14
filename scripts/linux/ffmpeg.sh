@@ -136,9 +136,6 @@ for library in {0..96} {99..102}; do
     linux-rubberband)
       CONFIGURE_POSTFIX+=" --enable-librubberband"
       ;;
-    linux-sdl)
-      CONFIGURE_POSTFIX+=" --enable-sdl2"
-      ;;
     linux-shine)
       CONFIGURE_POSTFIX+=" --enable-libshine"
       ;;
@@ -304,8 +301,6 @@ for library in {0..96} {99..102}; do
       CONFIGURE_POSTFIX+=" --disable-libopus"
     elif [[ ${library} -eq ${LIBRARY_LINUX_RUBBERBAND} ]]; then
       CONFIGURE_POSTFIX+=" --disable-librubberband"
-    elif [[ ${library} -eq ${LIBRARY_LINUX_SDL} ]]; then
-      CONFIGURE_POSTFIX+=" --disable-sdl2"
     elif [[ ${library} -eq ${LIBRARY_LINUX_SHINE} ]]; then
       CONFIGURE_POSTFIX+=" --disable-libshine"
     elif [[ ${library} -eq ${LIBRARY_LINUX_SNAPPY} ]]; then
@@ -478,6 +473,7 @@ fi
   ${DEBUG_OPTIONS} \
   --disable-neon-clobber-test \
   --disable-programs \
+  --disable-sdl2 \
   --disable-doc \
   --disable-htmlpages \
   --disable-manpages \

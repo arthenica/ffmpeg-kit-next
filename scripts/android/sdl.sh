@@ -1,47 +1,51 @@
 #!/bin/bash
 
-# ALWAYS CLEAN THE PREVIOUS BUILD
-make distclean 2>/dev/null 1>/dev/null
+# SET BUILD OPTIONS
+SDL_CMAKE_OPTIONS=("-DANDROID_ABI=$(get_android_cmake_ndk_abi)")
+case ${ARCH} in
+arm-v7a) SDL_CMAKE_OPTIONS+=("-DSDL_ARMNEON=OFF") ;;
+arm-v7a-neon) SDL_CMAKE_OPTIONS+=("-DANDROID_ARM_NEON=ON" "-DSDL_ARMNEON=ON") ;;
+esac
 
-# PATCH SDL SOURCES
-SDL_PATCH_DIR=$(get_library_patch_dir "${LIB_NAME}") || return 1
+mkdir -p "${BUILD_DIR}" || return 1
+cd "${BUILD_DIR}" || return 1
 
-apply_sdl_patch() {
-  local PATCH_NAME="$1"
-  local PATCH_FILE="${SDL_PATCH_DIR}/${PATCH_NAME}"
-
-  if git -C "${BASEDIR}"/src/"${LIB_NAME}" apply --check "${PATCH_FILE}" 2>/dev/null; then
-    git -C "${BASEDIR}"/src/"${LIB_NAME}" apply "${PATCH_FILE}" || return 1
-  elif git -C "${BASEDIR}"/src/"${LIB_NAME}" apply --reverse --check "${PATCH_FILE}" 2>/dev/null; then
-    echo -e "INFO: skipping sdl ${PATCH_NAME}, already applied\n" 1>>"${BASEDIR}"/build.log 2>&1
-  else
-    echo -e "ERROR: sdl ${PATCH_NAME} does not apply cleanly\n" 1>>"${BASEDIR}"/build.log 2>&1
-    return 1
-  fi
-}
-
-apply_sdl_patch "configure.android-opensles.patch" || return 1
-
-# REGENERATE BUILD FILES IF NECESSARY OR REQUESTED
-if [[ ! -f "${BASEDIR}"/src/"${LIB_NAME}"/configure ]] || [[ ${RECONF_sdl} -eq 1 ]]; then
-  autoreconf_library "${LIB_NAME}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
-fi
-
-./configure \
-  --prefix="${LIB_INSTALL_PREFIX}" \
-  --with-pic \
-  --disable-video-x11 \
-  --with-sysroot="${ANDROID_SYSROOT}" \
-  --enable-static \
-  --disable-shared \
-  --disable-fast-install \
-  --disable-hidapi \
-  --disable-sensor \
-  --host="${HOST}" || return 1
+cmake -Wno-dev \
+  -S "${BASEDIR}/src/${LIB_NAME}" \
+  -B "${BUILD_DIR}" \
+  -DCMAKE_TOOLCHAIN_FILE="${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake" \
+  -DANDROID_PLATFORM="android-${API}" \
+  -DANDROID_STL=none \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX="${LIB_INSTALL_PREFIX}" \
+  -DCMAKE_INSTALL_LIBDIR=lib \
+  -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+  -DCMAKE_C_FLAGS="${CFLAGS}" \
+  -DCMAKE_CXX_FLAGS="${CXXFLAGS}" \
+  -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}" \
+  -DSDL_SHARED=OFF \
+  -DSDL_STATIC=ON \
+  -DSDL_INSTALL=ON \
+  -DSDL_INSTALL_CPACK=OFF \
+  -DSDL_TEST_LIBRARY=OFF \
+  -DSDL_TESTS=OFF \
+  -DSDL_EXAMPLES=OFF \
+  -DSDL_ANDROID_JAR=OFF \
+  -DSDL_AUDIO=ON \
+  -DSDL_VIDEO=ON \
+  -DSDL_RENDER=ON \
+  -DSDL_HIDAPI=OFF \
+  -DSDL_SENSOR=OFF \
+  -DSDL_CAMERA=OFF \
+  -DSDL_DIALOG=OFF \
+  -DSDL_DISKAUDIO=OFF \
+  "${SDL_CMAKE_OPTIONS[@]}" || return 1
 
 make -j$(get_cpu_count) || return 1
 
 make install || return 1
 
-# MANUALLY COPY PKG-CONFIG FILES
-cp ./*.pc "${INSTALL_PKG_CONFIG_DIR}" || return 1
+mkdir -p "${LIB_INSTALL_PREFIX}/share/sdl3/java" || return 1
+cp -R "${BASEDIR}/src/${LIB_NAME}/android-project/app/src/main/java/org" \
+  "${LIB_INSTALL_PREFIX}/share/sdl3/java/" || return 1
+cp "${LIB_INSTALL_PREFIX}/lib/pkgconfig/sdl3.pc" "${INSTALL_PKG_CONFIG_DIR}" || return 1

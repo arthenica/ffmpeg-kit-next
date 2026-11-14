@@ -62,7 +62,7 @@ std::shared_ptr<std::set<std::string>> ffmpegkit::Packages::getExternalLibraries
         "openssl",
         "opus",
         "rubberband",
-        "sdl2",
+        "sdl3",
         "shine",
         "snappy",
         "soxr",

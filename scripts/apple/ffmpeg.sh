@@ -310,11 +310,6 @@ for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} $
       FFMPEG_LDFLAGS+=" -framework Accelerate"
       CONFIGURE_POSTFIX+=" --enable-librubberband"
       ;;
-    sdl)
-      FFMPEG_CFLAGS+=" $(pkg-config --cflags sdl2 2>>"${BASEDIR}"/build.log)"
-      FFMPEG_LDFLAGS+=" $(pkg-config --libs --static sdl2 2>>"${BASEDIR}"/build.log)"
-      CONFIGURE_POSTFIX+=" --enable-sdl2"
-      ;;
     shine)
       FFMPEG_CFLAGS+=" $(pkg-config --cflags shine 2>>"${BASEDIR}"/build.log)"
       FFMPEG_LDFLAGS+=" $(pkg-config --libs --static shine 2>>"${BASEDIR}"/build.log)"
@@ -500,9 +495,7 @@ for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} $
 
     # THE FOLLOWING LIBRARIES SHOULD BE EXPLICITLY DISABLED TO PREVENT AUTODETECT
     # NOTE THAT IDS MUST BE +1 OF THE INDEX VALUE
-    if [[ ${library} -eq ${LIBRARY_SDL} ]]; then
-      CONFIGURE_POSTFIX+=" --disable-sdl2"
-    elif [[ ${library} -eq ${LIBRARY_APPLE_AUDIOTOOLBOX} ]]; then
+    if [[ ${library} -eq ${LIBRARY_APPLE_AUDIOTOOLBOX} ]]; then
       CONFIGURE_POSTFIX+=" --disable-audiotoolbox"
     elif [[ ${library} -eq ${LIBRARY_APPLE_AVFOUNDATION} ]]; then
       CONFIGURE_POSTFIX+=" --disable-avfoundation"
@@ -650,7 +643,7 @@ else
   "${BASEDIR}/scripts/apple/ffmpeg-kit-protocols-test.sh" "${BASEDIR}" "${BASEDIR}/src/${LIB_NAME}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 fi
 
-# 3. Use thread local log levels
+# 4. Use thread local log levels
 ${SED_INLINE} 's/static atomic_int av_log_level/__thread atomic_int av_log_level/g' "${BASEDIR}"/src/${LIB_NAME}/libavutil/log.c 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 
 ###################################################################
@@ -692,6 +685,7 @@ ${SED_INLINE} 's/static atomic_int av_log_level/__thread atomic_int av_log_level
   ${DEBUG_OPTIONS} \
   --disable-neon-clobber-test \
   --disable-programs \
+  --disable-sdl2 \
   --disable-doc \
   --disable-htmlpages \
   --disable-manpages \

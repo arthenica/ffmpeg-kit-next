@@ -201,11 +201,6 @@ for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} $
       LDFLAGS+=" $(pkg-config --libs-only-L rubberband 2>>"${BASEDIR}"/build.log)"
       CONFIGURE_POSTFIX+=" --enable-librubberband"
       ;;
-    sdl)
-      CFLAGS+=" $(pkg-config --cflags sdl2 2>>"${BASEDIR}"/build.log)"
-      LDFLAGS+=" $(pkg-config --libs-only-L sdl2 2>>"${BASEDIR}"/build.log)"
-      CONFIGURE_POSTFIX+=" --enable-sdl2"
-      ;;
     shine)
       CFLAGS+=" $(pkg-config --cflags shine 2>>"${BASEDIR}"/build.log)"
       LDFLAGS+=" $(pkg-config --libs-only-L shine 2>>"${BASEDIR}"/build.log)"
@@ -424,6 +419,7 @@ emconfigure ./configure \
   ${SIZE_OPTIONS} \
   ${DEBUG_OPTIONS} \
   --disable-programs \
+  --disable-sdl2 \
   --disable-doc \
   --disable-htmlpages \
   --disable-manpages \

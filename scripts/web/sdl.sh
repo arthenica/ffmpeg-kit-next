@@ -1,44 +1,46 @@
 #!/bin/bash
 
-# ALWAYS CLEAN THE PREVIOUS BUILD
-make distclean 2>/dev/null 1>/dev/null
-
-# REGENERATE BUILD FILES IF NECESSARY OR REQUESTED
-if [[ ! -f "${BASEDIR}"/src/"${LIB_NAME}"/configure ]] || [[ ${RECONF_sdl} -eq 1 ]]; then
-  autoreconf_library "${LIB_NAME}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+# SET BUILD OPTIONS
+SDL_WEB_PTHREADS=OFF
+if [[ ${FFMPEG_KIT_WEB_PTHREADS:-1} == "1" ]]; then
+  SDL_WEB_PTHREADS=ON
 fi
 
-# UPDATE CONFIG FILES TO RECOGNIZE wasm32-unknown-emscripten WHEN SDL USES THEM
-if [[ -f "${BASEDIR}"/src/"${LIB_NAME}"/build-scripts/config.guess ]]; then
-  overwrite_file "${FFMPEG_KIT_TMPDIR}"/source/config/config.guess "${BASEDIR}"/src/"${LIB_NAME}"/build-scripts/config.guess 1>>"${BASEDIR}"/build.log 2>&1 || return 1
-fi
-if [[ -f "${BASEDIR}"/src/"${LIB_NAME}"/build-scripts/config.sub ]]; then
-  overwrite_file "${FFMPEG_KIT_TMPDIR}"/source/config/config.sub "${BASEDIR}"/src/"${LIB_NAME}"/build-scripts/config.sub 1>>"${BASEDIR}"/build.log 2>&1 || return 1
-fi
+mkdir -p "${BUILD_DIR}" || return 1
+cd "${BUILD_DIR}" || return 1
 
-emconfigure ./configure \
-  --prefix="${LIB_INSTALL_PREFIX}" \
-  --with-pic \
-  --enable-static \
-  --disable-shared \
-  --disable-video-x11 \
-  --disable-video-wayland \
-  --disable-video-cocoa \
-  --disable-video-uikit \
-  --disable-video-vulkan \
-  --disable-video-metal \
-  --disable-video-opengl \
-  --disable-video-opengles \
-  --disable-render-metal \
-  --disable-haptic \
-  --disable-hidapi \
-  --disable-joystick \
-  --disable-sensor \
-  --host="${HOST}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+emcmake cmake -Wno-dev \
+  -S "${BASEDIR}/src/${LIB_NAME}" \
+  -B "${BUILD_DIR}" \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX="${LIB_INSTALL_PREFIX}" \
+  -DCMAKE_INSTALL_LIBDIR=lib \
+  -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+  -DCMAKE_C_FLAGS="${CFLAGS}" \
+  -DCMAKE_CXX_FLAGS="${CXXFLAGS}" \
+  -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}" \
+  -DSDL_SHARED=OFF \
+  -DSDL_STATIC=ON \
+  -DSDL_INSTALL=ON \
+  -DSDL_INSTALL_CPACK=OFF \
+  -DSDL_TEST_LIBRARY=OFF \
+  -DSDL_TESTS=OFF \
+  -DSDL_EXAMPLES=OFF \
+  -DSDL_AUDIO=ON \
+  -DSDL_VIDEO=ON \
+  -DSDL_RENDER=ON \
+  -DSDL_OPENGLES=ON \
+  -DSDL_PTHREADS="${SDL_WEB_PTHREADS}" \
+  -DSDL_JOYSTICK=OFF \
+  -DSDL_HAPTIC=OFF \
+  -DSDL_HIDAPI=OFF \
+  -DSDL_SENSOR=OFF \
+  -DSDL_CAMERA=OFF \
+  -DSDL_DIALOG=OFF \
+  -DSDL_DISKAUDIO=OFF || return 1
 
-emmake make -j$(get_cpu_count) 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+emmake make -j$(get_cpu_count) || return 1
 
-emmake make install 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+emmake make install || return 1
 
-# MANUALLY COPY PKG-CONFIG FILES
-cp ./*.pc "${INSTALL_PKG_CONFIG_DIR}" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+cp "${LIB_INSTALL_PREFIX}/lib/pkgconfig/sdl3.pc" "${INSTALL_PKG_CONFIG_DIR}" || return 1

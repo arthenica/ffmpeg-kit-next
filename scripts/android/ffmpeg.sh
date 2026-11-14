@@ -236,11 +236,6 @@ for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} $
       LDFLAGS+=" $(pkg-config --libs --static rubberband 2>>"${BASEDIR}"/build.log)"
       CONFIGURE_POSTFIX+=" --enable-librubberband"
       ;;
-    sdl)
-      CFLAGS+=" $(pkg-config --cflags sdl2 2>>"${BASEDIR}"/build.log)"
-      LDFLAGS+=" $(pkg-config --libs --static sdl2 2>>"${BASEDIR}"/build.log)"
-      CONFIGURE_POSTFIX+=" --enable-sdl2 --extra-libs=-lOpenSLES"
-      ;;
     shine)
       CFLAGS+=" $(pkg-config --cflags shine 2>>"${BASEDIR}"/build.log)"
       LDFLAGS+=" $(pkg-config --libs --static shine 2>>"${BASEDIR}"/build.log)"
@@ -350,9 +345,7 @@ for library in {0..61} ${LIBRARY_VVENC} ${LIBRARY_LIBSVTAV1} ${LIBRARY_LIBJXL} $
 
     # THE FOLLOWING LIBRARIES SHOULD BE EXPLICITLY DISABLED TO PREVENT AUTODETECT
     # NOTE THAT IDS MUST BE +1 OF THE INDEX VALUE
-    if [[ ${library} -eq ${LIBRARY_SDL} ]]; then
-      CONFIGURE_POSTFIX+=" --disable-sdl2"
-    elif [[ ${library} -eq ${LIBRARY_SYSTEM_ZLIB} ]]; then
+    if [[ ${library} -eq ${LIBRARY_SYSTEM_ZLIB} ]]; then
       CONFIGURE_POSTFIX+=" --disable-zlib"
     elif [[ ${library} -eq ${LIBRARY_ANDROID_MEDIA_CODEC} ]]; then
       CONFIGURE_POSTFIX+=" --disable-mediacodec"
@@ -491,6 +484,7 @@ fi
   ${DEBUG_OPTIONS} \
   --disable-neon-clobber-test \
   --disable-programs \
+  --disable-sdl2 \
   --disable-doc \
   --disable-htmlpages \
   --disable-manpages \

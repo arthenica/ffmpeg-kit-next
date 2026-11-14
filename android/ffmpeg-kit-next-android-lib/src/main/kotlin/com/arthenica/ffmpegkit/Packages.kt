@@ -54,7 +54,7 @@ open class Packages {
             "openssl",
             "opus",
             "rubberband",
-            "sdl2",
+            "sdl3",
             "shine",
             "snappy",
             "soxr",

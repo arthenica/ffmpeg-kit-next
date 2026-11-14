@@ -387,7 +387,7 @@ get_app_specific_cflags() {
   openh264)
     APP_FLAGS="-std=gnu99 -Wno-unused-function -fstack-protector-all"
     ;;
-  libplacebo | openssl | srt)
+  libplacebo | openssl | sdl | srt)
     APP_FLAGS="-Wno-unused-function"
     ;;
   *)

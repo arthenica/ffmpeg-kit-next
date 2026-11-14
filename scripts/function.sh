@@ -237,7 +237,6 @@ get_library_name() {
   85) echo "linux-snappy" ;;
   86) echo "linux-soxr" ;;
   87) echo "linux-twolame" ;;
-  88) echo "linux-sdl" ;;
   89) echo "linux-tesseract" ;;
   90) echo "linux-vaapi" ;;
   91) echo "linux-vo-amrwbenc" ;;
@@ -353,7 +352,6 @@ from_library_name() {
   linux-snappy) echo 85 ;;
   linux-soxr) echo 86 ;;
   linux-twolame) echo 87 ;;
-  linux-sdl) echo 88 ;;
   linux-tesseract) echo 89 ;;
   linux-vaapi) echo 90 ;;
   linux-vo-amrwbenc) echo 91 ;;
@@ -399,7 +397,7 @@ is_library_supported_on_platform() {
   local library_index=$(from_library_name "$1")
   case ${library_index} in
   # ALL
-  16 | 17 | 18 | 23 | 27 | 28 | 32 | 34 | 35 | 36 | 93 | 94 | 95 | 96)
+  16 | 17 | 18 | 23 | 27 | 28 | 30 | 32 | 34 | 35 | 36 | 93 | 94 | 95 | 96)
     echo "0"
     ;;
 
@@ -425,7 +423,7 @@ is_library_supported_on_platform() {
     ;;
 
   # ALL EXCEPT LINUX
-  0 | 1 | 2 | 3 | 4 | 5 | 6 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 19 | 20 | 21 | 22 | 24 | 25 | 26 | 29 | 30 | 31 | 33 | 37 | 38 | 39 | 40 | 42 | 43 | 44 | 45 | 46 | 47 | 48)
+  0 | 1 | 2 | 3 | 4 | 5 | 6 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 19 | 20 | 21 | 22 | 24 | 25 | 26 | 29 | 31 | 33 | 37 | 38 | 39 | 40 | 42 | 43 | 44 | 45 | 46 | 47 | 48)
     if [[ ${FFMPEG_KIT_BUILD_TYPE} == "linux" ]]; then
       echo "1"
     else
@@ -490,7 +488,7 @@ is_library_supported_on_platform() {
     ;;
 
   # ONLY LINUX
-  62 | 63 | 64 | 65 | 66 | 67 | 68 | 69 | 70 | 71 | 72 | 73 | 74 | 75 | 76 | 77 | 78 | 79 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 87 | 88 | 89 | 90 | 91 | 92)
+  62 | 63 | 64 | 65 | 66 | 67 | 68 | 69 | 70 | 71 | 72 | 73 | 74 | 75 | 76 | 77 | 78 | 79 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 87 | 89 | 90 | 91 | 92)
     if [[ ${FFMPEG_KIT_BUILD_TYPE} == "linux" ]]; then
       echo "0"
     else
@@ -620,7 +618,7 @@ get_package_config_file_name() {
   21) echo "vidstab" ;;
   27) echo "aom" ;;
   28) echo "libchromaprint" ;;
-  30) echo "sdl2" ;;
+  30) echo "sdl3" ;;
   38) echo "libjpeg" ;;
   39) echo "ogg" ;;
   43) echo "libtiff-4" ;;
@@ -1795,9 +1793,6 @@ set_library() {
     ;;
   linux-rubberband)
     ENABLED_LIBRARIES[LIBRARY_LINUX_RUBBERBAND]=$2
-    ;;
-  linux-sdl)
-    ENABLED_LIBRARIES[LIBRARY_LINUX_SDL]=$2
     ;;
   linux-shine)
     ENABLED_LIBRARIES[LIBRARY_LINUX_SHINE]=$2

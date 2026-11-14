@@ -1,0 +1,20 @@
+--- a/src/video/uikit/SDL_uikitpen.m
++++ b/src/video/uikit/SDL_uikitpen.m
+@@ -157,7 +157,7 @@ extern void UIKit_HandlePenHover(SDL_uikitview *view, UIHoverGestureRecognizer *recog
+     }
+ 
+     float rollAngle = 0.0f;
+-    if (@available(iOS 17.5, *)) {
++    if (@available(iOS 17.5, visionOS 1.2, *)) {
+         rollAngle = (float) [recognizer rollAngle];
+     }
+ 
+@@ -174,7 +174,7 @@ static void UIKit_HandlePenAxesFromUITouch(SDL_uikitview *view, UITouch *pencil)
+ {
+     float rollAngle = 0.0f;
+ #if !defined(SDL_PLATFORM_TVOS)
+-    if (@available(iOS 17.5, *)) {
++    if (@available(iOS 17.5, visionOS 1.2, *)) {
+         rollAngle = (float) [pencil rollAngle];
+     }
+ #endif

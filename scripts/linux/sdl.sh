@@ -1,0 +1,46 @@
+#!/bin/bash
+
+mkdir -p "${BUILD_DIR}" || return 1
+cd "${BUILD_DIR}" || return 1
+
+cmake -Wno-dev \
+  -S "${BASEDIR}/src/${LIB_NAME}" \
+  -B "${BUILD_DIR}" \
+  -DCMAKE_SYSTEM_NAME=Linux \
+  -DCMAKE_SYSTEM_PROCESSOR="$(get_cmake_system_processor)" \
+  -DCMAKE_C_COMPILER="${CC}" \
+  -DCMAKE_CXX_COMPILER="${CXX}" \
+  -DCMAKE_LINKER="${LD}" \
+  -DCMAKE_AR="${AR}" \
+  -DCMAKE_RANLIB="${RANLIB}" \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX="${LIB_INSTALL_PREFIX}" \
+  -DCMAKE_INSTALL_LIBDIR=lib \
+  -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+  -DCMAKE_C_FLAGS="${CFLAGS}" \
+  -DCMAKE_CXX_FLAGS="${CXXFLAGS}" \
+  -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}" \
+  -DSDL_SHARED=OFF \
+  -DSDL_STATIC=ON \
+  -DSDL_INSTALL=ON \
+  -DSDL_INSTALL_CPACK=OFF \
+  -DSDL_TEST_LIBRARY=OFF \
+  -DSDL_TESTS=OFF \
+  -DSDL_EXAMPLES=OFF \
+  -DSDL_AUDIO=ON \
+  -DSDL_VIDEO=ON \
+  -DSDL_RENDER=ON \
+  -DSDL_JOYSTICK=OFF \
+  -DSDL_HAPTIC=OFF \
+  -DSDL_HIDAPI=OFF \
+  -DSDL_SENSOR=OFF \
+  -DSDL_CAMERA=OFF \
+  -DSDL_DIALOG=OFF \
+  -DSDL_TRAY=OFF \
+  -DSDL_DISKAUDIO=OFF || return 1
+
+make -j$(get_cpu_count) || return 1
+
+make install || return 1
+
+cp "${LIB_INSTALL_PREFIX}/lib/pkgconfig/sdl3.pc" "${INSTALL_PKG_CONFIG_DIR}" || return 1

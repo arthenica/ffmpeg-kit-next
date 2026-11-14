@@ -210,7 +210,7 @@ get_app_specific_cflags() {
   libaom)
     APP_FLAGS="-std=gnu99 -Wno-unused-function -Wno-implicit-function-declaration"
     ;;
-  libplacebo | libvpx | openssl | shine | srt)
+  libplacebo | libvpx | openssl | sdl | shine | srt)
     APP_FLAGS="-Wno-unused-function"
     ;;
   openh264)
@@ -218,9 +218,6 @@ get_app_specific_cflags() {
     ;;
   rubberband)
     APP_FLAGS="-std=c99 -Wno-unused-function"
-    ;;
-  sdl)
-    APP_FLAGS="-std=c99 -Wno-unused-function -Wno-incompatible-function-pointer-types"
     ;;
   soxr | snappy | libwebp)
     APP_FLAGS="-std=gnu99 -Wno-unused-function -DPIC"

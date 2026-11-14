@@ -1,0 +1,16 @@
+--- a/src/video/uikit/SDL_uikitview.m
++++ b/src/video/uikit/SDL_uikitview.m
+@@ -38,8 +38,12 @@
+ // The maximum number of mouse buttons we support
+ #define MAX_MOUSE_BUTTONS 5
+ 
+-// This is defined in SDL_sysjoystick.m
++#ifdef SDL_JOYSTICK_MFI
++// This is defined in joystick/apple/SDL_mfijoystick.m.
+ extern int SDL_AppleTVRemoteOpenedAsJoystick;
++#else
++#define SDL_AppleTVRemoteOpenedAsJoystick 0
++#endif
+ 
+ @implementation SDL_uikitview
+ {
