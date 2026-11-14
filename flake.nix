@@ -3,10 +3,9 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
-    nixpkgsWeb.url = "github:NixOS/nixpkgs/nixos-26.05";
   };
 
-  outputs = { self, nixpkgs, nixpkgsWeb }:
+  outputs = { self, nixpkgs }:
     let
       systems = [
         "aarch64-darwin"
@@ -24,12 +23,6 @@
               config = {
                 allowUnfree = true;
                 android_sdk.accept_license = true;
-              };
-            })
-            (import nixpkgsWeb {
-              inherit system;
-              config = {
-                allowUnfree = true;
               };
             }));
 
@@ -408,11 +401,11 @@
         };
     in
     {
-      devShells = forAllSystems (system: pkgs: webPkgs:
+      devShells = forAllSystems (system: pkgs:
         let
           androidR27dShell = androidShell system pkgs "Android NDK r27d" android.ndkVersion;
           linuxToolchainDevShell = linuxToolchainShell system pkgs;
-          webWasm32EmscriptenShell = webToolchainShell system webPkgs;
+          webWasm32EmscriptenShell = webToolchainShell system pkgs;
           linuxGlibcProfileName =
             if pkgs.stdenv.hostPlatform.isLinux
             then "linux-${linuxArchName pkgs}-glibc-${pkgs.lib.replaceStrings [ "." ] [ "_" ] (builtins.head (pkgs.lib.splitString "-" pkgs.glibc.version))}"
