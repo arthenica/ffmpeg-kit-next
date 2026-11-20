@@ -156,6 +156,7 @@
         yasm
         gettext
         gperf
+        gtk-doc
         libtasn1
         python3
         perl
@@ -174,7 +175,6 @@
         gnumake
         gnugrep
         groff
-        gtk-doc
         jdk17
         patch
         ragel
@@ -191,7 +191,6 @@
         gnumake
         gnugrep
         groff
-        gtk-doc
         patch
         ragel
         tcl
