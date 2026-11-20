@@ -148,6 +148,7 @@
         ninja
         pkg-config
         autoconf
+        autogen
         automake
         libtool
         gnused
@@ -165,7 +166,6 @@
       commonPackages = pkgs: commonToolPackages pkgs ++ pkgConfigPackages pkgs;
 
       androidPackages = pkgs: with pkgs; commonPackages pkgs ++ [
-        autogen
         clang
         coreutils
         doxygen
@@ -183,7 +183,6 @@
       ];
 
       linuxToolchainPackages = pkgs: with pkgs; commonToolPackages pkgs ++ [
-        autogen
         coreutils
         doxygen
         file
