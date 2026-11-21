@@ -141,6 +141,7 @@
         ninja
         pkg-config
         autoconf
+        autogen
         automake
         libtool
         gnused
@@ -148,6 +149,7 @@
         yasm
         gettext
         gperf
+        gtk-doc
         libtasn1
         python3
         perl
@@ -158,7 +160,6 @@
       commonPackages = pkgs: commonToolPackages pkgs ++ pkgConfigPackages pkgs;
 
       androidPackages = pkgs: with pkgs; commonPackages pkgs ++ [
-        autogen
         clang
         coreutils
         doxygen
@@ -167,7 +168,6 @@
         gnumake
         gnugrep
         groff
-        gtk-doc
         jdk17
         patch
         ragel
@@ -176,7 +176,6 @@
       ];
 
       linuxToolchainPackages = pkgs: with pkgs; commonToolPackages pkgs ++ [
-        autogen
         coreutils
         doxygen
         file
@@ -185,7 +184,6 @@
         gnumake
         gnugrep
         groff
-        gtk-doc
         patch
         ragel
         tcl
